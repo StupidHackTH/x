@@ -1,0 +1,49 @@
+---
+import Window from '../Window.astro';
+import { event } from '../../data/event';
+const reg = event.registration;
+---
+
+<Window id="register" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={reg.url ? 'Done' : 'Waiting for eventpop.com…'} beige>
+  <div class="h-full flex flex-col">
+    <div class="flex items-center gap-1 px-1 py-1 border-b border-[#fff] bg-xp-beige text-[11px]">
+      <span class="px-1">Address</span>
+      <div class="xp-sunken flex-1 px-1 py-0.5 truncate">🌐 {reg.url || 'https://www.eventpop.me/e/…  (TBD)'}</div>
+      {reg.url ? (
+        <a class="xp-btn min-w-0 px-2" href={reg.url} target="_blank" rel="noopener">Go</a>
+      ) : (
+        <button type="button" class="xp-btn min-w-0 px-2" data-action="fake-register">Go</button>
+      )}
+    </div>
+    <div class="xp-marquee bg-[#ffffe1] border-b border-[#e0e0a0] text-[11px] py-0.5">
+      <span>★★★ เปิดลงทะเบียนประมาณ {reg.opens} ที่ {reg.platform} · {reg.price} · รับ ~{event.capacity} คน ★★★</span>
+    </div>
+    <div class="p-4 bg-white flex-1 overflow-auto flex flex-col gap-3">
+      <h2 class="font-xp-title font-bold text-lg text-[#0046d5]">REGISTRATION</h2>
+      <div class="flex items-start gap-3 bg-[#fff8dc] border border-[#e0c060] p-2 text-[12px]">
+        <span class="text-2xl leading-none" aria-hidden="true">⚠️</span>
+        <div><b>{reg.note}</b><br />เว็บนี้เป็นแค่หน้าประกาศ ปุ่มลงทะเบียนด้านล่างจะพาไป Eventpop เมื่อลิงก์พร้อม</div>
+      </div>
+      <table class="text-[12px]">
+        <tbody>
+          <tr><td class="pr-4 text-neutral-500 align-top">ช่องทาง</td><td>{reg.platform}</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">เปิดรับ</td><td>{reg.opens}</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">ค่าใช้จ่าย</td><td>{reg.price}</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">จำนวน</td><td>~{event.capacity} คน</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">รูปแบบ</td><td>ตั๋วปล่อยเป็นรอบ ๆ พร้อม challenge สนุก ๆ ให้ทำก่อนได้ตั๋ว</td></tr>
+        </tbody>
+      </table>
+      <p class="text-[11px] text-neutral-600">ติดตามประกาศเปิดตั๋วได้ที่ Facebook Creatorsgarten และ Discord</p>
+      <div class="flex flex-wrap justify-end gap-2 mt-auto">
+        {reg.url ? (
+          <a class="xp-btn default" href={reg.url} target="_blank" rel="noopener">🎟️ ไป Eventpop</a>
+        ) : (
+          <button type="button" class="xp-btn default" data-action="fake-register">🎟️ ไป Eventpop</button>
+        )}
+        <a class="xp-btn" href={event.links.facebook} target="_blank" rel="noopener">📘 Facebook</a>
+        <a class="xp-btn" href={event.links.discord} target="_blank" rel="noopener">💬 Discord</a>
+        <button type="button" class="xp-btn" data-action="close">Cancel</button>
+      </div>
+    </div>
+  </div>
+</Window>

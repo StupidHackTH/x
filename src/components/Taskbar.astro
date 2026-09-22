@@ -1,0 +1,51 @@
+---
+import { fundingPercent } from '../data/funding';
+---
+
+<nav class="xp-taskbar" aria-label="Taskbar">
+  <button type="button" class="xp-start" id="start-btn" aria-expanded="false" aria-controls="startmenu" title="Click here to begin">
+    <svg viewBox="0 0 22 20" aria-hidden="true">
+      <path d="M2 4.5c2.5-1.6 4.5-1.6 7 0v6.5c-2.5-1.6-4.5-1.6-7 0z" fill="#f35325"/>
+      <path d="M10.5 4.5c2.5-1.6 5-1.6 8.5 0v6.5c-3.5-1.6-6-1.6-8.5 0z" fill="#81bc06"/>
+      <path d="M2 12.5c2.5-1.6 4.5-1.6 7 0V19c-2.5-1.6-4.5-1.6-7 0z" fill="#05a6f0"/>
+      <path d="M10.5 12.5c2.5-1.6 5-1.6 8.5 0V19c-3.5-1.6-6-1.6-8.5 0z" fill="#ffba08"/>
+    </svg>
+    <span>start</span>
+  </button>
+
+  <div class="xp-grip" aria-hidden="true"></div>
+  <div class="xp-quicklaunch" aria-label="Quick Launch">
+    <button type="button" data-action="show-desktop" title="Show Desktop">🖥️</button>
+    <button type="button" data-open="about" title="Stupid Hackathon X">💾</button>
+    <button type="button" data-open="register" title="Registration">🎟️</button>
+  </div>
+  <div class="xp-grip" aria-hidden="true"></div>
+
+  <div class="xp-tasks" id="taskbar-windows"></div>
+
+  <div class="xp-tray" aria-label="Notification area">
+    <button type="button" class="xp-tray-chevron" title="Show hidden icons" data-action="tray-chevron" aria-label="Show hidden icons">
+      <svg viewBox="0 0 7 7" aria-hidden="true"><path d="M5 0.5 1.5 3.5 5 6.5" fill="none" stroke="#1d4bb0" stroke-width="1.6"/></svg>
+    </button>
+    <button type="button" class="xp-tray-icon" data-open="funding" title={`Funding goal ${fundingPercent}% reached`} id="tray-funding">💰</button>
+    <span class="xp-tray-icon hidden sm:inline-flex" title="Volume: stupid">🔊</span>
+    <span class="xp-tray-icon hidden sm:inline-flex" title="Connected: Cleverse Wi-Fi · 56.0 Kbps">📶</span>
+    <time id="clock" datetime="" title="">--:--</time>
+  </div>
+</nav>
+
+<div class="xp-balloon" id="balloon" hidden role="status">
+  <button type="button" class="absolute top-1.5 right-2 text-[10px] leading-none" data-action="close-balloon" aria-label="Close">✕</button>
+  <div class="font-bold mb-1">💰 Funding goal: {fundingPercent}% reached</div>
+  <div>shtX ยังเปิดรับสปอนเซอร์ คลิกเพื่อดูสถานะ funding และ tier ต่าง ๆ</div>
+</div>
+
+<div class="xp-contextmenu" id="contextmenu" hidden role="menu">
+  <button type="button" role="menuitem" data-action="ctx-arrange">Arrange Icons By ▸</button>
+  <button type="button" role="menuitem" data-action="ctx-refresh">Refresh</button>
+  <hr />
+  <button type="button" role="menuitem" data-open="register">Register…</button>
+  <button type="button" role="menuitem" data-open="funding">Sponsor…</button>
+  <hr />
+  <button type="button" role="menuitem" class="bold" data-open="about">Properties</button>
+</div>

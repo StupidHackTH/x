@@ -1,0 +1,36 @@
+---
+import Window from '../Window.astro';
+import { faq, codeOfConduct } from '../../data/event';
+---
+
+<Window id="faq" menu={['File', 'Edit', 'View', 'Help']} status="Help and Support Center" beige>
+  <div class="h-full flex flex-col">
+    <div class="bg-gradient-to-r from-[#1c5fd5] to-[#6fa4f2] text-white px-4 py-2 font-xp-title font-bold text-base">
+      ❓ Help and Support Center
+      <div class="text-[10px] font-normal opacity-90">Search results for: "stupid"</div>
+    </div>
+    <div class="p-3 overflow-auto flex flex-col gap-2 bg-white flex-1">
+      <h3 class="font-bold text-[12px] text-[#0046d5]">FAQ</h3>
+      {faq.map((item, i) => (
+        <details class="border border-[#d0d0bf] rounded" open={i === 0}>
+          <summary class="cursor-default px-2 py-1 bg-xp-beige font-bold text-[12px]">{item.q}</summary>
+          <p class="px-3 py-2 text-[12px] leading-relaxed">{item.a}</p>
+        </details>
+      ))}
+
+      <h3 class="font-bold text-[12px] text-[#0046d5] mt-3">CODE OF CONDUCT</h3>
+      <div class="grid sm:grid-cols-2 gap-2 text-[12px]">
+        <fieldset class="xp-groupbox mt-0">
+          <legend>✅ สนับสนุน</legend>
+          <ul class="list-disc pl-4">{codeOfConduct.encouraged.map((x) => <li>{x}</li>)}</ul>
+        </fieldset>
+        <fieldset class="xp-groupbox mt-0">
+          <legend>⛔ ห้าม</legend>
+          <ul class="list-disc pl-4">{codeOfConduct.prohibited.map((x) => <li>{x}</li>)}</ul>
+        </fieldset>
+      </div>
+      <p class="text-[11px] text-neutral-600">{codeOfConduct.note}</p>
+      <p class="text-[10px] text-neutral-500 mt-2">Was this information helpful? <a href="#">Yes</a> · <a href="#">Yes</a></p>
+    </div>
+  </div>
+</Window>

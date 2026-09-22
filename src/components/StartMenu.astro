@@ -1,0 +1,54 @@
+---
+import { windows } from '../data/windows';
+import { event } from '../data/event';
+const items = windows.filter((w) => w.id !== 'error');
+const left = items.slice(0, 5);
+const right = items.slice(5);
+---
+
+<div class="xp-startmenu" id="startmenu" hidden role="menu" aria-label="Start menu">
+  <div class="xp-startmenu-header">
+    <img src="/logo.png" alt="" />
+    <span>Stupid Hacker</span>
+  </div>
+  <div class="grid grid-cols-2">
+    <div class="bg-white py-2 border-r border-[#a9c3f3]">
+      {left.map((w) => (
+        <button type="button" class="xp-startmenu-item" role="menuitem" data-open={w.id}>
+          <span class="glyph" aria-hidden="true">{w.glyph}</span>
+          <span><b>{w.label}</b><br /><span class="text-[10px] text-neutral-500">{w.title}</span></span>
+        </button>
+      ))}
+      <div class="border-t border-[#d2d2d2] my-2"></div>
+      <a class="xp-startmenu-item" role="menuitem" href={event.links.sponsor}>
+        <span class="glyph" aria-hidden="true">💸</span>
+        <span><b>Become a sponsor</b><br /><span class="text-[10px] text-neutral-500">ทุก tier ลงท้ายด้วย .10</span></span>
+      </a>
+    </div>
+    <div class="bg-[#d3e5fa] py-2">
+      {right.map((w) => (
+        <button type="button" class="xp-startmenu-item" role="menuitem" data-open={w.id}>
+          <span class="glyph" aria-hidden="true">{w.glyph}</span>
+          <span>{w.label}</span>
+        </button>
+      ))}
+      <div class="border-t border-[#a9c3f3] my-2"></div>
+      <a class="xp-startmenu-item" role="menuitem" href={event.links.discord} target="_blank" rel="noopener">
+        <span class="glyph" aria-hidden="true">💬</span>
+        <span>Discord</span>
+      </a>
+      <a class="xp-startmenu-item" role="menuitem" href={event.links.website} target="_blank" rel="noopener">
+        <span class="glyph" aria-hidden="true">🌐</span>
+        <span>stupid.hackathon.in.th</span>
+      </a>
+      <a class="xp-startmenu-item" role="menuitem" href={event.links.facebook} target="_blank" rel="noopener">
+        <span class="glyph" aria-hidden="true">📘</span>
+        <span>Facebook</span>
+      </a>
+    </div>
+  </div>
+  <div class="xp-startmenu-footer">
+    <button type="button" class="flex items-center gap-1 hover:underline" data-action="logoff">🔒 Log Off</button>
+    <button type="button" class="flex items-center gap-1 hover:underline" data-action="shutdown">⏻ Turn Off Computer</button>
+  </div>
+</div>

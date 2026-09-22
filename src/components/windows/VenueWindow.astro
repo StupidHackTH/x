@@ -1,0 +1,42 @@
+---
+import Window from '../Window.astro';
+import { venue } from '../../data/event';
+---
+
+<Window id="venue" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={venue.area} beige>
+  <div class="h-full flex flex-col">
+    <div class="flex items-center gap-1 px-1 py-1 border-b border-[#fff] bg-xp-beige text-[11px]">
+      <span class="px-1">Address</span>
+      <div class="xp-sunken flex-1 px-1 py-0.5 truncate">🗺️ {venue.building}</div>
+      <a class="xp-btn min-w-0 px-2" href={venue.mapsUrl} target="_blank" rel="noopener">Maps</a>
+    </div>
+    <div class="p-4 bg-white flex-1 overflow-auto flex flex-col gap-3 text-[12px]">
+      <div>
+        <h2 class="font-xp-title font-bold text-lg text-[#0046d5]">VENUE · {venue.name}</h2>
+        <p class="leading-relaxed">
+          <b>{venue.building}</b> ({venue.buildingNote})<br />
+          จัดที่ {venue.zone}<br />
+          <span class="text-neutral-600">ใกล้: {venue.nearby}</span>
+        </p>
+        <p class="text-[11px] text-neutral-600 mt-1">📌 ใน Google Maps ค้นหา "{venue.mapsQuery}" ได้เลย</p>
+      </div>
+
+      <fieldset class="xp-groupbox">
+        <legend>การเดินทาง</legend>
+        <ul class="flex flex-col gap-2">
+          {venue.transit.map((t) => (
+            <li class="flex gap-2">
+              <span class="text-lg leading-none w-6 text-center" aria-hidden="true">{t.icon}</span>
+              <span><b>{t.label}:</b> {t.text}</span>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+
+      <div class="flex justify-end gap-2 mt-auto">
+        <a class="xp-btn default" href={venue.mapsUrl} target="_blank" rel="noopener">🗺️ เปิด Google Maps</a>
+        <button type="button" class="xp-btn" data-action="close">Close</button>
+      </div>
+    </div>
+  </div>
+</Window>

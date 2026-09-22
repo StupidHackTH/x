@@ -1,0 +1,76 @@
+---
+import Window from '../Window.astro';
+import { funding, fundingPercent, formatTHB, tiers } from '../../data/funding';
+import { event } from '../../data/event';
+const remaining = Math.max(0, funding.goal - funding.raised);
+const daysLeft = Math.max(0, Math.ceil((new Date(funding.deadline).getTime() - new Date(funding.updatedAt).getTime()) / 86_400_000));
+---
+
+<Window id="funding" status={`Last updated ${new Date(funding.updatedAt).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })}${funding.mock ? ' (ประมาณการ)' : ''}`} beige>
+  <div class="p-3 flex flex-col gap-3 h-full overflow-auto">
+    <div class="flex items-start gap-3">
+      <span class="text-4xl leading-none" aria-hidden="true">💰</span>
+      <div>
+        <div class="font-bold text-sm">Copying money to {event.codename}…</div>
+        <div class="text-[11px] text-neutral-600">From: Sponsors &nbsp;·&nbsp; To: Venue, อาหาร, ของรางวัล, สติกเกอร์</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="xp-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={fundingPercent} aria-label="Funding progress">
+        <div style={`width:${fundingPercent}%`}></div>
+      </div>
+      <div class="flex justify-between mt-1 text-[11px] tabular-nums">
+        <span><b>{formatTHB(funding.raised)}</b> of {formatTHB(funding.goal)}</span>
+        <span><b>{fundingPercent}%</b> · อีก {daysLeft} วันถึงวันงาน</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 text-center">
+      {[
+        ['Raised', formatTHB(funding.raised)],
+        ['Still needed', formatTHB(remaining)],
+        ['Sponsors', String(funding.backers)],
+      ].map(([label, value]) => (
+        <div class="xp-sunken p-2">
+          <div class="text-[10px] text-neutral-500 uppercase tracking-wide">{label}</div>
+          <div class="font-bold text-sm tabular-nums">{value}</div>
+        </div>
+      ))}
+    </div>
+
+    {funding.mock && (
+      <div class="text-[11px] bg-[#fff8dc] border border-[#e0c060] px-2 py-1">
+        ℹ️ ตัวเลขเป็นค่าประมาณการ จะอัปเดตเมื่อยอดสปอนเซอร์ได้รับการยืนยัน
+      </div>
+    )}
+
+    <fieldset class="xp-groupbox">
+      <legend>Sponsor tiers {event.year}</legend>
+      <table class="w-full text-[11px]">
+        <thead>
+          <tr class="text-left text-neutral-500">
+            <th class="font-normal pb-1">Tier</th>
+            <th class="font-normal pb-1">Amount</th>
+            <th class="font-normal pb-1"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {tiers.map((t) => (
+            <tr class="border-t border-[#e5e5dc]">
+              <td class="py-1 font-bold">{t.name}</td>
+              <td class="py-1 tabular-nums">{formatTHB(t.amount)}</td>
+              <td class="py-1 text-neutral-700">{t.blurb}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </fieldset>
+
+    <div class="flex justify-end gap-2 mt-auto">
+      <a class="xp-btn default" href={event.links.sponsor}>💸 Sponsor us</a>
+      <button type="button" class="xp-btn" data-open="sponsors">View sponsors</button>
+      <button type="button" class="xp-btn" data-action="close">Cancel</button>
+    </div>
+  </div>
+</Window>

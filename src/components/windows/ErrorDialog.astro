@@ -1,0 +1,16 @@
+---
+import Window from '../Window.astro';
+---
+
+<Window id="error" dialog beige>
+  <div class="p-4 flex flex-col gap-4 h-full">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl leading-none" aria-hidden="true">⚠️</span>
+      <p class="text-[12px]" id="error-text">ยังไม่เปิดลงทะเบียน</p>
+    </div>
+    <div class="flex justify-center gap-2 mt-auto">
+      <button type="button" class="xp-btn default" data-action="close">OK</button>
+      <button type="button" class="xp-btn" data-action="close">Also OK</button>
+    </div>
+  </div>
+</Window>

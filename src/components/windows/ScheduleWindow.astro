@@ -1,0 +1,26 @@
+---
+import Window from '../Window.astro';
+import { agenda, whatToBring, event } from '../../data/event';
+const line = (t: string, s: string) => `  ${t.padEnd(9)} ${s}`;
+const text =
+`AGENDA.TXT - ${event.name} (${event.codename})
+${'='.repeat(48)}
+วันที่  : ${event.dates}
+รูปแบบ : ${event.duration}
+เวลา   : ${event.time}
+
+; ตารางเวลาโดยประมาณ อาจเปลี่ยนแปลงได้
+
+` +
+agenda.map((d) => `[${d.day}]\n` + d.items.map((i) => line(i.time, i.title) + `\n            ; ${i.note}`).join('\n')).join('\n\n') +
+`
+
+[WHAT TO BRING]
+` + whatToBring.map((b) => `  [ ] ${b}`).join('\n') + `
+
+; ค้างคืนไม่บังคับ ถ้าไม่ค้างก็ไม่ต้องเอาถุงนอนมา`;
+---
+
+<Window id="schedule" menu={['File', 'Edit', 'Format', 'View', 'Help']} status="Ln 1, Col 1">
+  <pre class="font-mono text-[12px] p-2 whitespace-pre-wrap leading-relaxed">{text}</pre>
+</Window>

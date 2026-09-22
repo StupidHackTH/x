@@ -1,0 +1,193 @@
+---
+import { funding, fundingPercent, formatTHB } from '../data/funding';
+import { event } from '../data/event';
+---
+
+<div
+  id="boot"
+  class="boot"
+  data-goal={funding.goal}
+  data-raised={funding.raised}
+  data-percent={fundingPercent}
+  aria-live="polite"
+>
+  <!-- 640x480 stage, scaled to fit the viewport (1 unit = 1 reference pixel) -->
+  <div class="boot-stage">
+    <div class="boot-group">
+      <img src="/logo-transparent.png" alt={`${event.name} logo`} class="boot-logo" />
+      <div class="boot-brand">{event.organizer}<sup>®</sup></div>
+      <div class="boot-title">Stupid Hackathon<sup>®</sup><span class="boot-x">X</span></div>
+      <div class="boot-edition">X Edition</div>
+    </div>
+
+    <div class="boot-bar xp-bootbar" aria-hidden="true"><div></div></div>
+    <div
+      class="boot-funding"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      aria-label="Funding goal progress"
+      id="boot-progress"
+    >
+      <span id="boot-status">Loading funding goal status…</span>
+      <span id="boot-pct">0%</span>
+      <span class="dim">(<span id="boot-raised">฿0</span> of {formatTHB(funding.goal)})</span>
+    </div>
+  </div>
+
+  <div class="boot-copyright">Copyright © {event.organizer}</div>
+  <img src="/creatorsgarten.png" alt="Creatorsgarten" class="boot-cg" />
+  <div class="boot-skip">press any key to skip</div>
+</div>
+
+<div id="welcome" class="xp-welcome" hidden aria-hidden="true">
+  <span>welcome</span>
+</div>
+
+<style>
+  .boot {
+    /* one reference pixel of the 640x480 XP boot screen, scaled to the viewport */
+    --u: min(calc(100vw / 640), calc(100vh / 480));
+    --u: min(calc(100dvw / 640), calc(100dvh / 480));
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+    user-select: none;
+    cursor: pointer;
+    font-family: "Franklin Gothic Medium", "Franklin Gothic", "Libre Franklin", "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+    line-height: 1;
+  }
+  .boot-stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(640 * var(--u));
+    height: calc(480 * var(--u));
+    transform: translate(-50%, -50%);
+  }
+  .boot-group,
+  .boot-bar,
+  .boot-funding {
+    position: absolute;
+    white-space: nowrap;
+  }
+  /* Logo + wordmark group, centred on the stage as one unit */
+  .boot-group {
+    left: 50%;
+    top: calc(118 * var(--u));
+    transform: translateX(-50%);
+    width: max-content;
+    padding-top: calc(112 * var(--u));
+  }
+  .boot-brand,
+  .boot-title,
+  .boot-edition {
+    position: relative;
+    white-space: nowrap;
+  }
+  .boot-group > .boot-logo {
+    position: absolute;
+    right: calc(-6 * var(--u));
+    top: calc(-14 * var(--u));
+    width: calc(160 * var(--u));
+    object-fit: contain;
+  }
+  .boot-brand {
+    font-size: calc(16 * var(--u));
+    letter-spacing: -0.01em;
+    margin-bottom: calc(3 * var(--u));
+  }
+  .boot-brand sup,
+  .boot-title sup {
+    font-size: 0.42em;
+    vertical-align: top;
+    margin-left: 0.1em;
+  }
+  .boot-title {
+    font-size: calc(48 * var(--u));
+    font-weight: 600;
+    letter-spacing: -0.035em;
+  }
+  .boot-x {
+    color: #ff8c00;
+    font-size: 0.68em;
+    vertical-align: top;
+    margin-left: 0.05em;
+    position: relative;
+    top: -0.12em;
+  }
+  .boot-edition {
+    padding-left: calc(10 * var(--u));
+    margin-top: calc(4 * var(--u));
+    font-size: calc(24 * var(--u));
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .boot-bar {
+    left: 50%;
+    top: calc(351 * var(--u));
+    transform: translateX(-50%);
+    width: calc(128 * var(--u));
+    height: calc(14 * var(--u));
+    border-radius: calc(4 * var(--u));
+  }
+  .boot-bar > div {
+    top: calc(2 * var(--u));
+    height: calc(9 * var(--u));
+    width: calc(27 * var(--u));
+    background: repeating-linear-gradient(90deg, #2c58e0 0 calc(7 * var(--u)), transparent calc(7 * var(--u)) calc(9 * var(--u)));
+    animation: boot-slide 1.4s linear infinite;
+  }
+  @keyframes boot-slide {
+    from { transform: translateX(calc(-30 * var(--u))); }
+    to { transform: translateX(calc(130 * var(--u))); }
+  }
+  .boot-funding {
+    left: 50%;
+    top: calc(376 * var(--u));
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.4em;
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: calc(11 * var(--u));
+    color: #8a8a8a;
+    font-variant-numeric: tabular-nums;
+  }
+  .boot-funding .dim { color: #5a5a5a; }
+
+  .boot-copyright,
+  .boot-cg,
+  .boot-skip {
+    position: absolute;
+    bottom: calc(18 * var(--u));
+  }
+  .boot-copyright {
+    left: calc(20 * var(--u));
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: calc(14 * var(--u));
+    color: #e6e6e6;
+  }
+  .boot-cg {
+    right: calc(30 * var(--u));
+    height: calc(30 * var(--u));
+    object-fit: contain;
+  }
+  .boot-skip {
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: calc(10 * var(--u));
+    color: #3a3a3a;
+  }
+  /* Phones: the stage is narrow, so keep footer text readable */
+  @media (max-width: 480px) {
+    .boot-copyright { font-size: 11px; }
+    .boot-cg { height: 22px; }
+    .boot-skip { display: none; }
+    .boot-funding { font-size: 10px; }
+  }
+</style>

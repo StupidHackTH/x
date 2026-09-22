@@ -1,0 +1,42 @@
+---
+import Window from '../Window.astro';
+import { event, venue } from '../../data/event';
+---
+
+<Window id="about" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status="Done" beige>
+  <div class="flex flex-col md:flex-row h-full">
+    <div class="md:w-44 shrink-0 bg-gradient-to-b from-[#7ba2e7] to-[#6375d6] text-white p-3 flex flex-col items-center gap-3">
+      <img src="/logo-transparent.png" alt="" class="w-32 object-contain drop-shadow-md" />
+      <div class="text-center">
+        <div class="font-xp-title font-bold text-lg leading-tight">Stupid Hackathon X</div>
+        <div class="text-[11px] opacity-90">{event.nameTh} · {event.codename}</div>
+      </div>
+      <div class="text-[10px] opacity-90 text-center mt-auto leading-relaxed">
+        จัดโดย {event.organizer}<br />ตั้งแต่ปี {event.since}
+      </div>
+    </div>
+    <div class="flex-1 p-4 bg-white overflow-auto">
+      <h1 class="font-xp-title font-bold text-xl text-[#0046d5] mb-1">WHAT IS STUPID HACK</h1>
+      <p class="text-[13px] mb-3 italic">{event.tagline}</p>
+      {event.about.map((p) => <p class="mb-3 leading-relaxed">{p}</p>)}
+      <table class="text-[12px] mb-4">
+        <tbody>
+          <tr><td class="pr-4 text-neutral-500 align-top">วันที่</td><td>{event.dates}<br /><span class="text-neutral-500">{event.duration}</span></td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">เวลา</td><td>⏳ {event.time}</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">สถานที่</td><td>{venue.name} · {venue.building} ({venue.area})</td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">ธีม</td><td>{event.theme}<br /><span class="text-neutral-500">{event.themeNote}</span></td></tr>
+          <tr><td class="pr-4 text-neutral-500 align-top">ค่าใช้จ่าย</td><td>{event.registration.price} · รับ ~{event.capacity} คน</td></tr>
+        </tbody>
+      </table>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="xp-btn default" data-open="register">🎟️ ลงทะเบียน</button>
+        <button type="button" class="xp-btn" data-open="venue">🗺️ Venue</button>
+        <button type="button" class="xp-btn" data-open="schedule">📅 Agenda</button>
+        <button type="button" class="xp-btn" data-open="funding">💰 Funding</button>
+      </div>
+      <p class="text-[10px] text-neutral-500 mt-4">
+        ดูงานครั้งที่แล้วได้ที่ <a href={event.links.previous} target="_blank" rel="noopener">stupid.hackathon.in.th/9</a>
+      </p>
+    </div>
+  </div>
+</Window>

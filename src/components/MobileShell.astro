@@ -1,0 +1,122 @@
+---
+// iPhone 4 / iOS 4 style shell, shown only on small screens (see global.css).
+import { windows } from '../data/windows';
+import { event } from '../data/event';
+import { funding, fundingPercent, formatTHB } from '../data/funding';
+const eventStart = '2026-10-10T00:00:00+07:00';
+const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
+
+const tiles: Record<string, { bg: string; glyph?: string }> = {
+  about: { bg: 'linear-gradient(180deg,#6fb6ff,#1d5fd6)' },
+  register: { bg: 'linear-gradient(180deg,#7ee07a,#1e8f2a)' },
+  schedule: { bg: '#fff' },
+  venue: { bg: 'linear-gradient(180deg,#9fd8ff 0%,#5aa9e6 55%,#7cc46b 56%,#4a9a3c 100%)', glyph: '📍' },
+  funding: { bg: 'linear-gradient(180deg,#ffe27a,#d99a00)' },
+  sponsors: { bg: 'linear-gradient(180deg,#ffb37a,#d9581a)' },
+  staff: { bg: 'linear-gradient(180deg,#c9b39a,#7d5b3c)' },
+  faq: { bg: 'linear-gradient(180deg,#8fb8ff,#2b5fc4)' },
+  recycle: { bg: 'linear-gradient(180deg,#d9d9d9,#7a7a7a)' },
+};
+const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
+const gridIds = ['about', 'schedule', 'venue', 'sponsors', 'staff', 'faq', 'recycle'];
+const dockIds = ['register', 'funding'];
+const eventDay = 10;
+---
+
+<div class="ios-only">
+  <div class="ios-statusbar" aria-hidden="true">
+    <span class="flex items-center">
+      <span class="bars"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i><i style="height:9px;opacity:.35"></i></span>
+      {event.codename}
+    </span>
+    <time id="ios-clock">9:41 AM</time>
+    <span class="battery"><span><i></i></span><span></span></span>
+  </div>
+
+  <div class="ios-lock ios-wallpaper" id="ios-lock" hidden>
+    <div class="ios-lock-clock">
+      <div class="time" id="ios-lock-time">9:41</div>
+      <div class="date" id="ios-lock-date">Saturday, October 10</div>
+    </div>
+    <div class="ios-lock-middle">
+      <img src="/logo-transparent.png" alt={`${event.name} logo`} />
+      <div class="note">
+        <b>{event.name}</b> · {event.datesEn}<br />
+        💰 Funding goal {fundingPercent}% reached
+      </div>
+    </div>
+    <div class="ios-lock-bottom">
+      <div class="ios-slider" id="ios-slider" role="button" aria-label="Slide to unlock" tabindex="0">
+        <div class="label">slide to unlock</div>
+        <div class="knob" id="ios-knob" aria-hidden="true">
+          <svg viewBox="0 0 20 20"><path d="M6 3l8 7-8 7" fill="none" stroke="#6b6b6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ios-home ios-wallpaper" id="ios-home">
+    <div class="ios-grid" role="list">
+      {gridIds.map((id) => {
+        const w = byId[id];
+        const t = tiles[id];
+        return (
+          <button type="button" class="ios-app-icon" data-open={id} role="listitem">
+            {id === 'schedule' ? (
+              <span class="tile calendar"><b>Oct</b><span>{eventDay}</span></span>
+            ) : (
+              <span class="tile" style={`background:${t.bg}`}><span>{t.glyph ?? w.glyph}</span></span>
+            )}
+            <span class="name">{w.label}</span>
+          </button>
+        );
+      })}
+      <a class="ios-app-icon" href={event.links.website} target="_blank" rel="noopener" role="listitem">
+        <span class="tile" style="background:linear-gradient(180deg,#7fd0ff,#1a7bd8)"><span>🧭</span></span>
+        <span class="name">Website</span>
+      </a>
+    </div>
+    <div class="ios-widgets">
+      <button type="button" class="ios-widget" data-open="funding" aria-label="Funding goal widget">
+        <div class="widget-head"><span>💰 Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
+        <div class="widget-bar"><div style={`width:${fundingPercent}%`}></div></div>
+        <div class="widget-foot">{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · {funding.backers} sponsors</div>
+      </button>
+      <button type="button" class="ios-widget countdown" data-open="schedule" data-countdown={eventStart} aria-label="Event countdown widget">
+        <div class="days">{daysToGo}</div>
+        <div class="unit">days to go</div>
+        <div class="when">Sat 10 – Sun 11 Oct · Cleverse</div>
+      </button>
+    </div>
+    <div class="ios-dots" aria-hidden="true"><i class="search"></i><i class="active"></i><i></i></div>
+    <div class="ios-dock">
+      {dockIds.map((id) => {
+        const w = byId[id];
+        const t = tiles[id];
+        return (
+          <button type="button" class="ios-app-icon" data-open={id}>
+            <span class="tile" style={`background:${t.bg}`}><span>{w.glyph}</span></span>
+            {id === 'funding' && <span class="badge">{fundingPercent}%</span>}
+            <span class="name">{w.label}</span>
+          </button>
+        );
+      })}
+      <a class="ios-app-icon" href={event.links.facebook} target="_blank" rel="noopener">
+        <span class="tile" style="background:linear-gradient(180deg,#6d8fd6,#2d4a8f)"><span class="font-bold text-white text-3xl" style="font-family:Helvetica,Arial,sans-serif">f</span></span>
+        <span class="name">Facebook</span>
+      </a>
+      <a class="ios-app-icon" href={event.links.discord} target="_blank" rel="noopener">
+        <span class="tile" style="background:linear-gradient(180deg,#8ea1ff,#4752c4)"><span>💬</span></span>
+        <span class="name">Discord</span>
+      </a>
+    </div>
+  </div>
+
+  <nav class="ios-tabbar" aria-label="App tabs">
+    <button type="button" data-action="ios-home"><span class="tab-icon">🏠</span><span>Home</span></button>
+    <button type="button" data-open="register" data-tab="register"><span class="tab-icon">🎟️</span><span>Register</span></button>
+    <button type="button" data-open="venue" data-tab="venue"><span class="tab-icon">🗺️</span><span>Venue</span></button>
+    <button type="button" data-open="funding" data-tab="funding"><span class="tab-icon">💰</span><span>Funding</span></button>
+    <button type="button" data-open="faq" data-tab="faq"><span class="tab-icon">❓</span><span>FAQ</span></button>
+  </nav>
+</div>

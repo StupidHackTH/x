@@ -1,0 +1,62 @@
+---
+import { byId } from '../data/windows';
+
+interface Props {
+  id: string;
+  menu?: string[];
+  status?: string;
+  beige?: boolean;
+  dialog?: boolean;
+  class?: string;
+}
+const { id, menu = [], status, beige = false, dialog = false, class: className } = Astro.props;
+const def = byId[id];
+if (!def) throw new Error(`Unknown window id: ${id}`);
+---
+
+<section
+  class:list={['xp-window', className]}
+  id={`win-${id}`}
+  data-window={id}
+  data-title={def.title}
+  data-glyph={def.glyph}
+  data-inactive
+  hidden={!def.open}
+  role={dialog ? 'alertdialog' : 'dialog'}
+  aria-labelledby={`win-${id}-title`}
+  style={`left:${def.x}px;top:${def.y}px;width:${def.w}px;height:${def.h}px;`}
+>
+  <header class="xp-titlebar" data-drag-handle>
+    <span class="xp-title-icon" aria-hidden="true">{def.glyph}</span>
+    <span class="xp-title-text" id={`win-${id}-title`}>{def.title}</span>
+    {!dialog && (
+      <>
+        <button class="xp-title-btn" data-action="minimize" title="Minimize" aria-label="Minimize">
+          <svg viewBox="0 0 11 11" aria-hidden="true"><rect x="2" y="8" width="6" height="2" fill="#fff"/></svg>
+        </button>
+        <button class="xp-title-btn" data-action="maximize" title="Maximize" aria-label="Maximize">
+          <svg viewBox="0 0 11 11" aria-hidden="true"><path d="M1.5 1.5h8v8h-8z" fill="none" stroke="#fff" stroke-width="1"/><rect x="1" y="1" width="9" height="2.5" fill="#fff"/></svg>
+        </button>
+      </>
+    )}
+    <button class="xp-title-btn close" data-action="close" title="Close" aria-label="Close">
+      <svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="#fff" stroke-width="2" stroke-linecap="square"/></svg>
+      <span class="ios-back-label">Home</span>
+    </button>
+  </header>
+  {menu.length > 0 && (
+    <nav class="xp-menubar" aria-label="Window menu">
+      {menu.map((m) => <button type="button"><u>{m[0]}</u>{m.slice(1)}</button>)}
+    </nav>
+  )}
+  <div class:list={['xp-window-body', { beige }]}>
+    <slot />
+  </div>
+  {status && (
+    <footer class="xp-statusbar">
+      <div>{status}</div>
+      <div>🖥️ My Computer</div>
+    </footer>
+  )}
+  {!dialog && ['n', 's', 'e', 'w', 'ne', 'nw', 'sw', 'se'].map((d) => <div class="xp-resize" data-resize={d} aria-hidden="true"></div>)}
+</section>

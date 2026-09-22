@@ -1,0 +1,48 @@
+---
+import Window from '../Window.astro';
+import { funding, tierOrder } from '../../data/funding';
+import { event } from '../../data/event';
+const sorted = [...funding.sponsors].sort((a, b) => Number(!!a.pending) - Number(!!b.pending) || tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier));
+const tierColor: Record<string, string> = {
+  Venue: 'bg-[#b5e3ff]',
+  System32: 'bg-[#1e3a8a] text-white',
+  'Full Screen': 'bg-[#e5e4e2]',
+  'Normal Mode': 'bg-[#ffd700]',
+  'Safe Mode': 'bg-[#c0c0c0]',
+  Corporate: 'bg-[#cde7c1]',
+  Partner: 'bg-[#ffe4b5]',
+  Individual: 'bg-[#f5e0ff]',
+};
+---
+
+<Window id="sponsors" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={`${funding.sponsors.length} objects`}>
+  <div class="p-2">
+    <div class="bg-[#eef3fb] border border-[#bcd0ec] p-2 mb-2 text-[11px]">
+      ขอบคุณสปอนเซอร์ทุกท่านที่ทำให้งานฟรีสำหรับผู้เข้าร่วม 🙏 อยากมีชื่ออยู่ตรงนี้ → ดู tier ในหน้าต่าง Funding Goal
+    </div>
+    <table class="w-full text-[12px]">
+      <thead>
+        <tr class="text-left bg-xp-beige border-b border-[#919b9c]">
+          <th class="font-normal px-2 py-1 border-r border-[#d8d2bd]">Name</th>
+          <th class="font-normal px-2 py-1 border-r border-[#d8d2bd]">Tier</th>
+          <th class="font-normal px-2 py-1">Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((s) => (
+          <tr class:list={['hover:bg-[#316ac5] hover:text-white', { 'text-neutral-400': s.pending }]}>
+            <td class="px-2 py-1">
+              🏢 {s.url ? <a href={s.url} target="_blank" rel="noopener" class="text-inherit">{s.name}</a> : s.name}
+            </td>
+            <td class="px-2 py-1"><span class:list={['px-1.5 rounded-sm text-[10px] text-black', tierColor[s.tier]]}>{s.tier}</span></td>
+            <td class="px-2 py-1 text-[11px]">{s.tier === 'Venue' ? 'สถานที่' : s.tier === 'Individual' ? 'บุคคล' : 'องค์กร'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <div class="mt-3 flex justify-end gap-2">
+      <button type="button" class="xp-btn" data-open="funding">Sponsor tiers</button>
+      <a class="xp-btn default" href={event.links.sponsor}>Add your name here</a>
+    </div>
+  </div>
+</Window>

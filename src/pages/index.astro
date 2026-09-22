@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BootScreen from '../components/BootScreen.astro';
+import DesktopIcons from '../components/DesktopIcons.astro';
+import Taskbar from '../components/Taskbar.astro';
+import StartMenu from '../components/StartMenu.astro';
+import AboutWindow from '../components/windows/AboutWindow.astro';
+import FundingWindow from '../components/windows/FundingWindow.astro';
+import ScheduleWindow from '../components/windows/ScheduleWindow.astro';
+import SponsorsWindow from '../components/windows/SponsorsWindow.astro';
+import FaqWindow from '../components/windows/FaqWindow.astro';
+import RegisterWindow from '../components/windows/RegisterWindow.astro';
+import RecycleWindow from '../components/windows/RecycleWindow.astro';
+import VenueWindow from '../components/windows/VenueWindow.astro';
+import StaffWindow from '../components/windows/StaffWindow.astro';
+import ErrorDialog from '../components/windows/ErrorDialog.astro';
+import MobileShell from '../components/MobileShell.astro';
+---
+
+<Layout>
+  <BootScreen />
+
+  <main class="xp-wallpaper relative w-full h-screen overflow-hidden" id="desktop">
+    <DesktopIcons />
+
+    <div class="md:contents" id="windows">
+      <AboutWindow />
+      <FundingWindow />
+      <ScheduleWindow />
+      <SponsorsWindow />
+      <FaqWindow />
+      <RegisterWindow />
+      <VenueWindow />
+      <StaffWindow />
+      <RecycleWindow />
+      <ErrorDialog />
+    </div>
+
+    <StartMenu />
+    <Taskbar />
+    <MobileShell />
+  </main>
+
+  <script src="../scripts/desktop.ts"></script>
+</Layout>

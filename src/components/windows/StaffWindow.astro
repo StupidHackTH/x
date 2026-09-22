@@ -1,0 +1,22 @@
+---
+import Window from '../Window.astro';
+import { staff } from '../../data/event';
+---
+
+<Window id="staff" menu={['File', 'Edit', 'View', 'Help']} status={`${staff.length} users`}>
+  <div class="p-2">
+    <h2 class="font-xp-title font-bold text-base text-[#0046d5] mb-1">EVENT STAFF · ทีมงานแห่งความเพี้ยน 🎭</h2>
+    <p class="text-[11px] text-neutral-600 mb-2">User Accounts — pick an account to blame.</p>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-1">
+      {staff.map((s) => (
+        <li class="flex items-center gap-2 p-1.5 border border-transparent hover:bg-[#316ac5] hover:text-white rounded-sm">
+          <span class="w-9 h-9 flex items-center justify-center bg-gradient-to-b from-[#a4c8f0] to-[#5a8fd8] border border-white rounded text-lg" aria-hidden="true">👤</span>
+          <span class="text-[12px] leading-tight">
+            <b>{s.name}</b> <span class="opacity-70">@{s.handle}</span><br />
+            <span class="text-[11px]">{s.role}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Window>
