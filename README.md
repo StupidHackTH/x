@@ -76,7 +76,7 @@ Both shells share the boot screen and the same window manager in `src/scripts/de
 - Shutter click and record beeps are generated with WebAudio (no files); Android phones also vibrate on the shutter.
 - Save downloads the file; on iPhone and iPad it opens the share sheet instead, whose "Save Image/Video" stores it in Photos (a plain download would land in Files, and Safari ignores download links to data: URLs, so files are blob URLs). Clips stop automatically after one minute.
 - The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press the start button again to resume.
-- Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480).
+- Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480, or 960×720 once the window is wider than 900px, for example maximized). The preview, review media and effect tiles are sized by script to the largest box of their true aspect ratio that fits, so nothing is ever stretched, whatever the window shape or browser.
 
 ## URL parameters
 
