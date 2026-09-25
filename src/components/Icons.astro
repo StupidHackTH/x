@@ -1,0 +1,135 @@
+---
+// Vector icon sprite shared by every shell (XP desktop, Mac Dock, iPhone tiles, Android launcher, windows).
+// Use <Icon name="…" /> (Icon.astro) or <svg class="icon"><use href="#i-…" /></svg>. All symbols are 64×64.
+---
+
+<!-- Not display:none: browsers then refuse to use the gradients and patterns defined inside -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="ig-gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75" /><stop offset=".5" stop-color="#fff" stop-opacity=".2" /><stop offset=".51" stop-color="#fff" stop-opacity="0" /></linearGradient>
+    <linearGradient id="ig-blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fbdff" /><stop offset="1" stop-color="#1656c9" /></linearGradient>
+    <linearGradient id="ig-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ff07a" /><stop offset="1" stop-color="#2f9a2a" /></linearGradient>
+    <linearGradient id="ig-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8f7f" /><stop offset="1" stop-color="#cf2a18" /></linearGradient>
+    <linearGradient id="ig-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a" /><stop offset="1" stop-color="#d8930a" /></linearGradient>
+    <linearGradient id="ig-gray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f7f7" /><stop offset="1" stop-color="#a9adb5" /></linearGradient>
+    <linearGradient id="ig-dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7180" /><stop offset="1" stop-color="#1f232b" /></linearGradient>
+    <linearGradient id="ig-pink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa6bd" /><stop offset="1" stop-color="#d9366a" /></linearGradient>
+    <linearGradient id="ig-purple" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#aeb2ff" /><stop offset="1" stop-color="#5359d1" /></linearGradient>
+    <linearGradient id="ig-cyan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8ecff" /><stop offset="1" stop-color="#1580cf" /></linearGradient>
+    <linearGradient id="ig-fb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d8ad6" /><stop offset="1" stop-color="#2f4a8c" /></linearGradient>
+    <radialGradient id="ig-lens" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#8fd3ff" /><stop offset=".45" stop-color="#1c3f6a" /><stop offset="1" stop-color="#000" /></radialGradient>
+    <radialGradient id="ig-screen" cx=".5" cy=".2" r="1"><stop offset="0" stop-color="#8cc4ff" /><stop offset="1" stop-color="#1544a8" /></radialGradient>
+    <pattern id="ig-mesh" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 4L4 0M-1 1l2-2M3 5l2-2" stroke="#6d7178" stroke-width=".8" /></pattern>
+  </defs>
+
+  <!-- About: a computer -->
+  <symbol id="i-about" viewBox="0 0 64 64">
+    <rect x="7" y="7" width="50" height="36" rx="4" fill="url(#ig-gray)" stroke="#6d7178" />
+    <rect x="11" y="11" width="42" height="27" rx="2" fill="url(#ig-screen)" />
+    <path d="M11 11h42v10c-12 4-30 4-42 0z" fill="url(#ig-gloss)" />
+    <rect x="27" y="43" width="10" height="6" fill="#8a8f98" />
+    <rect x="17" y="49" width="30" height="6" rx="3" fill="url(#ig-dark)" />
+  </symbol>
+  <!-- Register: an admit-one ticket -->
+  <symbol id="i-register" viewBox="0 0 64 64">
+    <path d="M6 20a4 4 0 0 1 4-4h44a4 4 0 0 1 4 4v6a6 6 0 0 0 0 12v6a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4v-6a6 6 0 0 0 0-12z" fill="url(#ig-pink)" stroke="#a8244f" />
+    <path d="M44 18v28" stroke="#fff" stroke-width="1.5" stroke-dasharray="2 3" />
+    <path d="M24 22l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#fff" />
+    <path d="M6 20a4 4 0 0 1 4-4h44a4 4 0 0 1 4 4v8H6z" fill="url(#ig-gloss)" />
+  </symbol>
+  <!-- Agenda: a calendar page -->
+  <symbol id="i-schedule" viewBox="0 0 64 64">
+    <rect x="9" y="10" width="46" height="46" rx="5" fill="#fff" stroke="#9aa0a8" />
+    <path d="M9 15a5 5 0 0 1 5-5h36a5 5 0 0 1 5 5v10H9z" fill="url(#ig-red)" />
+    <rect x="18" y="6" width="4" height="10" rx="2" fill="#555" /><rect x="42" y="6" width="4" height="10" rx="2" fill="#555" />
+    <text x="32" y="49" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="24" fill="#333">10</text>
+  </symbol>
+  <!-- Venue: a folded map with a pin -->
+  <symbol id="i-venue" viewBox="0 0 64 64">
+    <path d="M8 16l16-6 16 6 16-6v38l-16 6-16-6-16 6z" fill="url(#ig-green)" stroke="#2a6f1d" />
+    <path d="M24 10v38M40 16v38" stroke="#2a6f1d" stroke-opacity=".6" />
+    <path d="M12 36c8-6 14 2 22-4s10-8 16-6" fill="none" stroke="#5aa9ff" stroke-width="3" />
+    <path d="M40 8a9 9 0 0 1 9 9c0 7-9 17-9 17s-9-10-9-17a9 9 0 0 1 9-9z" fill="url(#ig-red)" stroke="#8f1a0e" />
+    <circle cx="40" cy="17" r="3.5" fill="#fff" />
+  </symbol>
+  <!-- Funding: a money bag -->
+  <symbol id="i-funding" viewBox="0 0 64 64">
+    <path d="M26 12h12l-4 8h-4z" fill="#a86f00" />
+    <path d="M22 20h20c10 8 14 16 14 24 0 8-8 12-24 12S8 52 8 44c0-8 4-16 14-24z" fill="url(#ig-gold)" stroke="#a86f00" />
+    <path d="M22 20h20c4 3 7 6 9 10H13c2-4 5-7 9-10z" fill="url(#ig-gloss)" />
+    <text x="32" y="50" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="22" fill="#fff" stroke="#8a5a00" stroke-width=".8">฿</text>
+  </symbol>
+  <!-- Sponsors: a medal on a ribbon -->
+  <symbol id="i-sponsors" viewBox="0 0 64 64">
+    <path d="M20 4h10l4 22-10 6z" fill="#2f5fc4" /><path d="M44 4H34l-4 22 10 6z" fill="#1c3f8f" />
+    <circle cx="32" cy="42" r="16" fill="url(#ig-gold)" stroke="#b8860b" stroke-width="1.5" />
+    <circle cx="32" cy="42" r="11" fill="none" stroke="#fff" stroke-opacity=".6" />
+    <path d="M32 33l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2-4.5-4.4 6.2-.9z" fill="#fff" />
+  </symbol>
+  <!-- Staff: two people -->
+  <symbol id="i-staff" viewBox="0 0 64 64">
+    <circle cx="42" cy="20" r="8" fill="url(#ig-dark)" />
+    <path d="M28 56v-12c0-8 6-12 14-12s14 4 14 12v12z" fill="url(#ig-dark)" />
+    <circle cx="23" cy="22" r="9" fill="url(#ig-blue)" stroke="#0f3f8f" />
+    <path d="M6 58V44c0-9 7-13 17-13s17 4 17 13v14z" fill="url(#ig-blue)" stroke="#0f3f8f" />
+  </symbol>
+  <!-- FAQ: help book -->
+  <symbol id="i-faq" viewBox="0 0 64 64">
+    <rect x="12" y="8" width="42" height="48" rx="3" fill="url(#ig-blue)" stroke="#0f3f8f" />
+    <rect x="12" y="8" width="7" height="48" rx="2" fill="#0f3f8f" />
+    <path d="M19 8h35v14c-12 4-23 4-35 0z" fill="url(#ig-gloss)" />
+    <text x="37" y="45" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="32" fill="#fff">?</text>
+  </symbol>
+  <!-- Camera -->
+  <symbol id="i-camera" viewBox="0 0 64 64">
+    <rect x="21" y="12" width="16" height="8" rx="2" fill="#7d8391" />
+    <rect x="5" y="18" width="54" height="36" rx="7" fill="url(#ig-gray)" stroke="#5b606a" />
+    <rect x="5" y="18" width="54" height="10" rx="7" fill="url(#ig-dark)" />
+    <circle cx="32" cy="37" r="13" fill="#1a1d22" stroke="#4a4f58" stroke-width="2" />
+    <circle cx="32" cy="37" r="9" fill="url(#ig-lens)" />
+    <circle cx="28" cy="33" r="2.5" fill="#fff" fill-opacity=".8" />
+    <rect x="46" y="21" width="8" height="4" rx="1" fill="#fff6c4" />
+  </symbol>
+  <!-- Recycle Bin: wire mesh basket -->
+  <symbol id="i-recycle" viewBox="0 0 64 64">
+    <path d="M14 16h36l-4 40H18z" fill="url(#ig-gray)" stroke="#5b606a" />
+    <path d="M14 16h36l-4 40H18z" fill="url(#ig-mesh)" />
+    <ellipse cx="32" cy="16" rx="18" ry="4" fill="#d7dae0" stroke="#5b606a" />
+    <path d="M22 12c4-4 10-4 12 0 3-3 8-2 8 2H20c0-1 1-2 2-2z" fill="#f4f4f4" stroke="#999" />
+  </symbol>
+  <!-- Website: globe -->
+  <symbol id="i-website" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="25" fill="url(#ig-cyan)" stroke="#0c5a9a" />
+    <path d="M7 32h50M32 7c-9 8-9 42 0 50M32 7c9 8 9 42 0 50M12 18c12 4 28 4 40 0M12 46c12-4 28-4 40 0" fill="none" stroke="#fff" stroke-opacity=".7" />
+    <path d="M9 32a23 23 0 0 1 46 0c-12-6-34-6-46 0z" fill="url(#ig-gloss)" />
+  </symbol>
+  <!-- Facebook -->
+  <symbol id="i-facebook" viewBox="0 0 64 64">
+    <rect x="6" y="6" width="52" height="52" rx="10" fill="url(#ig-fb)" stroke="#1f3468" />
+    <path d="M36 58V36h7l1-8h-8v-5c0-2 1-4 4-4h4v-7c-1 0-4-1-7-1-7 0-11 4-11 11v6h-7v8h7v22z" fill="#fff" />
+    <path d="M6 16a10 10 0 0 1 10-10h32a10 10 0 0 1 10 10v10c-16 5-36 5-52 0z" fill="url(#ig-gloss)" />
+  </symbol>
+  <!-- Discord: a chat bubble -->
+  <symbol id="i-discord" viewBox="0 0 64 64">
+    <rect x="6" y="6" width="52" height="52" rx="10" fill="url(#ig-purple)" stroke="#33378f" />
+    <path d="M32 16c11 0 19 6 19 14s-8 14-19 14c-2 0-4 0-6-1l-8 5 2-8c-4-3-6-6-6-10 0-8 8-14 18-14z" fill="#fff" />
+    <circle cx="25" cy="30" r="3" fill="#5359d1" /><circle cx="39" cy="30" r="3" fill="#5359d1" />
+    <path d="M6 16a10 10 0 0 1 10-10h32a10 10 0 0 1 10 10v10c-16 5-36 5-52 0z" fill="url(#ig-gloss)" />
+  </symbol>
+  <!-- Warning -->
+  <symbol id="i-warning" viewBox="0 0 64 64">
+    <path d="M32 6l28 50H4z" fill="url(#ig-gold)" stroke="#a86f00" stroke-linejoin="round" />
+    <path d="M32 22v18M32 46v5" stroke="#3a2a00" stroke-width="6" stroke-linecap="round" />
+  </symbol>
+  <!-- Small monochrome glyphs for status bars, tab bars and toolbars (currentColor) -->
+  <symbol id="i-home" viewBox="0 0 64 64"><path d="M32 8l26 24h-8v24H38V40H26v16H14V32H6z" fill="currentColor" /></symbol>
+  <symbol id="i-wifi" viewBox="0 0 64 64"><path d="M32 50a5 5 0 1 1 0 .1zM18 38a20 20 0 0 1 28 0l-5 5a13 13 0 0 0-18 0zM8 28a34 34 0 0 1 48 0l-5 5a27 27 0 0 0-38 0z" fill="currentColor" /></symbol>
+  <symbol id="i-speaker" viewBox="0 0 64 64"><path d="M8 24v16h10l14 12V12L18 24zm34 8a10 10 0 0 0-6-9v18a10 10 0 0 0 6-9zm-6-20v5a15 15 0 0 1 0 30v5a20 20 0 0 0 0-40z" fill="currentColor" /></symbol>
+  <symbol id="i-battery" viewBox="0 0 64 64"><path d="M6 20h44v24H6zm2 2v20h40V22zm3 3h26v14H11zM52 26h6v12h-6z" fill="currentColor" fill-rule="evenodd" /></symbol>
+  <symbol id="i-signal" viewBox="0 0 64 64"><path d="M6 44h8v12H6zm12-8h8v20h-8zm12-10h8v30h-8zm12-10h8v40h-8zm12-8h8v48h-8z" fill="currentColor" /></symbol>
+  <symbol id="i-network" viewBox="0 0 64 64"><path d="M6 14h24v18H6zm4 4v10h16V18zm24 14h24v18H34zm4 4v10h16V36zM14 34h8v4h-8zm28 18h8v4h-8zM18 38v10h20v-4h-16v-6z" fill="currentColor" /></symbol>
+  <symbol id="i-desktop" viewBox="0 0 64 64"><path d="M8 10h48v34H8zm4 4v26h40V14zM24 48h16v4h6v4H18v-4h6z" fill="currentColor" /></symbol>
+  <symbol id="i-still" viewBox="0 0 64 64"><path d="M22 14h20l4 6h10v32H8V20h10zm10 8a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 5a7 7 0 1 1 0 14 7 7 0 0 1 0-14z" fill="currentColor" fill-rule="evenodd" /></symbol>
+  <symbol id="i-burst" viewBox="0 0 64 64"><path d="M6 10h24v20H6zm28 0h24v20H34zM6 34h24v20H6zm28 0h24v20H34z" fill="currentColor" /></symbol>
+  <symbol id="i-movie" viewBox="0 0 64 64"><path d="M6 24h52v30H6zm2-14l50 8-2 6-50-8zm6 2l6 5-5 1-6-5zm14 2l6 5-5 1-6-5zm14 2l6 5-5 1-6-5z" fill="currentColor" /></symbol>
+</svg>

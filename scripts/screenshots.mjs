@@ -2,19 +2,22 @@
 // usage: npx astro build && npx astro preview --port 4323 --host 127.0.0.1 && node scripts/screenshots.mjs screenshots http://127.0.0.1:4323
 // Capture from the preview build, not the dev server (dev toolbar, possibly stale component CSS). macOS Chrome path below.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const OUT = process.argv[2] ?? 'screenshots';
 const BASE = process.argv[3] ?? 'http://localhost:4321';
-const PORT = 9333;
+const PORT = 9300 + Math.floor(Math.random() * 500); // random: a lingering Chrome on a fixed port would silently serve the old page
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const chrome = spawn(CHROME, [
   '--headless=new', `--remote-debugging-port=${PORT}`, '--no-first-run', '--no-default-browser-check', '--disable-gpu',
   '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--hide-scrollbars',
+  // FAKE_VIDEO=/plain/path/file.y4m feeds a real picture to the camera instead of Chrome's test pattern
+  // (make one with: ffmpeg -loop 1 -i photo.jpg -t 2 -r 15 -vf "scale=640:480:force_original_aspect_ratio=decrease,pad=640:480:(ow-iw)/2:(oh-ih)/2" -pix_fmt yuv420p /tmp/face.y4m)
+  ...(process.env.FAKE_VIDEO ? [`--use-file-for-fake-video-capture=${process.env.FAKE_VIDEO}`] : []),
   '--window-size=1280,800', `--user-data-dir=${join(OUT, '.profile')}`, 'about:blank',
 ], { stdio: 'ignore' });
 
@@ -86,7 +89,7 @@ await shot('02-xp-welcome', '"welcome" screen after the boot', { device: XP, url
 await shot('03-xp-home', 'Desktop: About window opens by default, funding balloon tip in the tray', { device: XP, url: '/?skip', wait: 1700 });
 await shot('04-xp-startmenu', 'Start menu lists every window from the registry (Camera included)', { device: XP, steps: [{ click: '#start-btn' }] });
 await shot('05-xp-windows', 'Several windows open: Venue, Agenda, Funding Goal, Sponsors', { device: XP, url: '/?skip&open=venue', wait: 1200, steps: [startMenu('schedule'), startMenu('funding'), startMenu('sponsors')] });
-await shot('06-xp-error', 'Register → Go: XP error dialog because tickets are not open yet', { device: XP, url: '/?skip&open=register', wait: 1200, steps: [{ click: '[data-action="fake-register"]' }] });
+await shot('06-xp-error', 'Turn Off Computer: XP error dialog (it is not safe to turn off your computer)', { device: XP, url: '/?skip&open=register', wait: 1200, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('07-xp-recycle', 'Recycle Bin', { device: XP, url: '/?skip&open=recycle', wait: 1200 });
 
 // ---- Camera (on XP) ----
@@ -106,6 +109,8 @@ await shot('13-camera-effects', 'Photo Booth Effects chooser: nine live previews
 await shot('14-camera-countdown', 'Shutter: 3-2-1 countdown before the flash', { device: XP, steps: [{ click: '.cam-effect[data-filter="lomo"]', wait: 300 }, { click: '.cam-shutter', wait: 1300 }] });
 await shot('15-camera-strip', 'After a still, a 4-up and a clip: the film strip', { device: XP, steps: [{ click: '.cam-pbmodes [data-cam-mode="burst"]', wait: 3200 }, { click: '.cam-shutter', wait: 7000 }, { click: '.cam-pbmodes [data-cam-mode="video"]', wait: 200 }, { click: '.cam-shutter', wait: 2500 }, { click: '.cam-shutter', wait: 1500 }] });
 await shot('16-camera-review', 'Review of the clip with player, previous/next, Delete, Share, Save', { device: XP, steps: [{ click: '#cam-strip button', wait: 900 }] });
+await shot('17-camera-maximized', 'Maximized: the preview keeps 4:3 (black pillars, no stretching) and renders at 960×720; zoom pill top right', { device: XP, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '#win-camera [data-action="maximize"]', wait: 1000 }] });
+await shot('18-camera-maximized-effects', 'Maximized Effects grid: tiles follow the cell shape (cropped, not stretched)', { device: XP, steps: [{ click: '.cam-effectsbtn', wait: 900 }] });
 
 // ---- Mac OS X Leopard (Mac user agent, no URL parameter) ----
 await shot('20-mac-boot', 'Leopard boot: gray screen, big X, spinning gear, funding readout', { device: MAC, url: '/', wait: 1500 });
@@ -115,7 +120,7 @@ await shot('23-mac-gomenu', 'Go menu lists every window and the external links',
 await shot('24-mac-windows', 'Several windows: traffic lights, centered titles, Aqua buttons, candy-striped progress bar; Dock dots mark open windows', { device: MAC, url: '/?skip&open=funding', wait: 1200, steps: [{ click: '#mac-menubar [data-menu="go"]', wait: 200 }, goMenu('venue'), { click: '#mac-menubar [data-menu="go"]', wait: 200 }, goMenu('schedule'), { click: '#mac-menubar [data-menu="go"]', wait: 200 }, goMenu('sponsors')] });
 await shot('25-mac-dock', 'Dock magnification with label on hover', { device: MAC, steps: [{ hover: '#mac-dock [data-dock="camera"]', wait: 400 }] });
 await shot('26-mac-minimized', 'Window menu → Minimize: the front window shrinks into the Dock (dimmed icon)', { device: MAC, url: '/?skip&open=about', wait: 1200, steps: [{ click: '#mac-menubar [data-menu="window"]', wait: 200 }, { click: '#mac-menu-window [data-action="mac-hide"]', wait: 700 }] });
-await shot('27-mac-alert', 'Register → Go: Leopard alert', { device: MAC, url: '/?skip&open=register', wait: 1200, steps: [{ click: '[data-action="fake-register"]' }] });
+await shot('27-mac-alert', 'Shut Down: Leopard alert', { device: MAC, url: '/?skip&open=register', wait: 1200, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('28-mac-camera', 'Photo Booth in a Leopard window, Lomo look', { device: MAC, url: '/?skip&open=camera', wait: 1200, steps: [start, filter('lomo')] });
 
 // ---- iPhone (chosen because the user agent is not Android) ----
@@ -124,10 +129,11 @@ await shot('31-ios-lock', 'iOS 4 lock screen: slide to unlock', { device: IPHONE
 await shot('32-ios-home', 'Home screen: app grid (Camera added), widgets, dock', { device: IPHONE, url: '/?skip', wait: 900 });
 await shot('33-ios-about', 'App view with iOS navigation bar and tab bar', { device: IPHONE, url: '/?skip&open=about', wait: 900 });
 await shot('34-ios-faq', 'FAQ as grouped lists', { device: IPHONE, url: '/?skip&open=faq', wait: 900 });
-await shot('35-ios-alert', 'Error dialog as an iOS alert', { device: IPHONE, url: '/?skip&open=register', wait: 900, steps: [{ click: '[data-action="fake-register"]' }] });
+await shot('35-ios-alert', 'Error dialog as an iOS alert (Turn Off Computer gag)', { device: IPHONE, url: '/?skip&open=register', wait: 900, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero look, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
 await shot('37-ios-recording', 'VIDEO mode while recording: timer and red stop square', { device: IPHONE, steps: [{ click: '.cam-modes [data-cam-mode="video"]', wait: 300 }, { click: '.cam-shutter', wait: 2500 }] });
 await shot('38-ios-review', 'Review of the clip from the thumbnail: Share and Save (share sheet on iPhone)', { device: IPHONE, steps: [{ click: '.cam-shutter', wait: 1500 }, { click: '.cam-thumb', wait: 900 }] });
+await shot('39-ios-zoom-grid', 'PHOTO mode with 2× zoom, grid on, Camcorder look in the live filter carousel', { device: IPHONE, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '.cam-modes [data-cam-mode="photo"]', wait: 300 }, { click: '[data-filter="camcorder"]', wait: 200 }, { click: '#cam-zoom [data-zoom="2"]', wait: 200 }, { click: '[data-cam="grid"]', wait: 300 }] });
 
 // ---- Android (chosen from the user agent, no URL parameter) ----
 await shot('40-android-boot', 'Boot: glowing "android" wordmark, funding readout stays', { device: ANDROID, url: '/', wait: 1500 });
@@ -138,7 +144,7 @@ await shot('44-android-menu', 'Menu key: Gingerbread options menu', { device: AN
 await shot('45-android-shade', 'Tap the status bar: notification shade', { device: ANDROID, url: '/?skip', wait: 3400, steps: [{ click: '.android-statusbar', wait: 500 }] });
 await shot('46-android-about', 'App view: dark title bar with icon, flat lists', { device: ANDROID, url: '/?skip&open=about', wait: 3400 });
 await shot('47-android-funding', 'Funding Goal: orange progress bar, gray buttons', { device: ANDROID, url: '/?skip&open=funding', wait: 3400 });
-await shot('48-android-dialog', 'Error dialog as a Gingerbread AlertDialog', { device: ANDROID, url: '/?skip&open=register', wait: 3400, steps: [{ click: '[data-action="fake-register"]' }] });
+await shot('48-android-dialog', 'Error dialog as a Gingerbread AlertDialog (Turn Off Computer gag)', { device: ANDROID, url: '/?skip&open=register', wait: 3400, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('49-android-camera', 'Camera app on Android, Camcorder look', { device: ANDROID, url: '/?skip&open=camera', wait: 3400, steps: [start, filter('camcorder')] });
 
 chrome.kill();
@@ -161,10 +167,13 @@ const html = `<!doctype html><meta charset="utf-8"><title>shtX screens</title>
   figcaption b { color: #245edb; }
 </style>
 <h1>Stupid Hackathon X · screen capture</h1>
-<div class="meta">${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })} · production build · headless Chrome with a fake camera device (the moving colour pattern is Chrome's test source, not a real camera) · shell chosen from the user agent: Windows → XP, Macintosh → Leopard, Android → Gingerbread, other phones → iPhone</div>
+<div class="meta">${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })} · captured from ${BASE} · headless Chrome with a fake camera device (the moving colour pattern is Chrome's test source, not a real camera) · shell chosen from the user agent: Windows → XP, Macintosh → Leopard, Android → Gingerbread, other phones → iPhone</div>
 ${Object.entries(groups).map(([device, items]) => `<section><h2>${esc(device)}</h2><div class="grid ${device.includes('desktop') ? 'cols1' : 'cols3'}">${items.map((m) => `<figure><img src="${m.name}.png"><figcaption><b>${m.name}</b> · ${esc(m.caption)}</figcaption></figure>`).join('')}</div></section>`).join('')}`;
 writeFileSync(join(OUT, 'gallery.html'), html);
-const pdf = join(OUT, 'shtX-screens.pdf');
-const r = spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=8000', `--user-data-dir=${join(OUT, '.profile-pdf')}`, `--print-to-pdf=${pdf}`, `file://${join(OUT, 'gallery.html')}`], { encoding: 'utf8' });
-console.log('pdf', r.status === 0 ? pdf : r.stderr);
+// Unique file name per run (a lingering Chrome from an earlier run can otherwise overwrite it), and a hard
+// timeout: headless Chrome sometimes keeps running after it has written the PDF.
+const stampName = (() => { const n = new Date(); const p = (v) => String(v).padStart(2, '0'); return `${n.getFullYear()}${p(n.getMonth() + 1)}${p(n.getDate())}-${p(n.getHours())}${p(n.getMinutes())}`; })(); // local time
+const pdf = join(OUT, `shtX-screens-${stampName}.pdf`);
+const r = spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=8000', `--user-data-dir=${join(OUT, '.profile-pdf')}`, `--print-to-pdf=${pdf}`, `file://${join(OUT, 'gallery.html')}`], { encoding: 'utf8', timeout: 90_000, killSignal: 'SIGKILL' });
+console.log('pdf', existsSync(pdf) ? pdf : `failed: ${r.stderr || r.error}`);
 process.exit(0);

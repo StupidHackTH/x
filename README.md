@@ -2,7 +2,7 @@
 
 Windows XP–themed website for the 10th Stupid Hackathon in Thailand (10–11 Oct 2026, Cleverse, Rama 9). Built with [Astro](https://astro.build) and Tailwind CSS v4.
 
-Registration is **not** handled by this site — it links out to Eventpop (link TBD in `src/data/event.ts`).
+Registration is **not** handled by this site — it links out to Eventpop (`registration.url` in `src/data/event.ts`).
 
 ## Develop
 
@@ -15,13 +15,14 @@ npm run preview
 
 ## How it works
 
-- `src/data/funding.ts` — sponsor tiers and sponsor list (real), plus goal/raised/backers (**mock**, flagged with `mock: true`). The boot screen, funding window, tray icon and balloon tip all read from it.
+- `src/data/funding.ts` — sponsor tiers, sponsor list and the goal/raised/backers figures. Set `mock: true` while numbers are provisional to show an "estimate" notice in the Funding window. The boot screen, funding window, tray icon and balloon tip all read from it.
 - `src/data/event.ts` — event basics, registration info, links, about text, venue + directions, draft agenda, what to bring, code of conduct, FAQ, staff, past editions. Anything unconfirmed is marked TBD.
 - `src/data/windows.ts` — registry of desktop windows (title, icon, default position/size).
-- `src/components/BootScreen.astro` — XP boot screen that animates the funding progress bar before the desktop appears. Click or press a key to skip.
+- `src/components/Icons.astro` — one SVG sprite of glossy 2000s-style icons used by every shell (`<Icon name="…" />` from `Icon.astro`); the window id doubles as the icon name. The sprite is hidden with zero size, not `display: none`, because browsers otherwise drop its gradients.
+- `src/components/BootScreen.astro` — boot screen that animates the funding progress bar before the desktop appears (XP loading bar, Leopard spinner or the glowing “android” wordmark, always with the Stupid Hackathon logo). Click or press a key to skip.
 - `src/components/Window.astro` — reusable XP window chrome (title bar, menu bar, status bar). Window contents live in `src/components/windows/`.
 - `src/scripts/desktop.ts` — client-side window manager: open/close/minimize/maximize, drag, focus, taskbar buttons, start menu, balloon tip, clock. On phones it also runs the lock screens and the Android shade, drawer, options menu, toast and hardware keys.
-- `src/styles/global.css` — Tailwind import plus all `xp-*` theme classes, then the iOS (`ios-*`) and Android (`android-*`) phone shells.
+- `src/styles/global.css` — Tailwind import plus all `xp-*` theme classes, then the iOS (`ios-*`), Android (`android-*`) and Mac (`mac-*`) shells. The four wallpapers (Bliss-like hill, Aurora, iOS water drops, Gingerbread light streaks) are inline SVG data URIs generated once and pasted in.
 
 ## XP behaviours
 
@@ -69,18 +70,32 @@ Both shells share the boot screen and the same window manager in `src/scripts/de
 
 `src/components/windows/CameraWindow.astro` is a working camera: it opens the real camera with `getUserMedia`, draws every frame through a canvas with a 2000s look, and saves photos as JPEG (PNG for the 1-bit look) and clips as MP4 or WebM (whatever `MediaRecorder` supports). The clip is recorded from the canvas, so the look is baked into the video; the microphone is asked for on the first recording and skipped if refused. Nothing is uploaded.
 
-- Looks: Webcam '03, Cam Phone 0.3MP (orange date stamp, 30% JPEG quality), Camcorder (scanlines, red bleed, REC, timestamp), Lomo, Normal, Old Photo, Frutiger Aero (gloss and bubbles), Nokia 3310 (dithered 1-bit LCD), NightShot. Every look is a pixel function plus an overlay in the `looks` map of the component script.
+- Looks: Webcam '03, Cam Phone 0.3MP (orange date stamp, 30% JPEG quality), Camcorder (scanlines, red bleed, REC, timestamp), Lomo, Normal, Old Photo, Frutiger Aero (gloss and bubbles), Nokia 3310 (a real 84×48 one-bit LCD with slow-pixel ghosting, signal and battery bars and a Menu softkey, drawn inside the phone's face with its keypad), NightShot. Every look is a pixel function plus an overlay in the `looks` map of the component script.
 - On computers it is Photo Booth: three modes (still, four quick pictures composed into a 2×2, movie clip), the big red shutter with a 3-2-1 countdown and a full-screen white flash, an Effects button that shows nine live previews, and a film strip. Clicking a strip thumbnail opens review with previous/next, Delete, Share and Save.
 - On phones it is a camera app: full-screen viewfinder, SVG toolbar (screen flash for selfies, rule-of-thirds grid, filters on/off, close), a carousel of live filter previews over the viewfinder, an iOS-style mode strip (only PHOTO and VIDEO exist; TIME-LAPSE, SLO-MO, PORTRAIT and PANO just show a toast), round shutter (red square while recording), Flip (only with two cameras), and the last capture as a thumbnail that opens review. Tapping the viewfinder shows a yellow focus square (decorative). The window title bar and the iOS tab bar are hidden while it is open.
 - Zoom: a pill with .5 / 1x / 2 / 3 presets (.5 only when the camera reports a wide lens), pinch on the viewfinder, mouse wheel or trackpad on computers, up to 5×. The camera's own zoom is used when the browser exposes it (`MediaStreamTrack` zoom capability, Chrome on Android and iOS 17+), digital crop beyond that or on other browsers.
 - Shutter click and record beeps are generated with WebAudio (no files); Android phones also vibrate on the shutter.
-- Save downloads the file; on iPhone and iPad it opens the share sheet instead, whose "Save Image/Video" stores it in Photos (a plain download would land in Files, and Safari ignores download links to data: URLs, so files are blob URLs). Clips stop automatically after one minute.
+- Full screen: the ⛶ button (Photo Booth bar on computers, top bar on phones) puts the camera alone on the whole display via the Fullscreen API; the frame goes up to 1280×960 there. Hidden on iPhone Safari, which has no page full screen.
+- Save downloads the file; on iPhone and iPad it opens the share sheet instead, whose "Save Image/Video" stores it in Photos (a plain download would land in Files, and Safari ignores download links to data: URLs, so files are blob URLs). Clips stop automatically after ten minutes (about 19 MB per minute at 2.5 Mbps).
 - The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press the start button again to resume.
 - Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480, or 960×720 once the window is wider than 900px, for example maximized). The preview, review media and effect tiles are sized by script to the largest box of their true aspect ratio that fits, so nothing is ever stretched, whatever the window shape or browser.
+
+## Screenshots
+
+`node scripts/screenshots.mjs <outDir> [baseUrl]` drives headless Chrome (with a fake camera device, so the camera runs without a permission prompt) through every screen of all four shells and prints a captioned gallery to `<outDir>/shtX-screens-<date>-<time>.pdf`. Capture from a preview of the production build, not the dev server (dev toolbar, possibly stale CSS):
+
+```
+npx astro build && npx astro preview --port 4323 --host 127.0.0.1
+node scripts/screenshots.mjs screenshots http://127.0.0.1:4323
+```
+
+The camera screens use Chrome's test pattern. To shoot them with a real picture, convert it to Y4M and pass it in: `ffmpeg -loop 1 -i photo.jpg -t 2 -r 15 -vf "scale=640:480:force_original_aspect_ratio=decrease,pad=640:480:(ow-iw)/2:(oh-ih)/2" -pix_fmt yuv420p /tmp/face.y4m`, then `FAKE_VIDEO=/tmp/face.y4m node scripts/screenshots.mjs …` (the file must sit in a plain path such as /tmp).
 
 ## URL parameters
 
 - `?skip` — skip the boot screen (and the lock screen on mobile). Add `&lock` to still show the lock screen.
+
+Full screen for the whole site: right-click the XP desktop → Full Screen, the shtX/Window menus on Mac (Enter/Exit Full Screen), or Menu → Full screen on Android. Esc leaves it.
 - `?android` / `?ios` — force the Android or iPhone shell on small screens regardless of the user agent.
 - `?mac` / `?xp` — force the Mac or Windows XP shell on large screens regardless of the user agent.
 - `?open=funding` — open a window after boot (`about`, `register`, `schedule`, `venue`, `funding`, `sponsors`, `staff`, `faq`, `camera`, `recycle`).

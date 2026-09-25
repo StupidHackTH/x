@@ -1,5 +1,6 @@
 ---
 import { byId } from '../data/windows';
+import Icon from './Icon.astro';
 
 interface Props {
   id: string;
@@ -28,7 +29,7 @@ if (!def) throw new Error(`Unknown window id: ${id}`);
   style={`left:${def.x}px;top:${def.y}px;width:${def.w}px;height:${def.h}px;`}
 >
   <header class="xp-titlebar" data-drag-handle>
-    <span class="xp-title-icon" aria-hidden="true">{def.glyph}</span>
+    <span class="xp-title-icon" aria-hidden="true"><Icon name={id} /></span>
     <span class="xp-title-text" id={`win-${id}-title`}>{def.title}</span>
     {!dialog && (
       <>

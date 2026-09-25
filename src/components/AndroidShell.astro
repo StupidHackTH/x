@@ -4,6 +4,7 @@
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { funding, fundingPercent, formatTHB } from '../data/funding';
+import Icon from './Icon.astro';
 
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
@@ -11,17 +12,17 @@ const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
 const homeIds = ['about', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
 const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
 const links = [
-  { label: 'Browser', glyph: '🌐', href: event.links.website },
-  { label: 'Facebook', glyph: '📘', href: event.links.facebook },
-  { label: 'Discord', glyph: '💬', href: event.links.discord },
-  { label: 'Creatorsgarten', glyph: '🌱', href: event.links.creatorsgarten },
+  { label: 'Browser', icon: 'website', href: event.links.website },
+  { label: 'Facebook', icon: 'facebook', href: event.links.facebook },
+  { label: 'Discord', icon: 'discord', href: event.links.discord },
+  { label: 'Creatorsgarten', icon: 'sponsors', href: event.links.creatorsgarten },
 ];
 const menuItems = [
-  { id: 'camera', glyph: '📷', label: 'Camera' },
-  { id: 'register', glyph: '🎟️', label: 'Register' },
-  { id: 'venue', glyph: '🗺️', label: 'Venue' },
-  { id: 'funding', glyph: '💰', label: 'Funding' },
-  { id: 'faq', glyph: '❓', label: 'FAQ' },
+  { id: 'camera', label: 'Camera' },
+  { id: 'register', label: 'Register' },
+  { id: 'venue', label: 'Venue' },
+  { id: 'funding', label: 'Funding' },
+  { id: 'faq', label: 'FAQ' },
 ];
 // 24x24 icon paths
 const icons = {
@@ -40,7 +41,7 @@ const icons = {
 <div class="android-only" id="android-shell" data-funding-percent={fundingPercent}>
   <!-- Status bar. Tap to pull down the notification shade. -->
   <div class="android-statusbar" role="button" tabindex="0" data-action="android-shade" aria-label="Notifications">
-    <span class="notif" aria-hidden="true"><span>💰</span><span>🎟️</span></span>
+    <span class="notif" aria-hidden="true"><Icon name="funding" /><Icon name="register" /></span>
     <span class="sys">
       <span class="net" aria-hidden="true">3G</span>
       <span class="sig" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:12px;opacity:.35"></i></span>
@@ -56,16 +57,16 @@ const icons = {
     </div>
     <div class="section">Ongoing</div>
     <button type="button" class="item" data-open="funding">
-      <span class="glyph" aria-hidden="true">💰</span>
+      <Icon name="funding" class="glyph" />
       <span class="text"><b>Funding goal {fundingPercent}% reached</b><small>{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · tap to sponsor</small></span>
     </button>
     <div class="section">Notifications</div>
     <button type="button" class="item" data-open="register">
-      <span class="glyph" aria-hidden="true">🎟️</span>
+      <Icon name="register" class="glyph" />
       <span class="text"><b>Registration opens {event.registration.opens}</b><small>{event.registration.platform} · {event.registration.price}</small></span>
     </button>
     <button type="button" class="item" data-open="schedule">
-      <span class="glyph" aria-hidden="true">📅</span>
+      <Icon name="schedule" class="glyph" />
       <span class="text"><b>{event.name}</b><small>{event.datesEn} · {daysToGo} days to go</small></span>
     </button>
     <div class="handle" data-action="android-shade" aria-hidden="true"><i></i></div>
@@ -83,7 +84,7 @@ const icons = {
       <img src="/logo-transparent.png" alt={`${event.name} logo`} />
       <div class="note">
         <b>{event.name}</b> · {event.datesEn}<br />
-        💰 Funding goal {fundingPercent}% reached
+        <Icon name="funding" /> Funding goal {fundingPercent}% reached
       </div>
     </div>
     <div class="android-lock-track" id="android-lock-track">
@@ -111,7 +112,7 @@ const icons = {
         const w = byId[id];
         return (
           <button type="button" class="android-app" data-open={id} role="listitem">
-            <span class="icon" aria-hidden="true">{w.glyph}</span>
+            <Icon name={id} class="icon" />
             <span class="name">{w.label}</span>
           </button>
         );
@@ -119,7 +120,7 @@ const icons = {
     </div>
     <div class="android-widgets">
       <button type="button" class="android-widget" data-open="funding" aria-label="Funding goal widget">
-        <div class="widget-head"><span>💰 Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
+        <div class="widget-head"><span class="flex items-center gap-1"><Icon name="funding" /> Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
         <div class="widget-bar"><div style={`width:${fundingPercent}%`}></div></div>
         <div class="widget-foot">{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · {funding.backers} sponsors</div>
       </button>
@@ -131,13 +132,13 @@ const icons = {
     </div>
     <div class="android-hotseat">
       <button type="button" class="android-app" data-open="register" aria-label="Register">
-        <span class="icon" aria-hidden="true">🎟️</span>
+        <Icon name="register" class="icon" />
       </button>
       <button type="button" class="android-drawer-btn" data-action="android-drawer" aria-label="All apps">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.grid} /></svg>
       </button>
       <a class="android-app" href={event.links.website} target="_blank" rel="noopener" aria-label="Browser">
-        <span class="icon" aria-hidden="true">🌐</span>
+        <Icon name="website" class="icon" />
       </a>
     </div>
   </div>
@@ -149,14 +150,14 @@ const icons = {
         const w = byId[id];
         return (
           <button type="button" class="android-app" data-open={id} role="listitem">
-            <span class="icon" aria-hidden="true">{w.glyph}</span>
+            <Icon name={id} class="icon" />
             <span class="name">{w.label}</span>
           </button>
         );
       })}
       {links.map((l) => (
         <a class="android-app" href={l.href} target="_blank" rel="noopener" role="listitem">
-          <span class="icon" aria-hidden="true">{l.glyph}</span>
+          <Icon name={l.icon} class="icon" />
           <span class="name">{l.label}</span>
         </a>
       ))}
@@ -168,9 +169,12 @@ const icons = {
     <div class="panel" role="menu">
       {menuItems.map((m) => (
         <button type="button" role="menuitem" data-open={m.id}>
-          <span class="glyph" aria-hidden="true">{m.glyph}</span>{m.label}
+          <Icon name={m.id} class="glyph" />{m.label}
         </button>
       ))}
+      <button type="button" role="menuitem" data-action="fullscreen">
+        <Icon name="desktop" class="glyph mono" />Full screen
+      </button>
       <button type="button" role="menuitem" data-action="android-settings">
         <span class="glyph" aria-hidden="true">⚙️</span>Settings
       </button>
