@@ -873,9 +873,9 @@
     .ios-lock[hidden] { display: none; }
     .ios-lock.ios-unlock { animation: ios-unlock 0.38s ease-in forwards; }
     @keyframes ios-unlock { to { transform: translateY(-100%); opacity: 0.6; } }
-    /* Home screen stays invisible until unlocked, even before scripts run */
-    body.ios-locked .ios-home { visibility: hidden; }
-    body.ios-locked .xp-window { visibility: hidden; }
+    /* Home screen stays invisible until unlocked, even before scripts run (both shells) */
+    body.mobile-locked .ios-home { visibility: hidden; }
+    body.mobile-locked .xp-window { visibility: hidden; }
     .ios-lock-clock {
       margin-top: 20px;
       height: 96px;
@@ -1119,7 +1119,7 @@
       border-top: 1px solid #000;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
     }
-    body.ios-app-open .ios-tabbar { display: flex; }
+    body.mobile-app-open .ios-tabbar { display: flex; }
     .ios-tabbar button {
       flex: 1;
       display: flex;
@@ -1139,7 +1139,7 @@
     .ios-tabbar button:active { filter: brightness(1.3); }
 
     /* Windows become full-screen iOS apps */
-    body.ios-app-open .ios-home { display: none; }
+    body.mobile-app-open .ios-home { display: none; }
     .xp-window {
       position: fixed !important;
       inset: 20px 0 0 0 !important;
@@ -1308,6 +1308,842 @@
     .xp-progress { border-radius: 10px; }
   }
   .ios-back-label { display: none; }
+
+  /* ================= MOBILE MODE: Android 2.3 Gingerbread ================= */
+  /* Replaces the iPhone shell when <html> has the `android` class (user agent, or ?android). See AndroidShell.astro. */
+  .android-only { display: none; }
+
+  @media (max-width: 767px) {
+    html.android body {
+      font-family: "Droid Sans", Roboto, "Noto Sans Thai", Arial, sans-serif;
+      background: #000;
+    }
+    html.android .android-only { display: block; }
+    html.android .ios-only { display: none !important; }
+
+    /* Wallpaper: dark glass with the Gingerbread green and orange glow */
+    .android-wallpaper {
+      background:
+        radial-gradient(ellipse 70% 45% at 85% 10%, rgba(164, 198, 57, 0.45), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 136, 0, 0.35), transparent 70%),
+        radial-gradient(circle at 60% 60%, rgba(164, 198, 57, 0.12), transparent 40%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 24px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 24px),
+        linear-gradient(180deg, #1b1f1a 0%, #0a0c0a 60%, #000 100%);
+    }
+
+    /* Status bar: green Gingerbread icons. Tap to open the notification shade. */
+    .android-statusbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 25px;
+      z-index: 19999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 5px;
+      background: #000;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-statusbar .notif { display: flex; gap: 6px; font-size: 13px; line-height: 1; }
+    .android-statusbar .sys { display: flex; align-items: center; gap: 6px; }
+    .android-statusbar .net { font-size: 9px; line-height: 1; color: #a4c639; }
+    .android-statusbar .sig { display: inline-flex; align-items: flex-end; gap: 1px; height: 12px; }
+    .android-statusbar .sig i { width: 3px; background: #a4c639; }
+    .android-statusbar .bat { position: relative; width: 9px; height: 14px; border: 1px solid #a4c639; border-radius: 1px; box-sizing: border-box; }
+    .android-statusbar .bat::before { content: ""; position: absolute; top: -3px; left: 1px; width: 5px; height: 2px; background: #a4c639; }
+    .android-statusbar .bat i { position: absolute; left: 1px; right: 1px; bottom: 1px; height: 65%; background: #a4c639; }
+
+    /* Notification shade */
+    .android-shade {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 25px;
+      bottom: 48px;
+      z-index: 19993;
+      display: flex;
+      flex-direction: column;
+      animation: android-shade-in 0.2s ease-out;
+    }
+    .android-shade[hidden] { display: none; }
+    @keyframes android-shade-in { from { transform: translateY(-100%); } to { transform: none; } }
+    .android-shade .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      padding: 0 10px;
+      background: linear-gradient(180deg, #4d4d4d, #2b2b2b);
+      border-bottom: 1px solid #111;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .android-shade .head button { height: 28px; padding: 0 12px; border: 1px solid #111; border-radius: 3px; background: linear-gradient(180deg, #ececec, #b9b9b9); color: #111; font-size: 13px; font-weight: 700; }
+    .android-shade .head button:active { background: linear-gradient(180deg, #ffbb33, #ff8800); }
+    .android-shade .section { padding: 3px 10px; background: #3b3b3b; color: #fff; font-size: 12px; font-weight: 700; }
+    .android-shade .item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; background: #fff; border-bottom: 1px solid #ccc; color: #111; text-align: left; }
+    .android-shade .item:active { background: #ffbb33; }
+    .android-shade .item .glyph { font-size: 26px; line-height: 1; }
+    .android-shade .item b { display: block; font-size: 14px; }
+    .android-shade .item small { display: block; font-size: 12px; color: #555; }
+    .android-shade .handle { height: 22px; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #2c2c2c, #101010); border-top: 1px solid #444; border-bottom: 1px solid #000; }
+    .android-shade .handle i { width: 44px; height: 4px; border-radius: 2px; background: #6a6a6a; }
+    .android-shade .fill { flex: 1; background: rgba(0, 0, 0, 0.55); }
+
+    /* Capacitive keys under the screen: Back · Menu · Search · Home */
+    .android-bezel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 48px;
+      z-index: 19995;
+      display: flex;
+      background: #000;
+      border-top: 1px solid #161616;
+    }
+    .android-bezel button { flex: 1; display: flex; align-items: center; justify-content: center; background: transparent; -webkit-tap-highlight-color: transparent; }
+    .android-bezel svg { width: 22px; height: 22px; fill: #c9c9c9; }
+    .android-bezel button:active svg { fill: #fff; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+
+    /* Lock screen */
+    .android-lock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 25px;
+      bottom: 48px;
+      z-index: 19990;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      user-select: none;
+    }
+    .android-lock[hidden] { display: none; }
+    .android-lock.android-unlock { animation: android-unlock 0.3s ease-in forwards; }
+    @keyframes android-unlock { to { opacity: 0; transform: scale(1.08); } }
+    body.mobile-locked .android-home { visibility: hidden; }
+    .android-lock-clock { padding: 14px 18px 0; }
+    .android-lock-clock .time { font-size: 68px; font-weight: 700; line-height: 1; letter-spacing: -2px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); }
+    .android-lock-clock .date { margin-top: 6px; font-size: 16px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+    .android-lock-clock .carrier { margin-top: 2px; font-size: 14px; color: #bdbdbd; }
+    .android-lock-middle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 0 24px; text-align: center; }
+    .android-lock-middle img { width: 140px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7)); }
+    .android-lock-middle .note { padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; background: rgba(0, 0, 0, 0.55); font-size: 13px; line-height: 1.35; }
+    .android-lock-track {
+      position: relative;
+      height: 104px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.65));
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+    .android-lock-track .guide { position: absolute; left: 20px; right: 20px; top: 50%; height: 2px; background: rgba(255, 255, 255, 0.12); }
+    .android-lock-track .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255, 255, 255, 0.5); font-size: 14px; pointer-events: none; }
+    .android-tab {
+      position: absolute;
+      top: 20px;
+      width: 96px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #666 0%, #3a3a3a 50%, #2a2a2a 51%, #333 100%);
+      border: 1px solid #111;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.7);
+      touch-action: none;
+      transition: left 0.2s ease-out, right 0.2s ease-out, opacity 0.15s;
+    }
+    .android-tab.dragging { transition: opacity 0.15s; }
+    .android-tab svg { width: 32px; height: 32px; fill: #eee; }
+    .android-tab.lock { left: 0; border-left: 0; border-radius: 0 16px 16px 0; }
+    .android-tab.sound { right: 0; border-right: 0; border-radius: 16px 0 0 16px; }
+    .android-tab.armed { background: linear-gradient(180deg, #c5e35a 0%, #a4c639 50%, #86a52a 51%, #93b532 100%); }
+    .android-tab.armed svg { fill: #1f2a00; }
+    .android-tab.sound .off { display: none; }
+    .android-tab.sound.muted .on { display: none; }
+    .android-tab.sound.muted .off { display: block; }
+    .android-tab.lock.hint { animation: android-hint-r 0.5s ease-out; }
+    .android-tab.sound.hint { animation: android-hint-l 0.5s ease-out; }
+    @keyframes android-hint-r { 30% { transform: translateX(26px); } 100% { transform: none; } }
+    @keyframes android-hint-l { 30% { transform: translateX(-26px); } 100% { transform: none; } }
+
+    /* Home screen (launcher) */
+    .android-home {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 25px;
+      bottom: 48px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      overflow: hidden;
+    }
+    body.mobile-app-open .android-home { display: none; }
+    .android-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 40px;
+      margin: 10px 10px 2px;
+      padding: 0 10px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #fff, #e6e6e6);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+      color: #888;
+      font-size: 15px;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-search:active { background: #ffbb33; }
+    .android-search .logo { font-size: 19px; font-weight: 700; letter-spacing: -0.5px; }
+    .android-search .logo i { font-style: normal; }
+    .android-search .logo i:nth-child(1) { color: #4285f4; }
+    .android-search .logo i:nth-child(2) { color: #ea4335; }
+    .android-search .logo i:nth-child(3) { color: #fbbc05; }
+    .android-search .logo i:nth-child(4) { color: #4285f4; }
+    .android-search .logo i:nth-child(5) { color: #34a853; }
+    .android-search .logo i:nth-child(6) { color: #ea4335; }
+    .android-search .hint { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .android-search svg { width: 22px; height: 22px; fill: #666; }
+    .android-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 86px; gap: 2px; padding: 6px 4px 0; }
+    .android-app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 2px 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #fff;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-app:active { background: rgba(255, 136, 0, 0.6); }
+    .android-app .icon { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 38px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+    .android-app .name { max-width: 84px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+    .android-widgets { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; padding: 8px 10px 0; }
+    .android-widget {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      min-height: 74px;
+      padding: 8px 10px;
+      border: 1px solid #000;
+      border-radius: 5px;
+      background: linear-gradient(180deg, rgba(70, 70, 70, 0.92), rgba(22, 22, 22, 0.96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.7);
+      color: #fff;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-widget:active { filter: brightness(1.3); }
+    .android-widget .widget-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+    .android-widget .widget-head .pct { color: #a4c639; }
+    .android-widget .widget-bar { height: 9px; border: 1px solid #000; border-radius: 2px; background: #111; overflow: hidden; }
+    .android-widget .widget-bar > div { height: 100%; background: linear-gradient(180deg, #ffd35c, #ff8800); }
+    .android-widget .widget-foot { font-size: 10px; color: #bdbdbd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .android-widget.countdown { align-items: center; text-align: center; gap: 0; }
+    .android-widget.countdown .days { font-size: 32px; font-weight: 700; line-height: 1; color: #a4c639; }
+    .android-widget.countdown .unit { margin-top: 2px; font-size: 11px; font-weight: 700; }
+    .android-widget.countdown .when { margin-top: 3px; font-size: 9px; color: #bdbdbd; white-space: nowrap; }
+    .android-hotseat {
+      margin-top: auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px;
+      background: linear-gradient(180deg, rgba(45, 45, 45, 0.92), rgba(0, 0, 0, 0.96));
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .android-hotseat .android-app { padding: 4px; }
+    .android-hotseat .android-app .icon { width: 44px; height: 44px; font-size: 32px; }
+    .android-drawer-btn {
+      width: 66px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #000;
+      border-radius: 5px;
+      background: linear-gradient(180deg, #555, #1e1e1e);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-drawer-btn svg { width: 24px; height: 24px; fill: #eee; }
+    .android-drawer-btn:active { background: linear-gradient(180deg, #ffbb33, #ff8800); }
+
+    /* All apps drawer */
+    .android-drawer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 25px;
+      bottom: 48px;
+      z-index: 22;
+      padding: 8px 4px;
+      background: #000;
+      overflow: auto;
+      animation: android-fade 0.15s ease-out;
+    }
+    .android-drawer[hidden] { display: none; }
+    @keyframes android-fade { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Options menu (Menu key) */
+    .android-menu { position: fixed; left: 0; right: 0; top: 25px; bottom: 48px; z-index: 28; }
+    .android-menu[hidden] { display: none; }
+    .android-menu .panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: linear-gradient(180deg, #454545, #202020);
+      border-top: 1px solid #666;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.7);
+      animation: android-menu-in 0.15s ease-out;
+    }
+    @keyframes android-menu-in { from { transform: translateY(100%); } to { transform: none; } }
+    .android-menu .panel button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 80px;
+      background: transparent;
+      border-right: 1px solid #101010;
+      border-bottom: 1px solid #101010;
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 13px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .android-menu .panel button:active { background: linear-gradient(180deg, #ffbb33, #ff8800); color: #111; }
+    .android-menu .panel .glyph { font-size: 26px; line-height: 1; }
+
+    /* Toast */
+    .android-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 84px;
+      z-index: 29;
+      max-width: 80%;
+      padding: 10px 16px;
+      border: 1px solid #111;
+      border-radius: 6px;
+      background: rgba(42, 42, 42, 0.96);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      color: #eee;
+      font-size: 14px;
+      text-align: center;
+      transform: translateX(-50%);
+      animation: android-fade 0.2s ease-out;
+      pointer-events: none;
+    }
+    .android-toast[hidden] { display: none; }
+
+    /* Windows become full-screen Gingerbread activities (Back or Home closes them) */
+    html.android .xp-window {
+      inset: 25px 0 48px 0 !important;
+      background: #fff;
+      animation: android-app-open 0.2s ease-out;
+    }
+    @keyframes android-app-open { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+    html.android .xp-window[data-closing],
+    html.android .xp-window[data-minimizing] { animation: android-app-close 0.15s ease-in forwards; }
+    @keyframes android-app-close { to { transform: scale(0.9); opacity: 0; } }
+    html.android .xp-titlebar,
+    html.android .xp-window[data-inactive] .xp-titlebar {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 8px;
+      height: 38px;
+      padding: 0 10px;
+      background: linear-gradient(180deg, #3d3d3d, #242424);
+      border-bottom: 1px solid #000;
+      box-shadow: none;
+      font-family: "Droid Sans", Roboto, "Noto Sans Thai", Arial, sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: none;
+    }
+    html.android .xp-title-icon { display: inline-flex !important; font-size: 20px; }
+    html.android .xp-title-text,
+    html.android .xp-window[data-inactive] .xp-titlebar .xp-title-text {
+      position: static;
+      flex: 1;
+      text-align: left;
+      pointer-events: none;
+    }
+    html.android .xp-title-btn.close { display: none !important; }
+    html.android .xp-window-body,
+    html.android .xp-window-body.beige { padding-bottom: 0; background: #fff; }
+    html.android .xp-window-body table { margin: 4px 0 12px; border: 0; border-radius: 0; }
+    html.android .xp-window-body td,
+    html.android .xp-window-body th { border-bottom: 1px solid #d6d6d6; }
+    html.android .xp-window-body td.text-neutral-500 { color: #555; }
+    html.android .xp-window-body thead tr { background: #e9e9e9; }
+    html.android .xp-window-body details { border: 0; border-bottom: 1px solid #d6d6d6; border-radius: 0; }
+    html.android .xp-window-body summary { padding: 12px 10px; }
+    html.android .xp-window-body summary::after { content: "▾"; color: #888; font-size: 16px; line-height: 1; }
+    html.android .xp-window-body details[open] summary { background: #f2f2f2; border-bottom: 1px solid #e2e2e2; }
+    html.android .xp-window-body details[open] summary::after { transform: none; }
+    html.android .xp-btn,
+    html.android .xp-btn.default {
+      height: 40px;
+      border: 1px solid #5f5f5f;
+      border-radius: 3px;
+      background: linear-gradient(180deg, #f5f5f5, #cfcfcf);
+      box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(0, 0, 0, 0.35);
+      color: #111;
+      font-size: 14px;
+      font-weight: 700;
+      text-shadow: none;
+    }
+    html.android .xp-btn:hover,
+    html.android .xp-btn.default:hover { box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(0, 0, 0, 0.35); }
+    html.android .xp-btn:active,
+    html.android .xp-btn.default:active { filter: none; background: linear-gradient(180deg, #ffbb33, #ff8800); border-color: #b85c00; }
+    html.android .xp-groupbox { border: 1px solid #ccc; border-radius: 3px; background: #fafafa; }
+    html.android .xp-groupbox > legend { color: #333; }
+    html.android .xp-sunken { border-radius: 3px; border-color: #ccc; }
+    html.android .xp-progress { border-radius: 2px; border-color: #888; background: #eee; box-shadow: none; }
+    html.android .xp-progress > div { background: linear-gradient(180deg, #ffd35c, #ff8800); }
+    html.android .xp-progress > div::before { display: none; }
+
+    /* Error dialog becomes a Gingerbread AlertDialog */
+    html.android .xp-window[data-window="error"] {
+      inset: auto !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: min(300px, 92vw) !important;
+      transform: translate(-50%, -50%);
+      border: 1px solid #000;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #3c3c3c, #1f1f1f);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.85);
+      color: #fff;
+      animation: android-dialog 0.18s ease-out;
+    }
+    @keyframes android-dialog { from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    html.android .xp-window[data-window="error"][data-closing] { animation: android-dialog-close 0.15s ease-in forwards; }
+    @keyframes android-dialog-close { to { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } }
+    html.android .xp-window[data-window="error"] .xp-titlebar {
+      display: flex;
+      height: 50px;
+      margin: 0 10px;
+      padding: 0 4px;
+      background: transparent;
+      border-bottom: 2px solid #8c8c8c;
+      font-size: 20px;
+    }
+    html.android .xp-window[data-window="error"] .xp-window-body,
+    html.android .xp-window[data-window="error"] .xp-window-body.beige {
+      padding: 0;
+      background: transparent;
+      color: #eee;
+      font-size: 15px;
+      font-weight: 400;
+      text-align: left;
+      text-shadow: none;
+    }
+    /* The dialog's button row sits in a darker panel */
+    html.android .xp-window[data-window="error"] .xp-window-body > div > div:last-child {
+      margin: 0 -16px -16px;
+      padding: 8px;
+      background: linear-gradient(180deg, #4a4a4a, #303030);
+      border-top: 1px solid #111;
+    }
+    html.android .xp-window[data-window="error"] .xp-btn,
+    html.android .xp-window[data-window="error"] .xp-btn.default {
+      flex: 1;
+      background: linear-gradient(180deg, #f5f5f5, #cfcfcf);
+      border-color: #5f5f5f;
+      color: #111;
+    }
+    html.android .xp-window[data-window="error"] .xp-btn:active,
+    html.android .xp-window[data-window="error"] .xp-btn.default:active { background: linear-gradient(180deg, #ffbb33, #ff8800); }
+  }
+
+  /* ================= DESKTOP MODE: Mac OS X Leopard ================= */
+  /* Replaces the XP chrome on large screens when <html> has the `mac` class (user agent, or ?mac). See MacShell.astro. */
+  .mac-only { display: none; }
+
+  @media (min-width: 768px) {
+    html.mac .mac-only { display: block; }
+    html.mac body { font-family: "Lucida Grande", "Helvetica Neue", Helvetica, "Noto Sans Thai", Arial, sans-serif; font-size: 12px; }
+    html.mac .xp-taskbar,
+    html.mac .xp-startmenu,
+    html.mac .xp-welcome { display: none !important; }
+    html.mac ::selection { background: #b5d5ff; color: inherit; }
+    html.mac ::-webkit-scrollbar { width: 15px; height: 15px; }
+    html.mac ::-webkit-scrollbar-track { background: #f1f1f1; border-left: 1px solid #e2e2e2; }
+    html.mac ::-webkit-scrollbar-thumb { border: 2px solid #f1f1f1; border-radius: 8px; background: linear-gradient(90deg, #5e9cf5, #9cc4f8 50%, #5e9cf5); box-shadow: none; }
+    html.mac ::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #4b8bea, #8ab8f4 50%, #4b8bea); }
+    html.mac ::-webkit-scrollbar-button:single-button { display: none; width: 0; height: 0; }
+    html.mac ::-webkit-scrollbar-corner { background: #f1f1f1; }
+
+    /* Aurora wallpaper */
+    html.mac .xp-wallpaper {
+      background:
+        radial-gradient(ellipse 70% 35% at 62% 52%, rgba(140, 190, 255, 0.4), transparent 70%),
+        radial-gradient(ellipse 45% 30% at 28% 42%, rgba(190, 130, 255, 0.35), transparent 70%),
+        radial-gradient(ellipse 60% 20% at 50% 58%, rgba(255, 255, 255, 0.18), transparent 70%),
+        linear-gradient(180deg, #06123a 0%, #12237a 38%, #3a1f78 68%, #04071c 100%);
+    }
+
+    /* Desktop icons sit on the right, Finder style (!important beats the md:left-2 utilities) */
+    html.mac #desktop-icons { left: auto !important; right: 14px !important; top: 34px !important; align-items: flex-end !important; }
+    html.mac .xp-icon { width: 84px; padding: 6px 2px 4px; border-radius: 4px; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 4px rgba(0, 0, 0, 0.9); }
+    html.mac .xp-icon .glyph { font-size: 40px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+    html.mac .xp-icon.selected { background: transparent; border-color: transparent; }
+    html.mac .xp-icon.selected .glyph { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)) brightness(0.7); }
+    html.mac .xp-icon.selected > span:last-child { padding: 1px 7px; border-radius: 9px; background: #1a56d6; text-shadow: none; }
+
+    /* Menu bar */
+    .mac-menubar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 22px;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(212, 212, 212, 0.96));
+      border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      font-size: 13px;
+      color: #000;
+      user-select: none;
+    }
+    .mac-menubar > button,
+    .mac-menubar .status > button { height: 22px; padding: 0 9px; background: transparent; font-size: 13px; color: #000; }
+    .mac-menubar .apple { display: flex; align-items: center; padding: 0 8px 0 6px; }
+    .mac-menubar .apple img { width: 18px; height: 18px; object-fit: contain; }
+    .mac-menubar .appname { font-weight: 700; }
+    .mac-menubar > button[aria-expanded="true"] { background: linear-gradient(180deg, #4a90f4, #2b6ee0); color: #fff; }
+    .mac-menubar .status { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+    .mac-menubar .status > span { padding: 0 5px; font-size: 12px; }
+    .mac-menubar time { padding: 0 8px; }
+    .mac-menu {
+      position: fixed;
+      top: 22px;
+      z-index: 9001;
+      min-width: 220px;
+      padding: 4px 0;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-top: 0;
+      border-radius: 0 0 5px 5px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      font-size: 13px;
+      animation: xp-fade-in 0.08s ease-out;
+    }
+    .mac-menu[hidden] { display: none; }
+    .mac-menu button,
+    .mac-menu a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 3px 20px;
+      background: transparent;
+      color: #000;
+      font-size: 13px;
+      text-align: left;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .mac-menu button:disabled { color: #a0a0a0; }
+    .mac-menu button:not(:disabled):hover,
+    .mac-menu a:hover { background: linear-gradient(180deg, #4a90f4, #2b6ee0); color: #fff; }
+    .mac-menu kbd { margin-left: auto; padding-left: 24px; font-family: inherit; font-size: 12px; color: #7a7a7a; }
+    .mac-menu button:hover kbd { color: rgba(255, 255, 255, 0.85); }
+    .mac-menu hr { margin: 4px 0; border: 0; border-top: 1px solid #dedede; }
+    .mac-menu .glyph { width: 18px; text-align: center; }
+
+    /* Dock */
+    .mac-dock {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 9000;
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 64px;
+      padding: 0 14px 8px;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(190, 190, 190, 0.55), rgba(255, 255, 255, 0.35));
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-bottom: 0;
+      border-radius: 10px 10px 0 0;
+      box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+    .mac-dock > button,
+    .mac-dock > a {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      font-size: 36px;
+      line-height: 1;
+      text-decoration: none;
+      transform-origin: 50% 100%;
+      transition: transform 0.12s ease-out;
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+      -webkit-box-reflect: below -12px linear-gradient(transparent 65%, rgba(0, 0, 0, 0.25));
+    }
+    .mac-dock > button:hover,
+    .mac-dock > a:hover { z-index: 1; transform: scale(1.5) translateY(-6px); }
+    .mac-dock > :hover + button,
+    .mac-dock > :hover + a,
+    .mac-dock > :has(+ :hover) { transform: scale(1.2) translateY(-3px); }
+    .mac-dock > button:active { filter: brightness(0.6); }
+    .mac-dock [data-minimized] { opacity: 0.55; }
+    .mac-dock .finder img { width: 44px; height: 44px; object-fit: contain; }
+    .mac-dock .tip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      display: none;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      white-space: nowrap;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .mac-dock > :hover .tip { display: block; }
+    .mac-dock [data-running]::after {
+      content: "";
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff, #8fd0ff 55%, transparent 72%);
+      box-shadow: 0 0 4px #8fd0ff;
+    }
+    .mac-dock .sep { width: 1px; height: 44px; margin: 0 6px 2px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.05)); }
+
+    /* Windows: Leopard unified look */
+    html.mac .xp-window {
+      min-width: 300px;
+      border: 0;
+      border-radius: 5px 5px 0 0;
+      background: #e8e8e8;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.55);
+      animation: mac-window-open 0.15s ease-out;
+    }
+    @keyframes mac-window-open { from { transform: scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+    html.mac .xp-window[data-closing] { animation: mac-window-close 0.12s ease-in forwards; }
+    @keyframes mac-window-close { to { transform: scale(0.97); opacity: 0; } }
+    html.mac .xp-window[data-minimizing] { transform-origin: 50% 100%; animation: mac-window-minimize 0.32s cubic-bezier(0.5, 0, 1, 1) forwards; }
+    @keyframes mac-window-minimize {
+      55% { transform: scaleX(0.35) scaleY(1.02) translateY(8vh); opacity: 0.95; }
+      to { transform: scaleX(0.06) scaleY(0.25) translateY(95vh); opacity: 0; }
+    }
+    html.mac .xp-window[data-inactive] { border-color: transparent; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.35); }
+    html.mac .xp-window[data-maximized] {
+      top: 22px !important;
+      height: calc(100% - 22px - 70px) !important;
+      border-radius: 0;
+    }
+    html.mac .xp-titlebar,
+    html.mac .xp-window[data-inactive] .xp-titlebar,
+    html.mac .xp-window[data-maximized] .xp-titlebar {
+      position: relative;
+      gap: 8px;
+      height: 22px;
+      margin: 0;
+      padding: 0 8px;
+      border-radius: 5px 5px 0 0;
+      background: linear-gradient(180deg, #e9e9e9 0%, #d3d3d3 50%, #c9c9c9 51%, #bcbcbc 100%);
+      border-bottom: 1px solid #8e8e8e;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      font-family: "Lucida Grande", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      color: #000;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+    html.mac .xp-window[data-maximized] .xp-titlebar { border-radius: 0; }
+    html.mac .xp-window[data-inactive] .xp-titlebar { background: linear-gradient(180deg, #f3f3f3 0%, #e7e7e7 50%, #e0e0e0 51%, #d8d8d8 100%); border-bottom-color: #b8b8b8; }
+    html.mac .xp-title-icon { display: none !important; }
+    html.mac .xp-title-text,
+    html.mac .xp-window[data-inactive] .xp-titlebar .xp-title-text {
+      position: absolute;
+      left: 80px;
+      right: 80px;
+      order: 4;
+      padding: 0;
+      color: #000;
+      text-align: center;
+    }
+    html.mac .xp-window[data-inactive] .xp-titlebar .xp-title-text { color: #7f7f7f; }
+    /* Traffic lights on the left: close, minimize, zoom */
+    html.mac .xp-title-btn {
+      width: 12px;
+      height: 12px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      border-radius: 50%;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55), 0 1px 0 rgba(255, 255, 255, 0.4);
+      color: rgba(0, 0, 0, 0.6);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      transition: none;
+    }
+    html.mac .xp-title-btn svg { display: none; }
+    html.mac .xp-title-btn::after { display: none; margin-top: -1px; }
+    html.mac .xp-titlebar:hover .xp-title-btn::after { display: block; }
+    html.mac .xp-title-btn.close { order: 1; margin-left: 0; margin-right: -1px; background: radial-gradient(circle at 50% 30%, #ff8d86, #ff5f57 60%); border-color: #e0443e; }
+    html.mac .xp-title-btn.close::after { content: "×"; }
+    html.mac .xp-title-btn[data-action="minimize"] { order: 2; background: radial-gradient(circle at 50% 30%, #ffd66b, #ffbd2e 60%); border-color: #dea123; }
+    html.mac .xp-title-btn[data-action="minimize"]::after { content: "–"; }
+    html.mac .xp-title-btn[data-action="maximize"] { order: 3; background: radial-gradient(circle at 50% 30%, #6ee686, #28c940 60%); border-color: #1aab29; }
+    html.mac .xp-title-btn[data-action="maximize"]::after { content: "+"; }
+    html.mac .xp-title-btn:hover { filter: brightness(1.08); }
+    html.mac .xp-title-btn:active { filter: brightness(0.8); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55); }
+    html.mac .xp-window[data-inactive] .xp-title-btn,
+    html.mac .xp-window[data-inactive] .xp-title-btn.close { opacity: 1; background: radial-gradient(circle at 50% 30%, #e9e9e9, #c9c9c9 60%); border-color: #a9a9a9; }
+    html.mac .xp-menubar { display: none; }
+    html.mac .xp-window-body,
+    html.mac .xp-window-body.beige { margin: 0; border: 0; background: #fff; font-size: 12px; }
+    html.mac .xp-window-body.beige { background: #ececec; }
+    html.mac .xp-statusbar {
+      height: 22px;
+      align-items: center;
+      padding: 0 8px;
+      background: linear-gradient(180deg, #e7e7e7, #cfcfcf);
+      border-top: 1px solid #a3a3a3;
+      font-size: 11px;
+      color: #444;
+    }
+    html.mac .xp-statusbar > div:last-child { display: none; }
+    html.mac .xp-resize[data-resize="se"] {
+      right: 0;
+      bottom: 0;
+      width: 15px;
+      height: 15px;
+      background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 4px);
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+
+    /* Aqua controls */
+    html.mac .xp-btn {
+      min-width: 70px;
+      height: 22px;
+      padding: 0 14px;
+      border: 1px solid #8a8a8a;
+      border-radius: 11px;
+      background: linear-gradient(180deg, #fff 0%, #f1f1f1 45%, #dedede 55%, #f5f5f5 100%);
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15), inset 0 1px 0 #fff;
+      color: #000;
+      font-size: 12px;
+      font-weight: 400;
+      text-shadow: none;
+    }
+    html.mac .xp-btn:hover { box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15), inset 0 1px 0 #fff; }
+    html.mac .xp-btn:active { filter: none; background: linear-gradient(180deg, #d3e3fb 0%, #8ab8f7 45%, #4f8fe9 55%, #9fcaff 100%); }
+    html.mac .xp-btn.default,
+    html.mac .xp-btn.default:hover {
+      border-color: #2f61c2;
+      background: linear-gradient(180deg, #d6e8ff 0%, #93bef8 45%, #4f8fe9 55%, #a6cdff 100%);
+      animation: mac-pulse 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes mac-pulse {
+      from { box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 2px rgba(93, 155, 240, 0.25); }
+      to { box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 4px rgba(93, 155, 240, 0.5); }
+    }
+    html.mac .xp-progress {
+      height: 14px;
+      padding: 0;
+      border: 1px solid #7a7a7a;
+      border-radius: 7px;
+      background: linear-gradient(180deg, #d4d4d4, #f6f6f6);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+    html.mac .xp-progress > div {
+      border-radius: 7px;
+      background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.35) 0 8px, transparent 8px 16px), linear-gradient(180deg, #a9cdff 0%, #5c9bf2 50%, #3a7de0 51%, #6fb0ff 100%);
+      background-size: 22.6px 100%, 100% 100%;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      animation: mac-stripes 0.8s linear infinite;
+    }
+    @keyframes mac-stripes { to { background-position: 22.6px 0, 0 0; } }
+    html.mac .xp-progress > div::before { display: none; }
+    html.mac .xp-groupbox { border: 1px solid #c8c8c8; border-radius: 6px; background: #f4f4f4; }
+    html.mac .xp-groupbox > legend { color: #333; font-weight: 700; }
+    html.mac .xp-sunken { border: 1px solid #b8b8b8; border-radius: 4px; background: #fff; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15); }
+
+    /* Error dialog becomes a Leopard alert */
+    html.mac .xp-window[data-window="error"] { width: 420px !important; height: auto !important; border-radius: 5px; background: #e8e8e8; }
+    html.mac .xp-window[data-window="error"] .xp-titlebar { height: 12px; padding: 0; border-bottom: 0; background: linear-gradient(180deg, #e6e6e6, #d2d2d2); }
+    html.mac .xp-window[data-window="error"] .xp-title-text { display: none; }
+    html.mac .xp-window[data-window="error"] .xp-window-body,
+    html.mac .xp-window[data-window="error"] .xp-window-body.beige { background: #e8e8e8; }
+    html.mac .xp-window[data-window="error"] .xp-window-body > div { padding: 12px 18px 14px; gap: 18px; }
+    html.mac .xp-window[data-window="error"] .xp-window-body > div > div:first-child { align-items: flex-start; gap: 16px; }
+    html.mac .xp-window[data-window="error"] .xp-window-body .text-3xl { font-size: 52px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3)); }
+    html.mac .xp-window[data-window="error"] #error-text { padding-top: 6px; font-size: 13px; font-weight: 700; line-height: 1.4; }
+    html.mac .xp-window[data-window="error"] .xp-window-body > div > div:last-child { justify-content: flex-end; }
+
+    /* Funding balloon becomes a Growl-style bubble; context menu goes Leopard */
+    html.mac .xp-balloon {
+      top: 30px;
+      right: 116px; /* clear of the icon column */
+      bottom: auto;
+      width: 300px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      background: rgba(20, 20, 20, 0.85);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font-size: 12px;
+    }
+    html.mac .xp-contextmenu {
+      padding: 4px 0;
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      font-size: 13px;
+    }
+    html.mac .xp-contextmenu button { padding: 3px 24px 3px 20px; }
+    html.mac .xp-contextmenu button:hover { background: linear-gradient(180deg, #4a90f4, #2b6ee0); color: #fff; }
+    html.mac .xp-contextmenu button.bold { font-weight: 400; }
+    html.mac .xp-contextmenu hr { margin: 4px 0; border: 0; border-top: 1px solid #dedede; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .xp-window, .xp-startmenu, .xp-contextmenu, .xp-balloon, .xp-welcome { animation: none; }

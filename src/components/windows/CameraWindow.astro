@@ -1,0 +1,652 @@
+---
+import Window from '../Window.astro';
+
+// 2000s-era looks. The toolbar is built from this list; the rendering lives in the <script> below (same ids).
+const filters = [
+  { id: 'normal', glyph: '🙂', name: 'Normal', hint: 'ธรรมดา ไม่โง่' },
+  { id: 'webcam', glyph: '🖥️', name: "Webcam '03", hint: 'MSN Messenger quality' },
+  { id: 'camphone', glyph: '📱', name: 'Cam Phone', hint: '0.3 megapixel + date stamp' },
+  { id: 'camcorder', glyph: '📼', name: 'Camcorder', hint: 'Hi8 · REC ●' },
+  { id: 'lomo', glyph: '🎞️', name: 'Lomo', hint: 'vignette จัดเต็ม' },
+  { id: 'sepia', glyph: '🟤', name: 'Old Photo', hint: 'ซีเปีย + เกรน' },
+  { id: 'aero', glyph: '🫧', name: 'Frutiger Aero', hint: 'glossy · bubbles · sky' },
+  { id: 'nokia', glyph: '📟', name: 'Nokia 3310', hint: '84×48 · 1-bit' },
+  { id: 'nightshot', glyph: '🌙', name: 'NightShot', hint: 'เขียว ๆ แบบ Handycam' },
+];
+---
+
+<Window id="camera" menu={['File', 'Edit', 'View', 'Filters', 'Help']} status="Ready · 0.3 megapixels of pure stupidity" beige>
+  <div class="cam h-full flex flex-col" id="cam">
+    <div class="cam-toolbar" role="toolbar" aria-label="Filters">
+      {filters.map((f, i) => (
+        <button type="button" class="cam-filter" data-filter={f.id} title={f.hint} aria-pressed={i === 0 ? 'true' : 'false'}>
+          <span class="glyph" aria-hidden="true">{f.glyph}</span>
+          <span>{f.name}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="cam-stage" id="cam-stage" data-state="off">
+      <canvas id="cam-canvas" width="480" height="360" aria-label="Camera preview"></canvas>
+      <video id="cam-video" playsinline muted autoplay></video>
+      <img id="cam-shot" alt="Captured photo" />
+      <div class="cam-off" id="cam-off">
+        <div class="text-4xl" aria-hidden="true">📷</div>
+        <p class="font-bold text-[12px]">Stupid Photo Booth</p>
+        <p class="text-[11px] text-neutral-600 max-w-[300px]" id="cam-message">
+          ถ่ายรูปด้วยกล้องจริง พร้อม filter ยุค 2000s · รูปอยู่ในเครื่องคุณเท่านั้น ไม่ถูกส่งไปไหน
+        </p>
+        <button type="button" class="xp-btn default" data-cam="start">▶ Start camera</button>
+      </div>
+      <div class="cam-flash" id="cam-flash" aria-hidden="true"></div>
+    </div>
+
+    <div class="cam-controls">
+      <div class="flex flex-wrap justify-center gap-1" id="cam-live-controls">
+        <button type="button" class="xp-btn" data-cam="flip" title="Switch camera" id="cam-flip">🔄 Flip</button>
+        <button type="button" class="xp-btn" data-cam="mirror" title="Mirror the preview" id="cam-mirror" aria-pressed="true">↔️ Mirror</button>
+        <button type="button" class="xp-btn default" data-cam="shoot" title="Take photo">📷 Take photo</button>
+      </div>
+      <div class="flex flex-wrap justify-center gap-1" id="cam-shot-controls" hidden>
+        <button type="button" class="xp-btn" data-cam="retake">↩ Retake</button>
+        <button type="button" class="xp-btn" data-cam="share" id="cam-share" hidden>📤 Share</button>
+        <a class="xp-btn default" id="cam-save" download="shtX-photo.jpg" href="#">💾 Save</a>
+      </div>
+    </div>
+
+    <div class="cam-strip" id="cam-strip" aria-label="Photos taken" hidden></div>
+  </div>
+</Window>
+
+<style is:global>
+  .cam-toolbar {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    padding: 3px 4px;
+    background: var(--color-xp-beige);
+    border-bottom: 1px solid #fff;
+    box-shadow: 0 1px 0 #d4d0c8;
+  }
+  .cam-filter {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    width: 64px;
+    padding: 3px 2px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    font-size: 10px;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .cam-filter .glyph { font-size: 20px; line-height: 1; }
+  .cam-filter:hover { border-color: #316ac5; background: linear-gradient(180deg, #fff, #e6e2d6); }
+  .cam-filter[aria-pressed="true"] { border-color: #316ac5; background: linear-gradient(180deg, #c3d5f2, #dbe6f7); box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.12); }
+  .cam-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+  }
+  .cam-stage canvas,
+  .cam-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .cam-stage video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .cam-stage.pixelated canvas { image-rendering: pixelated; }
+  .cam-stage:not([data-state="live"]) canvas,
+  .cam-stage:not([data-state="shot"]) img,
+  .cam-stage:not([data-state="off"]) .cam-off { display: none; }
+  .cam-off {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--color-xp-beige);
+    text-align: center;
+  }
+  .cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .cam-flash.on { animation: cam-flash 0.35s ease-out; }
+  @keyframes cam-flash { from { opacity: 1; } to { opacity: 0; } }
+  .cam-controls { display: flex; justify-content: center; padding: 6px; background: var(--color-xp-beige); border-top: 1px solid #fff; }
+  .cam-strip { display: flex; gap: 4px; overflow-x: auto; padding: 0 6px 6px; background: var(--color-xp-beige); }
+  .cam-strip a { flex: 0 0 auto; width: 64px; height: 48px; border: 2px solid #fff; background: #000; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+  .cam-strip img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  @media (max-width: 767px) {
+    .cam-filter { width: 72px; font-size: 11px; }
+    .cam-filter .glyph { font-size: 24px; }
+    .cam-strip a { width: 80px; height: 60px; }
+  }
+</style>
+
+<script>
+  /* Stupid Photo Booth: live camera → canvas with a 2000s look → JPEG/PNG. Nothing leaves the browser. */
+
+  type PixelFn = (d: Uint8ClampedArray, w: number, h: number, t: number) => void;
+  type OverlayFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
+  interface Look {
+    scale: number; // downscale factor of the working frame (1 = full)
+    pixelated?: boolean; // upscale without smoothing
+    quality?: number; // JPEG quality of the saved photo (low = authentic artifacts)
+    png?: boolean; // save as PNG (crisp 1-bit looks)
+    pixel?: PixelFn;
+    overlay?: OverlayFn;
+  }
+
+  const clamp = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
+  const lum = (d: Uint8ClampedArray, i: number) => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  function noise(d: Uint8ClampedArray, amp: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * amp;
+      d[i] = clamp(d[i] + n);
+      d[i + 1] = clamp(d[i + 1] + n);
+      d[i + 2] = clamp(d[i + 2] + n);
+    }
+  }
+  function saturate(d: Uint8ClampedArray, s: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      const l = lum(d, i);
+      d[i] = clamp(l + (d[i] - l) * s);
+      d[i + 1] = clamp(l + (d[i + 1] - l) * s);
+      d[i + 2] = clamp(l + (d[i + 2] - l) * s);
+    }
+  }
+  function contrast(d: Uint8ClampedArray, c: number, brightness = 0) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = clamp((d[i] - 128) * c + 128 + brightness);
+      d[i + 1] = clamp((d[i + 1] - 128) * c + 128 + brightness);
+      d[i + 2] = clamp((d[i + 2] - 128) * c + 128 + brightness);
+    }
+  }
+  function tint(d: Uint8ClampedArray, r: number, g: number, b: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = clamp(d[i] + r);
+      d[i + 1] = clamp(d[i + 1] + g);
+      d[i + 2] = clamp(d[i + 2] + b);
+    }
+  }
+  function vignette(ctx: CanvasRenderingContext2D, w: number, h: number, strength: number) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.72);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${strength})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  function stamp(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') {
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillText(text, x + 1, y + 1);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+  }
+  let scanPattern: CanvasPattern | null = null;
+  function scanlines(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    if (!scanPattern) {
+      const c = document.createElement('canvas');
+      c.width = 1;
+      c.height = 2;
+      const x = c.getContext('2d')!;
+      x.fillStyle = 'rgba(0,0,0,0.22)';
+      x.fillRect(0, 1, 1, 1);
+      scanPattern = ctx.createPattern(c, 'repeat');
+    }
+    ctx.fillStyle = scanPattern!;
+    ctx.fillRect(0, 0, w, h);
+  }
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const bubbles = [0.12, 0.3, 0.52, 0.68, 0.86, 0.4].map((x, i) => ({ x, r: 10 + (i % 3) * 9, speed: 12 + i * 5, phase: i * 137 }));
+
+  const looks: Record<string, Look> = {
+    normal: { scale: 1, quality: 0.92 },
+    webcam: {
+      scale: 2,
+      quality: 0.55,
+      pixel: (d) => {
+        contrast(d, 0.82, 6);
+        tint(d, -6, 2, 14);
+        noise(d, 26);
+      },
+    },
+    camphone: {
+      scale: 3,
+      pixelated: true,
+      quality: 0.3,
+      pixel: (d) => {
+        tint(d, 16, 6, -18);
+        contrast(d, 1.1);
+        for (let i = 0; i < d.length; i += 4) {
+          d[i] &= 0xf8;
+          d[i + 1] &= 0xf8;
+          d[i + 2] &= 0xf8;
+        }
+        noise(d, 12);
+      },
+      overlay: (ctx, w, h) => {
+        const n = new Date();
+        stamp(ctx, `${pad(n.getDate())}.${pad(n.getMonth() + 1)}.${n.getFullYear()}`, w - 10, h - 10, `bold ${Math.round(h * 0.055)}px "Courier New", monospace`, '#ff9d1c', 'right');
+      },
+    },
+    camcorder: {
+      scale: 2,
+      quality: 0.7,
+      pixel: (d, w, h) => {
+        const src = d.slice();
+        for (let y = 0; y < h; y++) {
+          for (let x = 2; x < w; x++) {
+            const i = (y * w + x) * 4;
+            d[i] = src[i - 8]; // red channel bleeds 2px to the right, like a tired tape head
+          }
+        }
+        saturate(d, 1.25);
+        contrast(d, 1.08, -4);
+      },
+      overlay: (ctx, w, h, t) => {
+        scanlines(ctx, w, h);
+        const font = `bold ${Math.round(h * 0.045)}px "Courier New", monospace`;
+        if (Math.floor(t / 500) % 2 === 0) {
+          ctx.fillStyle = '#ff2a2a';
+          ctx.beginPath();
+          ctx.arc(22, 24, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        stamp(ctx, 'REC', 34, 30, font, '#fff');
+        stamp(ctx, 'SP', w - 16, 30, font, '#fff', 'right');
+        const n = new Date();
+        const date = n.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+        const time = n.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        stamp(ctx, `${date}  ${time}`, 16, h - 14, font, '#fff');
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 2;
+        const m = 40;
+        const L = 18;
+        for (const [x, y, sx, sy] of [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]] as const) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + sy * L);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + sx * L, y);
+          ctx.stroke();
+        }
+      },
+    },
+    lomo: {
+      scale: 1,
+      quality: 0.85,
+      pixel: (d) => {
+        saturate(d, 1.55);
+        contrast(d, 1.28);
+        for (let i = 0; i < d.length; i += 4) {
+          const l = lum(d, i);
+          if (l < 90) d[i + 1] = clamp(d[i + 1] + 14);
+          else if (l > 170) {
+            d[i] = clamp(d[i] + 10);
+            d[i + 1] = clamp(d[i + 1] + 6);
+          }
+        }
+      },
+      overlay: (ctx, w, h) => vignette(ctx, w, h, 0.85),
+    },
+    sepia: {
+      scale: 1,
+      quality: 0.8,
+      pixel: (d) => {
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          d[i] = clamp(r * 0.393 + g * 0.769 + b * 0.189);
+          d[i + 1] = clamp(r * 0.349 + g * 0.686 + b * 0.168);
+          d[i + 2] = clamp(r * 0.272 + g * 0.534 + b * 0.131);
+        }
+        noise(d, 18);
+      },
+      overlay: (ctx, w, h) => vignette(ctx, w, h, 0.5),
+    },
+    aero: {
+      scale: 1,
+      quality: 0.88,
+      pixel: (d) => {
+        saturate(d, 1.25);
+        tint(d, -4, 6, 18);
+        for (let i = 0; i < d.length; i += 4) {
+          if (lum(d, i) > 185) {
+            d[i] = clamp(d[i] + 30);
+            d[i + 1] = clamp(d[i + 1] + 30);
+            d[i + 2] = clamp(d[i + 2] + 30);
+          }
+        }
+      },
+      overlay: (ctx, w, h, t) => {
+        const gloss = ctx.createLinearGradient(0, 0, 0, h * 0.45);
+        gloss.addColorStop(0, 'rgba(255,255,255,0.3)');
+        gloss.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gloss;
+        ctx.fillRect(0, 0, w, h * 0.45);
+        const glow = ctx.createLinearGradient(0, h * 0.6, 0, h);
+        glow.addColorStop(0, 'rgba(110,230,190,0)');
+        glow.addColorStop(1, 'rgba(110,230,190,0.28)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, h * 0.6, w, h * 0.4);
+        for (const b of bubbles) {
+          const y = h - (((t / 1000) * b.speed + b.phase) % (h + 60)) + 30;
+          const x = b.x * w + Math.sin((t / 1000 + b.phase) * 0.8) * 8;
+          ctx.beginPath();
+          ctx.arc(x, y, b.r, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(180,240,255,0.14)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x - b.r * 0.35, y - b.r * 0.35, b.r * 0.25, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.fill();
+        }
+      },
+    },
+    nokia: {
+      scale: 6,
+      pixelated: true,
+      png: true,
+      pixel: (d, w, h) => {
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const l = (lum(d, i) - 128) * 1.4 + 128;
+            const on = l > ((BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16) * 255;
+            d[i] = on ? 199 : 44;
+            d[i + 1] = on ? 215 : 60;
+            d[i + 2] = on ? 166 : 40;
+          }
+        }
+      },
+      overlay: (ctx, w, h) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        for (let x = 0; x < w; x += 6) ctx.fillRect(x, 0, 1, h);
+        for (let y = 0; y < h; y += 6) ctx.fillRect(0, y, w, 1);
+      },
+    },
+    nightshot: {
+      scale: 2,
+      quality: 0.6,
+      pixel: (d) => {
+        for (let i = 0; i < d.length; i += 4) {
+          const l = lum(d, i) * 1.5 + 12;
+          d[i] = clamp(l * 0.25);
+          d[i + 1] = clamp(l);
+          d[i + 2] = clamp(l * 0.3);
+        }
+        noise(d, 34);
+      },
+      overlay: (ctx, w, h, t) => {
+        vignette(ctx, w, h, 0.75);
+        stamp(ctx, 'NIGHTSHOT', w - 16, 30, `bold ${Math.round(h * 0.045)}px "Courier New", monospace`, '#9cff9c', 'right');
+        if (Math.floor(t / 700) % 2 === 0) {
+          ctx.fillStyle = '#9cff9c';
+          ctx.fillRect(16, 18, 10, 10);
+        }
+      },
+    },
+  };
+
+  function setupCamera() {
+    const root = document.getElementById('cam');
+    const win = root?.closest<HTMLElement>('[data-window]');
+    const stage = document.getElementById('cam-stage');
+    const canvas = document.getElementById('cam-canvas') as HTMLCanvasElement | null;
+    const video = document.getElementById('cam-video') as HTMLVideoElement | null;
+    const shot = document.getElementById('cam-shot') as HTMLImageElement | null;
+    const flash = document.getElementById('cam-flash');
+    const message = document.getElementById('cam-message');
+    const liveControls = document.getElementById('cam-live-controls');
+    const shotControls = document.getElementById('cam-shot-controls');
+    const flipBtn = document.getElementById('cam-flip');
+    const mirrorBtn = document.getElementById('cam-mirror');
+    const shareBtn = document.getElementById('cam-share');
+    const save = document.getElementById('cam-save') as HTMLAnchorElement | null;
+    const strip = document.getElementById('cam-strip');
+    if (!root || !win || !stage || !canvas || !video || !shot || !flash || !message || !liveControls || !shotControls || !flipBtn || !mirrorBtn || !shareBtn || !save || !strip) return;
+
+    const ctx = canvas.getContext('2d')!;
+    const work = document.createElement('canvas');
+    const wctx = work.getContext('2d', { willReadFrequently: true })!;
+    const defaultMessage = message.textContent;
+
+    let state: 'off' | 'live' | 'shot' = 'off';
+    let current = 'normal';
+    let stream: MediaStream | null = null;
+    let facing: 'user' | 'environment' = 'user';
+    let mirror = true;
+    let raf = 0;
+    let lastBlob: Promise<Blob | null> | null = null;
+    let lastName = '';
+    let lastType = '';
+    const canShareFiles = (() => {
+      try {
+        return !!navigator.share && !!navigator.canShare?.({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] });
+      } catch {
+        return false;
+      }
+    })();
+
+    const setState = (s: typeof state) => {
+      state = s;
+      stage.dataset.state = s;
+      liveControls.hidden = s !== 'live';
+      shotControls.hidden = s !== 'shot';
+    };
+    const fail = (text: string) => {
+      message.textContent = text;
+      setState('off');
+    };
+    const describe = (err: unknown) => {
+      const name = (err as { name?: string })?.name ?? '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') return 'ไม่ได้รับอนุญาตให้ใช้กล้อง กด Allow ในเบราว์เซอร์แล้วลองใหม่';
+      if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'ไม่พบกล้อง ลองเสียบกล้องเข้า floppy drive';
+      if (name === 'NotReadableError') return 'กล้องถูกโปรแกรมอื่นใช้อยู่ (MSN video call?)';
+      return `เปิดกล้องไม่ได้: ${(err as Error)?.message ?? err}`;
+    };
+
+    /* Draw the video onto the working canvas, cropped to fill (like a real viewfinder) */
+    const drawCover = (w: number, h: number) => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      let sw = vw, sh = vh, sx = 0, sy = 0;
+      if (vw / vh > w / h) {
+        sw = vh * (w / h);
+        sx = (vw - sw) / 2;
+      } else {
+        sh = vw / (w / h);
+        sy = (vh - sh) / 2;
+      }
+      wctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+    };
+
+    const draw = (t: number) => {
+      if (video.readyState < 2) return;
+      const look = looks[current];
+      const W = canvas.width;
+      const H = canvas.height;
+      const w = Math.round(W / look.scale);
+      const h = Math.round(H / look.scale);
+      if (work.width !== w || work.height !== h) {
+        work.width = w;
+        work.height = h;
+      }
+      wctx.save();
+      if (mirror) {
+        wctx.translate(w, 0);
+        wctx.scale(-1, 1);
+      }
+      drawCover(w, h);
+      wctx.restore();
+      if (look.pixel) {
+        const img = wctx.getImageData(0, 0, w, h);
+        look.pixel(img.data, w, h, t);
+        wctx.putImageData(img, 0, 0);
+      }
+      ctx.imageSmoothingEnabled = !look.pixelated;
+      ctx.drawImage(work, 0, 0, W, H);
+      look.overlay?.(ctx, W, H, t);
+    };
+
+    const loop = () => {
+      cancelAnimationFrame(raf);
+      const frame = (t: number) => {
+        if (state !== 'live') return;
+        draw(t);
+        raf = requestAnimationFrame(frame);
+      };
+      raf = requestAnimationFrame(frame);
+    };
+
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      video.srcObject = null;
+      if (state === 'live') setState('off');
+    };
+
+    const start = async () => {
+      message.textContent = defaultMessage;
+      if (!navigator.mediaDevices?.getUserMedia) return fail('เบราว์เซอร์นี้ไม่รองรับกล้อง (ต้องเปิดผ่าน HTTPS หรือ localhost)');
+      stop();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false,
+        });
+      } catch (err) {
+        return fail(describe(err));
+      }
+      // Portrait frame on phones, 4:3 landscape elsewhere
+      const portrait = window.matchMedia('(max-width: 767px) and (orientation: portrait)').matches;
+      canvas.width = portrait ? 360 : 480;
+      canvas.height = portrait ? 480 : 360;
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      mirror = facing === 'user';
+      mirrorBtn.setAttribute('aria-pressed', String(mirror));
+      setState('live');
+      loop();
+      try {
+        const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+        flipBtn.hidden = cams.length < 2;
+      } catch {
+        /* keep the button */
+      }
+    };
+
+    const selectFilter = (id: string) => {
+      if (!looks[id]) return;
+      current = id;
+      for (const b of root.querySelectorAll<HTMLElement>('.cam-filter')) b.setAttribute('aria-pressed', String(b.dataset.filter === id));
+      stage.classList.toggle('pixelated', !!looks[id].pixelated);
+      if (state === 'shot') retake();
+    };
+
+    const retake = () => {
+      if (stream) {
+        setState('live');
+        loop();
+      } else {
+        start();
+      }
+    };
+
+    const shoot = () => {
+      if (state !== 'live') return;
+      draw(performance.now());
+      flash.classList.remove('on');
+      void flash.offsetWidth;
+      flash.classList.add('on');
+      const look = looks[current];
+      lastType = look.png ? 'image/png' : 'image/jpeg';
+      const url = canvas.toDataURL(lastType, look.quality ?? 0.9);
+      const n = new Date();
+      lastName = `shtX-${current}-${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}-${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}.${look.png ? 'png' : 'jpg'}`;
+      lastBlob = new Promise((resolve) => canvas.toBlob(resolve, lastType, look.quality ?? 0.9));
+      shot.src = url;
+      save.href = url;
+      save.download = lastName;
+      shareBtn.hidden = !canShareFiles;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = lastName;
+      a.title = lastName;
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      a.appendChild(img);
+      strip.prepend(a);
+      while (strip.children.length > 8) strip.lastElementChild?.remove();
+      strip.hidden = false;
+      cancelAnimationFrame(raf);
+      setState('shot');
+    };
+
+    const share = async () => {
+      const blob = await lastBlob;
+      if (!blob) return;
+      const file = new File([blob], lastName, { type: lastType });
+      try {
+        await navigator.share({ files: [file], title: 'Stupid Hackathon X' });
+      } catch {
+        /* user cancelled */
+      }
+    };
+
+    root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const filter = target.closest<HTMLElement>('.cam-filter');
+      if (filter) return selectFilter(filter.dataset.filter!);
+      const action = target.closest<HTMLElement>('[data-cam]')?.dataset.cam;
+      switch (action) {
+        case 'start':
+          start();
+          break;
+        case 'shoot':
+          shoot();
+          break;
+        case 'retake':
+          retake();
+          break;
+        case 'share':
+          share();
+          break;
+        case 'flip':
+          facing = facing === 'user' ? 'environment' : 'user';
+          start();
+          break;
+        case 'mirror':
+          mirror = !mirror;
+          mirrorBtn.setAttribute('aria-pressed', String(mirror));
+          break;
+      }
+    });
+
+    // Release the camera whenever the window is closed, minimized, or the tab goes to the background
+    new MutationObserver(() => {
+      if (win.hidden || win.hasAttribute('data-minimized')) stop();
+    }).observe(win, { attributes: true, attributeFilter: ['hidden', 'data-minimized'] });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+    });
+    window.addEventListener('pagehide', stop);
+  }
+
+  setupCamera();
+</script>

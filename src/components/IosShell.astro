@@ -1,5 +1,5 @@
 ---
-// iPhone 4 / iOS 4 style shell, shown only on small screens (see global.css).
+// iPhone 4 / iOS 4 style shell. Shown on small screens unless <html> has the `android` class (see Layout.astro and global.css).
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { funding, fundingPercent, formatTHB } from '../data/funding';
@@ -15,10 +15,11 @@ const tiles: Record<string, { bg: string; glyph?: string }> = {
   sponsors: { bg: 'linear-gradient(180deg,#ffb37a,#d9581a)' },
   staff: { bg: 'linear-gradient(180deg,#c9b39a,#7d5b3c)' },
   faq: { bg: 'linear-gradient(180deg,#8fb8ff,#2b5fc4)' },
+  camera: { bg: 'linear-gradient(180deg,#a9b1bb,#3d434b)' },
   recycle: { bg: 'linear-gradient(180deg,#d9d9d9,#7a7a7a)' },
 };
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const gridIds = ['about', 'schedule', 'venue', 'sponsors', 'staff', 'faq', 'recycle'];
+const gridIds = ['about', 'schedule', 'venue', 'camera', 'sponsors', 'staff', 'faq', 'recycle'];
 const dockIds = ['register', 'funding'];
 const eventDay = 10;
 ---
@@ -113,7 +114,7 @@ const eventDay = 10;
   </div>
 
   <nav class="ios-tabbar" aria-label="App tabs">
-    <button type="button" data-action="ios-home"><span class="tab-icon">🏠</span><span>Home</span></button>
+    <button type="button" data-action="mobile-home"><span class="tab-icon">🏠</span><span>Home</span></button>
     <button type="button" data-open="register" data-tab="register"><span class="tab-icon">🎟️</span><span>Register</span></button>
     <button type="button" data-open="venue" data-tab="venue"><span class="tab-icon">🗺️</span><span>Venue</span></button>
     <button type="button" data-open="funding" data-tab="funding"><span class="tab-icon">💰</span><span>Funding</span></button>

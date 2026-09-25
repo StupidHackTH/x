@@ -22,3 +22,11 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+.claudeclaude.md
+
+# node scripts/screenshots.mjs output
+screenshots/
+
+# personal notes
+claudeclaude.md

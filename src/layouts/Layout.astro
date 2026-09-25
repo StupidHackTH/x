@@ -20,12 +20,23 @@ const { title = `${event.name} (${event.codename}) · ${event.datesEn}`, descrip
     <meta property="og:description" content={description} />
     <meta property="og:image" content="/logo.png" />
     <link rel="icon" type="image/png" href="/favicon-64.png" />
+    <script is:inline>
+      // Pick the shell from the user agent before first paint so the right one renders immediately.
+      // Phones (<768px): Android gets the Gingerbread look, everything else the iPhone look (?android / ?ios force one).
+      // Large screens: Macs get the Mac OS X Leopard look, everything else Windows XP (?mac / ?xp force one).
+      (function () {
+        var q = new URLSearchParams(location.search);
+        var ua = navigator.userAgent;
+        if (q.has('android') || (!q.has('ios') && /Android/i.test(ua))) document.documentElement.classList.add('android');
+        if (q.has('mac') || (!q.has('xp') && /Macintosh/.test(ua))) document.documentElement.classList.add('mac');
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;1,600&display=swap" />
     <title>{title}</title>
   </head>
-  <body class="ios-locked">
+  <body class="mobile-locked">
     <slot />
   </body>
 </html>

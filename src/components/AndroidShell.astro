@@ -1,0 +1,189 @@
+---
+// Android 2.3 Gingerbread style shell. Shown on small screens when <html> has the `android` class,
+// which the inline script in Layout.astro sets from the user agent (or ?android / ?ios to force one).
+import { windows } from '../data/windows';
+import { event } from '../data/event';
+import { funding, fundingPercent, formatTHB } from '../data/funding';
+
+const eventStart = '2026-10-10T00:00:00+07:00';
+const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
+const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
+const homeIds = ['about', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
+const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
+const links = [
+  { label: 'Browser', glyph: '🌐', href: event.links.website },
+  { label: 'Facebook', glyph: '📘', href: event.links.facebook },
+  { label: 'Discord', glyph: '💬', href: event.links.discord },
+  { label: 'Creatorsgarten', glyph: '🌱', href: event.links.creatorsgarten },
+];
+const menuItems = [
+  { id: 'camera', glyph: '📷', label: 'Camera' },
+  { id: 'register', glyph: '🎟️', label: 'Register' },
+  { id: 'venue', glyph: '🗺️', label: 'Venue' },
+  { id: 'funding', glyph: '💰', label: 'Funding' },
+  { id: 'faq', glyph: '❓', label: 'FAQ' },
+];
+// 24x24 icon paths
+const icons = {
+  back: 'M13 5l-1.4 1.4 2.6 2.6H8a5 5 0 000 10h3v-2H8a3 3 0 010-6h6.2l-2.6 2.6L13 15l5-5z',
+  menu: 'M3 4h18v2.5H3zm0 4.5h18V11H3zM3 13h18v2.5H3zm0 4.5h18V20H3z',
+  search: 'M9.5 3a6.5 6.5 0 015.2 10.4l5.6 5.6-1.4 1.4-5.6-5.6A6.5 6.5 0 119.5 3zm0 2a4.5 4.5 0 100 9 4.5 4.5 0 000-9z',
+  home: 'M12 3l9 8.5h-3V21h-4.5v-6h-3v6H6v-9.5H3z',
+  grid: 'M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z',
+  lock: 'M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm0 2a3 3 0 013 3v3H9V7a3 3 0 013-3z',
+  sound: 'M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z',
+  mute: 'M3 9v6h4l5 5V4L7 9zm13.6 3l2.4-2.4-1.4-1.4-2.4 2.4-2.4-2.4-1.4 1.4 2.4 2.4-2.4 2.4 1.4 1.4 2.4-2.4 2.4 2.4 1.4-1.4z',
+  mic: 'M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V21h2v-3.1A7 7 0 0019 11z',
+};
+---
+
+<div class="android-only" id="android-shell" data-funding-percent={fundingPercent}>
+  <!-- Status bar. Tap to pull down the notification shade. -->
+  <div class="android-statusbar" role="button" tabindex="0" data-action="android-shade" aria-label="Notifications">
+    <span class="notif" aria-hidden="true"><span>💰</span><span>🎟️</span></span>
+    <span class="sys">
+      <span class="net" aria-hidden="true">3G</span>
+      <span class="sig" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:12px;opacity:.35"></i></span>
+      <span class="bat" aria-hidden="true"><i></i></span>
+      <time id="android-clock">10:08</time>
+    </span>
+  </div>
+
+  <div class="android-shade" id="android-shade" hidden>
+    <div class="head">
+      <span id="android-shade-date">October 10, 2026</span>
+      <button type="button" data-action="android-clear">Clear</button>
+    </div>
+    <div class="section">Ongoing</div>
+    <button type="button" class="item" data-open="funding">
+      <span class="glyph" aria-hidden="true">💰</span>
+      <span class="text"><b>Funding goal {fundingPercent}% reached</b><small>{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · tap to sponsor</small></span>
+    </button>
+    <div class="section">Notifications</div>
+    <button type="button" class="item" data-open="register">
+      <span class="glyph" aria-hidden="true">🎟️</span>
+      <span class="text"><b>Registration opens {event.registration.opens}</b><small>{event.registration.platform} · {event.registration.price}</small></span>
+    </button>
+    <button type="button" class="item" data-open="schedule">
+      <span class="glyph" aria-hidden="true">📅</span>
+      <span class="text"><b>{event.name}</b><small>{event.datesEn} · {daysToGo} days to go</small></span>
+    </button>
+    <div class="handle" data-action="android-shade" aria-hidden="true"><i></i></div>
+    <div class="fill" data-action="android-shade"></div>
+  </div>
+
+  <!-- Lock screen: drag the lock tab right to unlock, the sound tab left to toggle silent mode -->
+  <div class="android-lock android-wallpaper" id="android-lock" hidden>
+    <div class="android-lock-clock">
+      <div class="time" id="android-lock-time">10:08</div>
+      <div class="date" id="android-lock-date">Saturday, October 10</div>
+      <div class="carrier">{event.organizer}</div>
+    </div>
+    <div class="android-lock-middle">
+      <img src="/logo-transparent.png" alt={`${event.name} logo`} />
+      <div class="note">
+        <b>{event.name}</b> · {event.datesEn}<br />
+        💰 Funding goal {fundingPercent}% reached
+      </div>
+    </div>
+    <div class="android-lock-track" id="android-lock-track">
+      <div class="guide" aria-hidden="true"></div>
+      <div class="label" id="android-lock-label">Drag to unlock</div>
+      <div class="android-tab lock" id="android-lock-tab" role="button" tabindex="0" aria-label="Drag right to unlock">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.lock} /></svg>
+      </div>
+      <div class="android-tab sound" id="android-sound-tab" role="button" tabindex="-1" aria-label="Drag left to toggle silent mode">
+        <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d={icons.sound} /></svg>
+        <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d={icons.mute} /></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Home screen (launcher) -->
+  <div class="android-home android-wallpaper" id="android-home">
+    <button type="button" class="android-search" data-action="android-search" aria-label="Search">
+      <span class="logo" aria-hidden="true"><i>S</i><i>t</i><i>u</i><i>p</i><i>i</i><i>d</i></span>
+      <span class="hint">Search stupid ideas</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.mic} /></svg>
+    </button>
+    <div class="android-grid" role="list">
+      {homeIds.map((id) => {
+        const w = byId[id];
+        return (
+          <button type="button" class="android-app" data-open={id} role="listitem">
+            <span class="icon" aria-hidden="true">{w.glyph}</span>
+            <span class="name">{w.label}</span>
+          </button>
+        );
+      })}
+    </div>
+    <div class="android-widgets">
+      <button type="button" class="android-widget" data-open="funding" aria-label="Funding goal widget">
+        <div class="widget-head"><span>💰 Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
+        <div class="widget-bar"><div style={`width:${fundingPercent}%`}></div></div>
+        <div class="widget-foot">{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · {funding.backers} sponsors</div>
+      </button>
+      <button type="button" class="android-widget countdown" data-open="schedule" data-countdown={eventStart} aria-label="Event countdown widget">
+        <div class="days">{daysToGo}</div>
+        <div class="unit">days to go</div>
+        <div class="when">Sat 10 – Sun 11 Oct · Cleverse</div>
+      </button>
+    </div>
+    <div class="android-hotseat">
+      <button type="button" class="android-app" data-open="register" aria-label="Register">
+        <span class="icon" aria-hidden="true">🎟️</span>
+      </button>
+      <button type="button" class="android-drawer-btn" data-action="android-drawer" aria-label="All apps">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.grid} /></svg>
+      </button>
+      <a class="android-app" href={event.links.website} target="_blank" rel="noopener" aria-label="Browser">
+        <span class="icon" aria-hidden="true">🌐</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- All apps drawer -->
+  <div class="android-drawer" id="android-drawer" hidden>
+    <div class="android-grid" role="list">
+      {drawerIds.map((id) => {
+        const w = byId[id];
+        return (
+          <button type="button" class="android-app" data-open={id} role="listitem">
+            <span class="icon" aria-hidden="true">{w.glyph}</span>
+            <span class="name">{w.label}</span>
+          </button>
+        );
+      })}
+      {links.map((l) => (
+        <a class="android-app" href={l.href} target="_blank" rel="noopener" role="listitem">
+          <span class="icon" aria-hidden="true">{l.glyph}</span>
+          <span class="name">{l.label}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- Options menu (Menu key). Tapping outside the panel closes it. -->
+  <div class="android-menu" id="android-menu" hidden data-action="android-menu">
+    <div class="panel" role="menu">
+      {menuItems.map((m) => (
+        <button type="button" role="menuitem" data-open={m.id}>
+          <span class="glyph" aria-hidden="true">{m.glyph}</span>{m.label}
+        </button>
+      ))}
+      <button type="button" role="menuitem" data-action="android-settings">
+        <span class="glyph" aria-hidden="true">⚙️</span>Settings
+      </button>
+    </div>
+  </div>
+
+  <div class="android-toast" id="android-toast" role="status" hidden></div>
+
+  <!-- Capacitive keys under the screen (Nexus S order) -->
+  <nav class="android-bezel" aria-label="Phone keys">
+    <button type="button" data-action="android-back" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.back} /></svg></button>
+    <button type="button" data-action="android-menu" aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.menu} /></svg></button>
+    <button type="button" data-action="android-search" aria-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.search} /></svg></button>
+    <button type="button" data-action="mobile-home" aria-label="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={icons.home} /></svg></button>
+  </nav>
+</div>
