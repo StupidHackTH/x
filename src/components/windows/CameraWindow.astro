@@ -1,0 +1,1301 @@
+---
+import Window from '../Window.astro';
+
+// 2000s-era looks. The chips (phones) and the Effects grid (computers) are built from this list; rendering
+// lives in the <script> below under the same ids. The order is the 3×3 Effects grid, Normal in the centre.
+const filters = [
+  { id: 'webcam', glyph: '🖥️', name: "Webcam '03", hint: 'MSN Messenger quality' },
+  { id: 'camphone', glyph: '📱', name: 'Cam Phone', hint: '0.3 megapixel + date stamp' },
+  { id: 'camcorder', glyph: '📼', name: 'Camcorder', hint: 'Hi8 · REC ●' },
+  { id: 'lomo', glyph: '🎞️', name: 'Lomo', hint: 'vignette จัดเต็ม' },
+  { id: 'normal', glyph: '🙂', name: 'Normal', hint: 'ธรรมดา ไม่โง่' },
+  { id: 'sepia', glyph: '🟤', name: 'Old Photo', hint: 'ซีเปีย + เกรน' },
+  { id: 'aero', glyph: '🫧', name: 'Frutiger Aero', hint: 'glossy · bubbles · sky' },
+  { id: 'nokia', glyph: '📟', name: 'Nokia 3310', hint: '84×48 · 1-bit' },
+  { id: 'nightshot', glyph: '🌙', name: 'NightShot', hint: 'เขียว ๆ แบบ Handycam' },
+];
+---
+
+<Window id="camera" menu={['File', 'Edit', 'View', 'Effects', 'Help']} status="Ready · 0.3 megapixels of pure stupidity" beige>
+  <div class="cam filters-open" id="cam" data-state="off" data-view="live" data-mode="photo" data-kind="image">
+    <!-- Phone top bar: flash · grid · filters · close (SVG icons like a real camera app) -->
+    <div class="cam-top">
+      <button type="button" class="cam-iconbtn" data-cam="flash" aria-pressed="false" aria-label="Screen flash">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="bolt" d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" /><path class="slash" d="M4 4l16 16" /></svg>
+      </button>
+      <span class="cam-top-spacer"></span>
+      <button type="button" class="cam-iconbtn" data-cam="grid" aria-pressed="false" aria-label="Grid">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M3.5 3.5h17v17h-17zM9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17" /></svg>
+      </button>
+      <button type="button" class="cam-iconbtn" data-cam="filters" aria-pressed="true" aria-label="Filters">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="stroke" cx="9" cy="9.5" r="5" /><circle class="stroke" cx="15" cy="9.5" r="5" /><circle class="stroke" cx="12" cy="14.5" r="5" /></svg>
+      </button>
+      <button type="button" class="cam-iconbtn" data-action="close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+
+    <div class="cam-view">
+      <div class="cam-stage" id="cam-stage">
+        <canvas id="cam-canvas" width="480" height="360" aria-label="Camera preview"></canvas>
+        <video id="cam-video" playsinline muted autoplay></video>
+        <img id="cam-shot" alt="Captured photo" />
+        <video id="cam-play" controls playsinline></video>
+        <div class="cam-gridlines" aria-hidden="true"></div>
+        <div class="cam-focus" id="cam-focus" hidden aria-hidden="true"></div>
+        <div class="cam-count" id="cam-count" hidden></div>
+        <div class="cam-rec" id="cam-rec" hidden><i></i><time id="cam-rec-time">00:00</time></div>
+        <div class="cam-note" id="cam-note" hidden></div>
+        <div class="cam-review-nav" id="cam-review-nav" hidden>
+          <button type="button" data-cam="prev" aria-label="Previous">‹</button>
+          <span id="cam-review-pos">1/1</span>
+          <button type="button" data-cam="next" aria-label="Next">›</button>
+        </div>
+        <div class="cam-off" id="cam-off">
+          <div class="text-5xl" aria-hidden="true">📷</div>
+          <p class="font-bold text-sm">Stupid Photo Booth</p>
+          <p class="cam-msg" id="cam-message">ถ่ายรูปและอัดวิดีโอด้วยกล้องจริง พร้อม filter ยุค 2000s · ไฟล์อยู่ในเครื่องคุณเท่านั้น ไม่ถูกส่งไปไหน</p>
+          <button type="button" class="xp-btn default" data-cam="start">▶ เปิดกล้อง</button>
+        </div>
+      </div>
+      <!-- Live previews of every look: Photo Booth 3×3 grid on computers, filter carousel on phones -->
+      <div class="cam-effects" id="cam-effects" hidden>
+        {filters.map((f) => (
+          <button type="button" class="cam-effect" data-filter={f.id} title={f.hint} aria-pressed={f.id === 'normal' ? 'true' : 'false'}>
+            <canvas width="160" height="120"></canvas>
+            <span>{f.name}</span>
+          </button>
+        ))}
+      </div>
+      <div class="cam-zoom" id="cam-zoom" role="group" aria-label="Zoom" hidden></div>
+    </div>
+
+    <!-- Phone: mode strip (only PHOTO and VIDEO exist; the rest are as real as the funding numbers) -->
+    <div class="cam-modes" id="cam-modes" role="tablist" aria-label="Mode">
+      <button type="button" role="tab" data-cam="fakemode" aria-selected="false">TIME-LAPSE</button>
+      <button type="button" role="tab" data-cam="fakemode" aria-selected="false">SLO-MO</button>
+      <button type="button" role="tab" data-cam-mode="video" aria-selected="false">VIDEO</button>
+      <button type="button" role="tab" data-cam-mode="photo" aria-selected="true">PHOTO</button>
+      <button type="button" role="tab" data-cam="fakemode" aria-selected="false">PORTRAIT</button>
+      <button type="button" role="tab" data-cam="fakemode" aria-selected="false">PANO</button>
+    </div>
+
+    <!-- Bottom bar. Phone: last capture · shutter · flip. Computer: Photo Booth modes · shutter · Effects -->
+    <div class="cam-bar">
+      <div class="cam-bar-left">
+        <button type="button" class="cam-thumb empty" data-cam="review" aria-label="Last capture"><img alt="" /><i class="play" hidden>▶</i></button>
+        <div class="cam-pbmodes" role="group" aria-label="Photo Booth mode">
+          <button type="button" data-cam-mode="photo" aria-pressed="true" title="Take a still picture">📷</button>
+          <button type="button" data-cam-mode="burst" aria-pressed="false" title="Take four quick pictures">🎞️</button>
+          <button type="button" data-cam-mode="video" aria-pressed="false" title="Take a movie clip">🎬</button>
+        </div>
+      </div>
+      <button type="button" class="cam-shutter" data-cam="shutter" aria-label="Take photo"><span></span></button>
+      <div class="cam-bar-right">
+        <button type="button" class="cam-iconbtn cam-flip" data-cam="flip" aria-label="Switch camera">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H21l-3.5 4-3.5-4h2.2A5 5 0 0 0 12 7zm0 14a7 7 0 0 1-6.3-4H3l3.5-4 3.5 4H7.8A5 5 0 0 0 12 17z" /></svg>
+        </button>
+        <button type="button" class="cam-effectsbtn" data-cam="effects" aria-pressed="false">Effects</button>
+      </div>
+    </div>
+
+    <!-- Review controls -->
+    <div class="cam-reviewbar" id="cam-reviewbar" hidden>
+      <button type="button" class="xp-btn" data-cam="back">‹ กลับ</button>
+      <button type="button" class="xp-btn" data-cam="delete">🗑️ ลบ</button>
+      <button type="button" class="xp-btn" data-cam="share" id="cam-share" hidden>📤 Share</button>
+      <a class="xp-btn default" id="cam-save" download="shtX-photo.jpg" href="#">💾 Save</a>
+      <p class="cam-hint" id="cam-hint" hidden>iPhone/iPad: Save จะเปิด share sheet ให้เลือก “Save Image / Save Video” เพื่อเก็บลง Photos</p>
+    </div>
+
+    <!-- Computer: film strip -->
+    <div class="cam-strip" id="cam-strip" aria-label="Captures"></div>
+  </div>
+</Window>
+
+<style is:global>
+  .cam { position: relative; display: flex; flex-direction: column; height: 100%; background: #1c1c1c; color: #fff; overflow: hidden; }
+  .cam-view { position: relative; flex: 1; min-height: 0; display: flex; }
+  .cam-stage { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; background: #000; overflow: hidden; touch-action: none; }
+  .cam-stage > canvas,
+  .cam-stage > img,
+  .cam-stage > #cam-play { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+  .cam-stage > #cam-video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .cam.pixelated #cam-canvas { image-rendering: pixelated; }
+  .cam:not([data-state="live"]) #cam-canvas,
+  .cam:not([data-view="live"]) #cam-canvas,
+  .cam:not([data-view="review"]) #cam-shot,
+  .cam:not([data-view="review"]) #cam-play,
+  .cam[data-kind="video"] #cam-shot,
+  .cam[data-kind="image"] #cam-play,
+  .cam:not([data-state="off"]) .cam-off,
+  .cam[data-view="review"] .cam-bar,
+  .cam[data-view="review"] .cam-modes,
+  .cam[data-view="review"] .cam-zoom,
+  .cam[data-view="review"] .cam-gridlines,
+  .cam:not([data-state="live"]) .cam-zoom,
+  .cam:not(.grid-on) .cam-gridlines,
+  .cam[data-recording] .cam-modes,
+  .cam[data-recording] .cam-flip,
+  .cam[data-recording] .cam-pbmodes { display: none; }
+  .cam[data-recording] .cam-thumb { visibility: hidden; }
+  .cam-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; background: #1c1c1c; color: #eee; text-align: center; }
+  .cam-msg { max-width: 300px; font-size: 12px; color: #aaa; }
+  .cam-gridlines { position: absolute; inset: 0; pointer-events: none; background:
+      linear-gradient(90deg, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px)),
+      linear-gradient(90deg, transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+      linear-gradient(180deg, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px)),
+      linear-gradient(180deg, transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)); }
+  .cam-focus { position: absolute; width: 72px; height: 72px; margin: -36px 0 0 -36px; border: 1.5px solid #ffd60a; pointer-events: none; animation: cam-focus 1.4s ease-out forwards; }
+  .cam-focus[hidden] { display: none; }
+  .cam-focus::after { content: "☀"; position: absolute; right: -22px; top: 50%; color: #ffd60a; font-size: 14px; line-height: 0; }
+  @keyframes cam-focus { from { transform: scale(1.4); opacity: 0; } 15% { opacity: 1; } 60% { transform: scale(1); opacity: 1; } to { transform: scale(1); opacity: 0; } }
+  .cam-effects[hidden] { display: none; }
+  .cam-effect { position: relative; overflow: hidden; background: #111; }
+  .cam-effect canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .cam-effect span { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px; text-align: center; }
+  .cam-effect:hover { filter: brightness(1.15); }
+  .cam-effect[aria-pressed="true"] { outline: 2px solid #ffd60a; outline-offset: -2px; }
+  .cam-zoom { position: absolute; display: flex; gap: 4px; padding: 3px; border-radius: 22px; background: rgba(0, 0, 0, 0.4); }
+  .cam-zoom[hidden] { display: none; }
+  .cam-zoom button { min-width: 30px; height: 30px; padding: 0 5px; border-radius: 15px; background: rgba(35, 35, 35, 0.75); color: #fff; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; transition: min-width 0.15s; }
+  .cam-zoom button.on { min-width: 38px; color: #ffd60a; font-size: 12px; }
+  .cam-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 150px; font-weight: 700; color: #fff; text-shadow: 0 0 30px rgba(0, 0, 0, 0.8); pointer-events: none; animation: cam-count 0.9s ease-out; }
+  .cam-count[hidden] { display: none; }
+  @keyframes cam-count { from { transform: scale(1.5); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); opacity: 0.9; } }
+  .cam-rec { position: absolute; top: 10px; left: 50%; display: flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 11px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 13px; font-variant-numeric: tabular-nums; transform: translateX(-50%); }
+  .cam-rec[hidden] { display: none; }
+  .cam-rec i { width: 10px; height: 10px; border-radius: 50%; background: #ff3b30; animation: cam-blink 1s steps(2) infinite; }
+  @keyframes cam-blink { to { opacity: 0.2; } }
+  .cam-note { position: absolute; bottom: 12px; left: 50%; padding: 6px 12px; border-radius: 14px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 12px; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
+  .cam-note[hidden] { display: none; }
+  .cam-review-nav { position: absolute; top: 8px; left: 50%; display: flex; align-items: center; gap: 8px; padding: 2px 6px; border-radius: 14px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 12px; transform: translateX(-50%); }
+  .cam-review-nav[hidden] { display: none; }
+  .cam-review-nav button { width: 28px; height: 24px; background: transparent; color: #fff; font-size: 20px; line-height: 1; }
+  #cam-screenflash { position: fixed; inset: 0; z-index: 30000; background: #fff; opacity: 0; pointer-events: none; }
+  #cam-screenflash.hold { opacity: 1; }
+  #cam-screenflash.on { animation: cam-screenflash 0.5s ease-out; }
+  @keyframes cam-screenflash { from { opacity: 1; } to { opacity: 0; } }
+  .cam-shutter { position: relative; width: 64px; height: 64px; border-radius: 50%; }
+  .cam-reviewbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; background: #2a2a2a; }
+  .cam-reviewbar[hidden] { display: none; }
+  .cam-hint { width: 100%; margin: 2px 0 0; font-size: 10px; color: #bbb; text-align: center; }
+  .cam-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; }
+  .cam-iconbtn svg { width: 22px; height: 22px; fill: #fff; }
+  .cam-iconbtn svg .stroke { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .cam-iconbtn[aria-pressed="true"] svg { fill: #ffd60a; }
+  .cam-iconbtn[aria-pressed="true"] svg .stroke { stroke: #ffd60a; }
+  .cam-iconbtn[data-cam="flash"] svg .slash { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; }
+  .cam-iconbtn[data-cam="flash"][aria-pressed="true"] svg .slash { display: none; }
+  .cam-thumb { position: relative; width: 48px; height: 48px; overflow: hidden; border: 2px solid #fff; border-radius: 8px; background: #222; }
+  .cam-thumb.empty { visibility: hidden; }
+  .cam-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .cam-thumb .play,
+  .cam-strip .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; text-shadow: 0 0 4px #000; pointer-events: none; }
+  .cam-thumb .play[hidden] { display: none; }
+
+  /* Computer: Photo Booth */
+  @media (min-width: 768px) {
+    .cam-top, .cam-modes, .cam-thumb, .cam-flip { display: none; }
+    .cam-view { margin: 8px 8px 0; border: 1px solid #000; border-radius: 4px; box-shadow: inset 0 0 0 1px #444; }
+    .cam-effects { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 3px; padding: 3px; background: #000; }
+    .cam-zoom { top: 10px; right: 10px; }
+    .cam-bar { display: flex; align-items: center; height: 68px; padding: 0 14px; background: linear-gradient(180deg, #4b4b4b, #2b2b2b); border-top: 1px solid #5a5a5a; }
+    .cam-bar-left, .cam-bar-right { flex: 1; display: flex; align-items: center; }
+    .cam-bar-right { justify-content: flex-end; }
+    .cam-pbmodes { display: flex; overflow: hidden; border: 1px solid #111; border-radius: 5px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15); }
+    .cam-pbmodes button { width: 40px; height: 30px; border-right: 1px solid #111; background: linear-gradient(180deg, #666, #444); color: #fff; font-size: 16px; }
+    .cam-pbmodes button:last-child { border-right: 0; }
+    .cam-pbmodes button[aria-pressed="true"] { background: linear-gradient(180deg, #262626, #3a3a3a); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6); }
+    .cam-shutter { border: 2px solid #5a0f0c; background: radial-gradient(circle at 50% 35%, #ff8a80, #e3342f 55%, #9b1c17); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.35); }
+    .cam-shutter span::before { content: "📷"; font-size: 24px; line-height: 1; }
+    .cam[data-mode="video"] .cam-shutter span::before { content: "●"; color: #fff; font-size: 26px; }
+    .cam[data-recording] .cam-shutter span::before { content: "■"; color: #fff; font-size: 26px; }
+    .cam-shutter:active { filter: brightness(0.8); }
+    .cam-effectsbtn { height: 26px; padding: 0 14px; border: 1px solid #111; border-radius: 13px; background: linear-gradient(180deg, #777, #4a4a4a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); color: #fff; font-size: 12px; font-weight: 700; }
+    .cam-effectsbtn[aria-pressed="true"] { background: linear-gradient(180deg, #4d8de8, #2f61c2); }
+    .cam-strip { display: flex; gap: 6px; height: 74px; padding: 6px 8px; overflow-x: auto; background: #1a1a1a; border-top: 1px solid #000; }
+    .cam-strip button { position: relative; flex: 0 0 auto; width: 80px; height: 60px; border: 2px solid #fff; background: #000; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+    .cam-strip button img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .cam-strip button[aria-current="true"] { outline: 2px solid #ffd60a; }
+    .cam-reviewbar { background: linear-gradient(180deg, #4b4b4b, #2b2b2b); }
+  }
+
+  /* Phone: camera app */
+  @media (max-width: 767px) {
+    .xp-window[data-window="camera"] .xp-titlebar { display: none !important; }
+    .xp-window[data-window="camera"] .xp-window-body { padding-bottom: 0; }
+    body.camera-open .ios-tabbar { display: none !important; }
+    .cam { background: #000; font-family: -apple-system, "Helvetica Neue", Roboto, "Noto Sans Thai", sans-serif; }
+    .cam-top { display: flex; align-items: center; gap: 4px; height: 48px; padding: 0 8px; background: #000; }
+    .cam-top-spacer { flex: 1; }
+    .cam-top .cam-iconbtn { width: 38px; height: 38px; background: transparent; }
+    .cam-top .cam-iconbtn[data-action="close"] { background: rgba(255, 255, 255, 0.14); }
+    .cam-effects { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; padding: 10px 12px 8px; overflow-x: auto; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.65)); scrollbar-width: none; }
+    .cam-effects::-webkit-scrollbar { display: none; }
+    .cam-effect { flex: 0 0 auto; width: 62px; background: transparent; }
+    .cam-effect canvas { width: 62px; height: 62px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+    .cam-effect span { position: static; display: block; padding: 3px 0 0; background: transparent; font-size: 9px; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cam-effect[aria-pressed="true"] { outline: 0; }
+    .cam-effect[aria-pressed="true"] canvas { outline: 2px solid #ffd60a; outline-offset: -2px; }
+    .cam-effect[aria-pressed="true"] span { color: #ffd60a; }
+    .cam-zoom { left: 50%; bottom: 12px; transform: translateX(-50%); }
+    .cam.filters-open .cam-zoom { bottom: 104px; }
+    .cam-modes { display: flex; gap: 26px; padding: 8px 50% 6px; overflow-x: auto; background: #000; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; scrollbar-width: none; }
+    .cam-modes::-webkit-scrollbar { display: none; }
+    .cam-modes button { flex: 0 0 auto; background: transparent; color: #cfcfcf; white-space: nowrap; }
+    .cam-modes button[aria-selected="true"] { color: #ffd60a; }
+    .cam-bar { display: flex; align-items: center; justify-content: space-between; height: 100px; padding: 0 28px; background: #000; }
+    .cam-bar-left, .cam-bar-right { display: flex; align-items: center; justify-content: center; width: 56px; }
+    .cam-pbmodes, .cam-effectsbtn { display: none; }
+    .cam-shutter { width: 74px; height: 74px; padding: 4px; border: 4px solid #fff; background: transparent; }
+    .cam-shutter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; transition: transform 0.15s, border-radius 0.15s, background 0.15s; }
+    .cam[data-mode="video"] .cam-shutter span { background: #ff3b30; }
+    .cam[data-recording] .cam-shutter span { border-radius: 7px; background: #ff3b30; transform: scale(0.5); }
+    .cam-shutter:active span { transform: scale(0.9); }
+    .cam-flip { width: 46px; height: 46px; background: rgba(255, 255, 255, 0.18); }
+    .cam-strip { display: none; }
+    .cam-reviewbar { padding: 12px 8px; background: #000; }
+    .cam-reviewbar .xp-btn, .cam-reviewbar .xp-btn.default { height: 36px; border: 0; background: transparent; box-shadow: none; color: #fff; font-size: 15px; font-weight: 400; text-shadow: none; }
+    .cam-reviewbar .xp-btn.default { color: #ffd60a; font-weight: 700; }
+    .cam-reviewbar .xp-btn:active { filter: brightness(0.6); background: transparent; }
+  }
+</style>
+
+<script>
+  /* Stupid Photo Booth: live camera → canvas with a 2000s look → JPEG/PNG photos and MP4/WebM clips.
+     Phones get a camera-app layout, computers a Photo Booth layout; the DOM is the same. Nothing leaves the browser. */
+
+  type PixelFn = (d: Uint8ClampedArray, w: number, h: number, t: number) => void;
+  type OverlayFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
+  interface Look {
+    scale: number; // downscale factor of the working frame (1 = full)
+    pixelated?: boolean; // upscale without smoothing
+    quality?: number; // JPEG quality of the saved photo (low = authentic artifacts)
+    png?: boolean; // save as PNG (crisp 1-bit looks)
+    pixel?: PixelFn;
+    overlay?: OverlayFn;
+  }
+  type Mode = 'photo' | 'burst' | 'video';
+  type View = 'live' | 'effects' | 'review';
+  interface Item { kind: 'image' | 'video'; blob: Blob; url: string; thumb: string; name: string }
+
+  const clamp = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
+  const lum = (d: Uint8ClampedArray, i: number) => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  function noise(d: Uint8ClampedArray, amp: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * amp;
+      d[i] = clamp(d[i] + n);
+      d[i + 1] = clamp(d[i + 1] + n);
+      d[i + 2] = clamp(d[i + 2] + n);
+    }
+  }
+  function saturate(d: Uint8ClampedArray, s: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      const l = lum(d, i);
+      d[i] = clamp(l + (d[i] - l) * s);
+      d[i + 1] = clamp(l + (d[i + 1] - l) * s);
+      d[i + 2] = clamp(l + (d[i + 2] - l) * s);
+    }
+  }
+  function contrast(d: Uint8ClampedArray, c: number, brightness = 0) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = clamp((d[i] - 128) * c + 128 + brightness);
+      d[i + 1] = clamp((d[i + 1] - 128) * c + 128 + brightness);
+      d[i + 2] = clamp((d[i + 2] - 128) * c + 128 + brightness);
+    }
+  }
+  function tint(d: Uint8ClampedArray, r: number, g: number, b: number) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = clamp(d[i] + r);
+      d[i + 1] = clamp(d[i + 1] + g);
+      d[i + 2] = clamp(d[i + 2] + b);
+    }
+  }
+  function vignette(ctx: CanvasRenderingContext2D, w: number, h: number, strength: number) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.72);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${strength})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  function stamp(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') {
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillText(text, x + 1, y + 1);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+  }
+  let scanPattern: CanvasPattern | null = null;
+  function scanlines(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    if (!scanPattern) {
+      const c = document.createElement('canvas');
+      c.width = 1;
+      c.height = 2;
+      const x = c.getContext('2d')!;
+      x.fillStyle = 'rgba(0,0,0,0.22)';
+      x.fillRect(0, 1, 1, 1);
+      scanPattern = ctx.createPattern(c, 'repeat');
+    }
+    ctx.fillStyle = scanPattern!;
+    ctx.fillRect(0, 0, w, h);
+  }
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const bubbles = [0.12, 0.3, 0.52, 0.68, 0.86, 0.4].map((x, i) => ({ x, r: 10 + (i % 3) * 9, speed: 12 + i * 5, phase: i * 137 }));
+
+  const looks: Record<string, Look> = {
+    normal: { scale: 1, quality: 0.92 },
+    webcam: {
+      scale: 2,
+      quality: 0.55,
+      pixel: (d) => {
+        contrast(d, 0.82, 6);
+        tint(d, -6, 2, 14);
+        noise(d, 26);
+      },
+    },
+    camphone: {
+      scale: 3,
+      pixelated: true,
+      quality: 0.3,
+      pixel: (d) => {
+        tint(d, 16, 6, -18);
+        contrast(d, 1.1);
+        for (let i = 0; i < d.length; i += 4) {
+          d[i] &= 0xf8;
+          d[i + 1] &= 0xf8;
+          d[i + 2] &= 0xf8;
+        }
+        noise(d, 12);
+      },
+      overlay: (ctx, w, h) => {
+        const n = new Date();
+        stamp(ctx, `${pad(n.getDate())}.${pad(n.getMonth() + 1)}.${n.getFullYear()}`, w - w * 0.02, h - h * 0.03, `bold ${Math.round(h * 0.055)}px "Courier New", monospace`, '#ff9d1c', 'right');
+      },
+    },
+    camcorder: {
+      scale: 2,
+      quality: 0.7,
+      pixel: (d, w, h) => {
+        const src = d.slice();
+        for (let y = 0; y < h; y++) {
+          for (let x = 2; x < w; x++) {
+            const i = (y * w + x) * 4;
+            d[i] = src[i - 8]; // red channel bleeds 2px to the right, like a tired tape head
+          }
+        }
+        saturate(d, 1.25);
+        contrast(d, 1.08, -4);
+      },
+      overlay: (ctx, w, h, t) => {
+        scanlines(ctx, w, h);
+        const u = h / 360; // scale the graphics with the frame
+        const font = `bold ${Math.round(h * 0.045)}px "Courier New", monospace`;
+        if (Math.floor(t / 500) % 2 === 0) {
+          ctx.fillStyle = '#ff2a2a';
+          ctx.beginPath();
+          ctx.arc(22 * u, 24 * u, 6 * u, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        stamp(ctx, 'REC', 34 * u, 30 * u, font, '#fff');
+        stamp(ctx, 'SP', w - 16 * u, 30 * u, font, '#fff', 'right');
+        const n = new Date();
+        const date = n.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+        const time = n.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        stamp(ctx, `${date}  ${time}`, 16 * u, h - 14 * u, font, '#fff');
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 2 * u;
+        const m = 40 * u;
+        const L = 18 * u;
+        for (const [x, y, sx, sy] of [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]] as const) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + sy * L);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + sx * L, y);
+          ctx.stroke();
+        }
+      },
+    },
+    lomo: {
+      scale: 1,
+      quality: 0.85,
+      pixel: (d) => {
+        saturate(d, 1.55);
+        contrast(d, 1.28);
+        for (let i = 0; i < d.length; i += 4) {
+          const l = lum(d, i);
+          if (l < 90) d[i + 1] = clamp(d[i + 1] + 14);
+          else if (l > 170) {
+            d[i] = clamp(d[i] + 10);
+            d[i + 1] = clamp(d[i + 1] + 6);
+          }
+        }
+      },
+      overlay: (ctx, w, h) => vignette(ctx, w, h, 0.85),
+    },
+    sepia: {
+      scale: 1,
+      quality: 0.8,
+      pixel: (d) => {
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          d[i] = clamp(r * 0.393 + g * 0.769 + b * 0.189);
+          d[i + 1] = clamp(r * 0.349 + g * 0.686 + b * 0.168);
+          d[i + 2] = clamp(r * 0.272 + g * 0.534 + b * 0.131);
+        }
+        noise(d, 18);
+      },
+      overlay: (ctx, w, h) => vignette(ctx, w, h, 0.5),
+    },
+    aero: {
+      scale: 1,
+      quality: 0.88,
+      pixel: (d) => {
+        saturate(d, 1.25);
+        tint(d, -4, 6, 18);
+        for (let i = 0; i < d.length; i += 4) {
+          if (lum(d, i) > 185) {
+            d[i] = clamp(d[i] + 30);
+            d[i + 1] = clamp(d[i + 1] + 30);
+            d[i + 2] = clamp(d[i + 2] + 30);
+          }
+        }
+      },
+      overlay: (ctx, w, h, t) => {
+        const u = h / 360;
+        const gloss = ctx.createLinearGradient(0, 0, 0, h * 0.45);
+        gloss.addColorStop(0, 'rgba(255,255,255,0.3)');
+        gloss.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gloss;
+        ctx.fillRect(0, 0, w, h * 0.45);
+        const glow = ctx.createLinearGradient(0, h * 0.6, 0, h);
+        glow.addColorStop(0, 'rgba(110,230,190,0)');
+        glow.addColorStop(1, 'rgba(110,230,190,0.28)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, h * 0.6, w, h * 0.4);
+        for (const b of bubbles) {
+          const r = b.r * u;
+          const y = h - (((t / 1000) * b.speed * u + b.phase) % (h + 60 * u)) + 30 * u;
+          const x = b.x * w + Math.sin((t / 1000 + b.phase) * 0.8) * 8 * u;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+          ctx.lineWidth = 1.5 * u;
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(180,240,255,0.14)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.25, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.fill();
+        }
+      },
+    },
+    nokia: {
+      scale: 6,
+      pixelated: true,
+      png: true,
+      pixel: (d, w, h) => {
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const l = (lum(d, i) - 128) * 1.4 + 128;
+            const on = l > ((BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16) * 255;
+            d[i] = on ? 199 : 44;
+            d[i + 1] = on ? 215 : 60;
+            d[i + 2] = on ? 166 : 40;
+          }
+        }
+      },
+      overlay: (ctx, w, h) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        const step = w / Math.round(w / 6); // one LCD cell = one 6× pixel of the working frame
+        for (let x = 0; x < w; x += step) ctx.fillRect(Math.round(x), 0, 1, h);
+        for (let y = 0; y < h; y += step) ctx.fillRect(0, Math.round(y), w, 1);
+      },
+    },
+    nightshot: {
+      scale: 2,
+      quality: 0.6,
+      pixel: (d) => {
+        for (let i = 0; i < d.length; i += 4) {
+          const l = lum(d, i) * 1.5 + 12;
+          d[i] = clamp(l * 0.25);
+          d[i + 1] = clamp(l);
+          d[i + 2] = clamp(l * 0.3);
+        }
+        noise(d, 34);
+      },
+      overlay: (ctx, w, h, t) => {
+        const u = h / 360;
+        vignette(ctx, w, h, 0.75);
+        stamp(ctx, 'NIGHTSHOT', w - 16 * u, 30 * u, `bold ${Math.round(h * 0.045)}px "Courier New", monospace`, '#9cff9c', 'right');
+        if (Math.floor(t / 700) % 2 === 0) {
+          ctx.fillStyle = '#9cff9c';
+          ctx.fillRect(16 * u, 18 * u, 10 * u, 10 * u);
+        }
+      },
+    },
+  };
+
+  function setupCamera() {
+    const root = document.getElementById('cam');
+    const win = root?.closest<HTMLElement>('[data-window]');
+    const by = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+    const canvas = by<HTMLCanvasElement>('cam-canvas');
+    const video = by<HTMLVideoElement>('cam-video');
+    const shot = by<HTMLImageElement>('cam-shot');
+    const play = by<HTMLVideoElement>('cam-play');
+    const effects = by('cam-effects');
+    const count = by('cam-count');
+    const rec = by('cam-rec');
+    const recTime = by('cam-rec-time');
+    const note = by('cam-note');
+    const message = by('cam-message');
+    const stage = by('cam-stage');
+    const focusBox = by('cam-focus');
+    const zoomPill = by('cam-zoom');
+    const modesStrip = by('cam-modes');
+    const reviewNav = by('cam-review-nav');
+    const reviewPos = by('cam-review-pos');
+    const reviewBar = by('cam-reviewbar');
+    const shareBtn = by('cam-share');
+    const save = by<HTMLAnchorElement>('cam-save');
+    const hint = by('cam-hint');
+    const strip = by('cam-strip');
+    const thumb = root?.querySelector<HTMLButtonElement>('.cam-thumb');
+    const thumbImg = thumb?.querySelector('img');
+    const thumbPlay = thumb?.querySelector<HTMLElement>('.play');
+    const flipBtn = root?.querySelector<HTMLElement>('.cam-flip');
+    const shutter = root?.querySelector<HTMLElement>('.cam-shutter');
+    const effectsBtn = root?.querySelector<HTMLElement>('.cam-effectsbtn');
+    if (!root || !win || !canvas || !video || !shot || !play || !effects || !count || !rec || !recTime || !note || !message || !stage || !focusBox || !zoomPill || !modesStrip || !reviewNav || !reviewPos || !reviewBar || !shareBtn || !save || !hint || !strip || !thumb || !thumbImg || !thumbPlay || !flipBtn || !shutter || !effectsBtn) return;
+
+    const ctx = canvas.getContext('2d')!;
+    const work = document.createElement('canvas');
+    const wctx = work.getContext('2d', { willReadFrequently: true })!;
+    const tileWork = document.createElement('canvas');
+    const twctx = tileWork.getContext('2d', { willReadFrequently: true })!;
+    const tiles = Array.from(effects.querySelectorAll<HTMLElement>('.cam-effect')).map((b) => {
+      const c = b.querySelector('canvas')!;
+      return { id: b.dataset.filter!, canvas: c, ctx: c.getContext('2d')! };
+    });
+    // The whole screen flashes white, Photo Booth style (also the "flash" for selfies on phones)
+    const screenFlash = document.createElement('div');
+    screenFlash.id = 'cam-screenflash';
+    document.body.appendChild(screenFlash);
+    const defaultMessage = message.textContent;
+
+    let state: 'off' | 'live' = 'off';
+    let view: View = 'live';
+    let mode: Mode = 'photo';
+    let current = 'normal';
+    let stream: MediaStream | null = null;
+    let audioStream: MediaStream | null = null;
+    let facing: 'user' | 'environment' = 'user';
+    let mirror = true;
+    let flashOn = false;
+    let filtersOpen = true;
+    let busy = false;
+    let zoom = 1; // what the pill shows
+    let digitalZoom = 1; // crop factor applied when the camera itself cannot zoom that far
+    let hwZoom: { min: number; max: number } | null = null;
+    const MAX_ZOOM = 5;
+    let tileTick = 0;
+    let raf = 0;
+    let recorder: MediaRecorder | null = null;
+    let recStream: MediaStream | null = null;
+    let recStart = 0;
+    let recTimer = 0;
+    let noteTimer = 0;
+    const items: Item[] = [];
+    let reviewIndex = -1;
+
+    const isPhone = () => window.matchMedia('(max-width: 767px)').matches;
+    const canShareFiles = (() => {
+      try {
+        return !!navigator.share && !!navigator.canShare?.({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] });
+      } catch {
+        return false;
+      }
+    })();
+    // iPhone/iPad (Safari sends a Mac user agent on iPad, hence the touch check)
+    const isApple = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const showNote = (text: string) => {
+      note.textContent = text;
+      note.hidden = false;
+      clearTimeout(noteTimer);
+      noteTimer = window.setTimeout(() => (note.hidden = true), 2200);
+    };
+    const setState = (s: typeof state) => {
+      state = s;
+      root.dataset.state = s;
+    };
+    /* Live previews: full 3×3 chooser on computers (own view), carousel over the viewfinder on phones */
+    const syncEffects = () => {
+      effects.hidden = isPhone() ? !(filtersOpen && view === 'live' && state === 'live') : view !== 'effects';
+      root.classList.toggle('filters-open', isPhone() && !effects.hidden);
+      if (isPhone()) {
+        for (const tile of tiles) if (tile.canvas.width !== 96 || tile.canvas.height !== 96) {
+          tile.canvas.width = 96;
+          tile.canvas.height = 96;
+        }
+      } else fitAll();
+    };
+    const setView = (v: View) => {
+      view = v;
+      root.dataset.view = v;
+      syncEffects();
+      reviewBar.hidden = v !== 'review';
+      reviewNav.hidden = v !== 'review';
+      effectsBtn.setAttribute('aria-pressed', String(v === 'effects'));
+      if (v !== 'review') {
+        play.pause();
+        if (state === 'live') loop();
+      }
+    };
+    const setMode = (m: Mode) => {
+      if (recorder) return;
+      mode = m;
+      root.dataset.mode = m;
+      for (const b of root.querySelectorAll<HTMLElement>('[data-cam-mode]')) {
+        const on = b.dataset.camMode === m;
+        b.setAttribute(b.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed', String(on));
+      }
+      shutter.setAttribute('aria-label', m === 'video' ? 'Record' : m === 'burst' ? 'Take four pictures' : 'Take photo');
+      centerMode(true);
+    };
+    /* Phone mode strip: keep the selected mode centred, like the real thing (needs the window to be visible) */
+    const centerMode = (smooth = false) => {
+      const tab = modesStrip.querySelector<HTMLElement>(`[data-cam-mode="${mode}"]`);
+      if (!tab || !modesStrip.clientWidth) return;
+      modesStrip.scrollTo({ left: tab.offsetLeft + tab.offsetWidth / 2 - modesStrip.clientWidth / 2, behavior: smooth ? 'smooth' : 'auto' });
+    };
+    const selectLook = (id: string) => {
+      if (!looks[id]) return;
+      current = id;
+      for (const b of root.querySelectorAll<HTMLElement>('[data-filter]')) b.setAttribute('aria-pressed', String(b.dataset.filter === id));
+      root.classList.toggle('pixelated', !!looks[id].pixelated);
+      const tile = effects.querySelector<HTMLElement>(`[data-filter="${id}"]`);
+      if (tile && isPhone()) effects.scrollTo({ left: tile.offsetLeft + tile.offsetWidth / 2 - effects.clientWidth / 2, behavior: 'smooth' });
+    };
+    const fail = (text: string) => {
+      message.textContent = text;
+      setState('off');
+    };
+    const describe = (err: unknown) => {
+      const name = (err as { name?: string })?.name ?? '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') return 'ไม่ได้รับอนุญาตให้ใช้กล้อง กด Allow ในเบราว์เซอร์แล้วลองใหม่';
+      if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'ไม่พบกล้อง ลองเสียบกล้องเข้า floppy drive';
+      if (name === 'NotReadableError') return 'กล้องถูกโปรแกรมอื่นใช้อยู่ (MSN video call?)';
+      return `เปิดกล้องไม่ได้: ${(err as Error)?.message ?? err}`;
+    };
+
+    /* ---- sizing: keep the picture's real aspect ratio at any window size (Safari ignores object-fit on canvas),
+            and render sharper when the Photo Booth window is big ---- */
+    const fit = (el: HTMLElement, ratio: number) => {
+      const sw = stage.clientWidth;
+      const sh = stage.clientHeight;
+      if (!sw || !sh || !ratio) return;
+      let w = sw;
+      let h = w / ratio;
+      if (h > sh) {
+        h = sh;
+        w = h * ratio;
+      }
+      el.style.width = `${Math.floor(w)}px`;
+      el.style.height = `${Math.floor(h)}px`;
+    };
+    const fitAll = () => {
+      fit(canvas, canvas.width / canvas.height);
+      if (shot.naturalWidth) fit(shot, shot.naturalWidth / shot.naturalHeight);
+      if (play.videoWidth) fit(play, play.videoWidth / play.videoHeight);
+      // Effects grid cells share the stage's aspect ratio; give the tile canvases the same one so 100%/100% never distorts
+      if (!isPhone() && stage.clientWidth && stage.clientHeight) {
+        const th = Math.max(60, Math.round((160 * stage.clientHeight) / stage.clientWidth));
+        for (const tile of tiles) if (tile.canvas.width !== 160 || tile.canvas.height !== th) {
+          tile.canvas.width = 160;
+          tile.canvas.height = th;
+        }
+      }
+    };
+    const pickResolution = () => {
+      if (isPhone()) return window.matchMedia('(orientation: portrait)').matches ? [480, 640] : [640, 480];
+      return stage.clientWidth >= 900 ? [960, 720] : [640, 480]; // maximised window: sharper, still cheap enough for the per-pixel looks
+    };
+    const applyResolution = () => {
+      if (recorder) return; // never change the frame size mid-clip
+      const [w, h] = pickResolution();
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      fitAll();
+    };
+    let resizeTimer = 0;
+    new ResizeObserver(() => {
+      fitAll();
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(applyResolution, 250);
+    }).observe(stage);
+    shot.addEventListener('load', fitAll);
+    play.addEventListener('loadedmetadata', fitAll);
+
+    /* ---- rendering ---- */
+    const drawCover = (target: CanvasRenderingContext2D, w: number, h: number) => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      let sw = vw, sh = vh, sx = 0, sy = 0;
+      if (vw / vh > w / h) {
+        sw = vh * (w / h);
+        sx = (vw - sw) / 2;
+      } else {
+        sh = vw / (w / h);
+        sy = (vh - sh) / 2;
+      }
+      if (digitalZoom > 1) {
+        // crop around the centre for the part of the zoom the camera itself did not do
+        const zw = sw / digitalZoom;
+        const zh = sh / digitalZoom;
+        sx += (sw - zw) / 2;
+        sy += (sh - zh) / 2;
+        sw = zw;
+        sh = zh;
+      }
+      target.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+    };
+    const renderLook = (target: CanvasRenderingContext2D, W: number, H: number, look: Look, t: number, wc: HTMLCanvasElement, wcx: CanvasRenderingContext2D) => {
+      const w = Math.max(8, Math.round(W / look.scale));
+      const h = Math.max(6, Math.round(H / look.scale));
+      if (wc.width !== w || wc.height !== h) {
+        wc.width = w;
+        wc.height = h;
+      }
+      wcx.save();
+      if (mirror) {
+        wcx.translate(w, 0);
+        wcx.scale(-1, 1);
+      }
+      drawCover(wcx, w, h);
+      wcx.restore();
+      if (look.pixel) {
+        const img = wcx.getImageData(0, 0, w, h);
+        look.pixel(img.data, w, h, t);
+        wcx.putImageData(img, 0, 0);
+      }
+      target.imageSmoothingEnabled = !look.pixelated;
+      target.drawImage(wc, 0, 0, W, H);
+      look.overlay?.(target, W, H, t);
+    };
+    const drawMain = (t: number) => renderLook(ctx, canvas.width, canvas.height, looks[current], t, work, wctx);
+    const frame = (t: number) => {
+      if (state !== 'live' || view === 'review') {
+        raf = 0;
+        return;
+      }
+      if (video.readyState >= 2) {
+        if (view === 'effects') {
+          for (const tile of tiles) renderLook(tile.ctx, tile.canvas.width, tile.canvas.height, looks[tile.id], t, tileWork, twctx);
+          if (recorder) drawMain(t); // keep the clip going while browsing effects
+        } else {
+          drawMain(t);
+          // phone carousel: every other frame is plenty for thumbnails
+          if (!effects.hidden && (tileTick++ & 1) === 0) for (const tile of tiles) renderLook(tile.ctx, tile.canvas.width, tile.canvas.height, looks[tile.id], t, tileWork, twctx);
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    const loop = () => {
+      if (!raf) raf = requestAnimationFrame(frame);
+    };
+
+    /* ---- camera stream ---- */
+    const stop = () => {
+      stopRecording();
+      cancelAnimationFrame(raf);
+      raf = 0;
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      audioStream?.getTracks().forEach((track) => track.stop());
+      audioStream = null;
+      video.srcObject = null;
+      if (state === 'live') setState('off');
+      if (view === 'effects') setView('live');
+      zoomPill.hidden = true;
+      syncEffects();
+    };
+    const start = async () => {
+      message.textContent = defaultMessage;
+      if (!navigator.mediaDevices?.getUserMedia) return fail('เบราว์เซอร์นี้ไม่รองรับกล้อง (ต้องเปิดผ่าน HTTPS หรือ localhost)');
+      stop();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false,
+        });
+      } catch (err) {
+        return fail(describe(err));
+      }
+      // Portrait frame on phones, 4:3 landscape elsewhere, sharper when the window is big
+      const [cw, ch] = pickResolution();
+      canvas.width = cw;
+      canvas.height = ch;
+      fitAll();
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      mirror = facing === 'user';
+      setState('live');
+      readZoomCaps();
+      applyZoom(1);
+      if (view === 'review') setView('live');
+      else {
+        syncEffects();
+        loop();
+      }
+      try {
+        const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+        flipBtn.hidden = cams.length < 2;
+      } catch {
+        /* keep the button */
+      }
+    };
+
+    /* ---- zoom: the camera's own zoom when the browser exposes it, digital crop beyond that ---- */
+    const videoTrack = () => stream?.getVideoTracks()[0] ?? null;
+    const readZoomCaps = () => {
+      const track = videoTrack() as (MediaStreamTrack & { getCapabilities?: () => { zoom?: { min?: number; max?: number } } }) | null;
+      const z = track?.getCapabilities?.().zoom;
+      hwZoom = z && typeof z.min === 'number' && typeof z.max === 'number' && z.max > z.min ? { min: z.min, max: z.max } : null;
+    };
+    const minZoom = () => (hwZoom && hwZoom.min < 1 ? hwZoom.min : 1);
+    let hwPending = 0;
+    const applyZoom = (z: number) => {
+      zoom = Math.min(MAX_ZOOM, Math.max(minZoom(), z));
+      const track = videoTrack();
+      if (hwZoom && track) {
+        const hw = Math.min(hwZoom.max, Math.max(hwZoom.min, zoom));
+        digitalZoom = Math.max(1, zoom / hw);
+        clearTimeout(hwPending);
+        hwPending = window.setTimeout(() => {
+          track.applyConstraints({ advanced: [{ zoom: hw } as MediaTrackConstraintSet] }).catch(() => {
+            hwZoom = null;
+            digitalZoom = zoom;
+          });
+        }, 60);
+      } else digitalZoom = zoom;
+      renderZoomPill();
+    };
+    const renderZoomPill = () => {
+      const presets = [...(minZoom() < 1 ? [minZoom()] : []), 1, 2, 3];
+      const nearest = presets.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a));
+      zoomPill.replaceChildren(
+        ...presets.map((p) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.zoom = String(p);
+          const on = p === nearest;
+          b.classList.toggle('on', on);
+          const shown = on ? zoom : p;
+          b.textContent = (shown < 1 ? shown.toFixed(1).replace(/^0/, '') : Number.isInteger(shown) ? String(shown) : shown.toFixed(1)) + (on ? 'x' : '');
+          return b;
+        }),
+      );
+      zoomPill.hidden = state !== 'live';
+    };
+    zoomPill.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-zoom]');
+      if (b) applyZoom(Number(b.dataset.zoom));
+    });
+    // Pinch to zoom, wheel to zoom, tap to "focus" (the yellow square is decorative; phones focus on their own)
+    const pointers = new Map<number, { x: number; y: number; t: number }>();
+    let pinchStart = 0;
+    let pinchZoom = 1;
+    const pinchDist = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    stage.addEventListener('pointerdown', (e) => {
+      if (state !== 'live' || view !== 'live') return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: Date.now() });
+      stage.setPointerCapture(e.pointerId);
+      if (pointers.size === 2) {
+        pinchStart = pinchDist();
+        pinchZoom = zoom;
+      }
+    });
+    stage.addEventListener('pointermove', (e) => {
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      pointers.set(e.pointerId, { ...p, x: e.clientX, y: e.clientY });
+      if (pointers.size === 2 && pinchStart) applyZoom(pinchZoom * (pinchDist() / pinchStart));
+    });
+    const pointerEnd = (e: PointerEvent) => {
+      const p = pointers.get(e.pointerId);
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinchStart = 0;
+      if (!p || pointers.size || pinchStart) return;
+      const moved = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+      if (moved < 8 && Date.now() - p.t < 400 && e.type === 'pointerup') {
+        const r = stage.getBoundingClientRect();
+        focusBox.style.left = `${e.clientX - r.left}px`;
+        focusBox.style.top = `${e.clientY - r.top}px`;
+        focusBox.hidden = true;
+        void focusBox.offsetWidth;
+        focusBox.hidden = false;
+      }
+    };
+    stage.addEventListener('pointerup', pointerEnd);
+    stage.addEventListener('pointercancel', pointerEnd);
+    stage.addEventListener('wheel', (e) => {
+      if (state !== 'live' || view !== 'live') return;
+      e.preventDefault();
+      applyZoom(zoom * (e.deltaY < 0 ? 1.08 : 0.92));
+    }, { passive: false });
+
+    /* ---- shutter sound and haptics (quiet; generated, no audio files) ---- */
+    let audio: AudioContext | null = null;
+    const tone = (freq: number, ms: number, gain = 0.08, type: OscillatorType = 'sine') => {
+      try {
+        audio ??= new AudioContext();
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        o.type = type;
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(gain, audio.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + ms / 1000);
+        o.connect(g).connect(audio.destination);
+        o.start();
+        o.stop(audio.currentTime + ms / 1000);
+      } catch {
+        /* no audio, no problem */
+      }
+    };
+    const shutterSound = () => {
+      tone(2200, 25, 0.1, 'square');
+      setTimeout(() => tone(1400, 40, 0.06, 'triangle'), 30);
+    };
+    const buzz = (ms = 15) => navigator.vibrate?.(ms);
+
+    /* ---- captures ---- */
+    const snapshot = () => {
+      const c = document.createElement('canvas');
+      c.width = canvas.width;
+      c.height = canvas.height;
+      c.getContext('2d')!.drawImage(canvas, 0, 0);
+      return c;
+    };
+    const toBlob = (c: HTMLCanvasElement, type: string, quality?: number) => new Promise<Blob | null>((resolve) => c.toBlob(resolve, type, quality));
+    const flashBang = () => {
+      screenFlash.classList.remove('hold', 'on');
+      void screenFlash.offsetWidth;
+      screenFlash.classList.add('on');
+    };
+    const countdown = async (n: number) => {
+      for (let i = n; i >= 1; i--) {
+        count.hidden = true;
+        count.textContent = String(i);
+        count.hidden = false;
+        await sleep(1000);
+      }
+      count.hidden = true;
+    };
+    const fileName = (ext: string) => {
+      const n = new Date();
+      return `shtX-${current}-${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}-${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}.${ext}`;
+    };
+    const addItem = (kind: Item['kind'], blob: Blob, ext: string, thumbBlob?: Blob | null) => {
+      const url = URL.createObjectURL(blob);
+      const item: Item = { kind, blob, url, thumb: thumbBlob ? URL.createObjectURL(thumbBlob) : url, name: fileName(ext) };
+      items.push(item);
+      while (items.length > 12) {
+        const old = items.shift()!;
+        URL.revokeObjectURL(old.url);
+        if (old.thumb !== old.url) URL.revokeObjectURL(old.thumb);
+      }
+      renderStrip();
+    };
+    const renderStrip = () => {
+      strip.replaceChildren(
+        ...items
+          .map((it, i) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.dataset.cam = 'review';
+            b.dataset.index = String(i);
+            b.title = it.name;
+            b.setAttribute('aria-current', String(view === 'review' && i === reviewIndex));
+            const img = new Image();
+            img.src = it.thumb;
+            img.alt = '';
+            b.append(img);
+            if (it.kind === 'video') {
+              const p = document.createElement('i');
+              p.className = 'play';
+              p.textContent = '▶';
+              b.append(p);
+            }
+            return b;
+          })
+          .reverse(),
+      );
+      const last = items[items.length - 1];
+      thumb.classList.toggle('empty', !last);
+      if (last) {
+        thumbImg.src = last.thumb;
+        thumbPlay.hidden = last.kind !== 'video';
+      }
+    };
+    const takePhoto = async () => {
+      if (isPhone()) {
+        if (flashOn) {
+          screenFlash.classList.add('hold'); // light the face with the screen, then shoot
+          await sleep(280);
+        }
+      } else await countdown(3);
+      const look = looks[current];
+      const c = snapshot();
+      flashBang();
+      shutterSound();
+      buzz();
+      const blob = await toBlob(c, look.png ? 'image/png' : 'image/jpeg', look.quality ?? 0.9);
+      if (blob) addItem('image', blob, look.png ? 'png' : 'jpg');
+    };
+    const takeBurst = async () => {
+      await countdown(3);
+      const shots: HTMLCanvasElement[] = [];
+      for (let i = 0; i < 4; i++) {
+        shots.push(snapshot());
+        flashBang();
+        shutterSound();
+        if (i < 3) await sleep(700);
+      }
+      const W = canvas.width;
+      const H = canvas.height;
+      const comp = document.createElement('canvas');
+      comp.width = W * 2;
+      comp.height = H * 2;
+      const cx = comp.getContext('2d')!;
+      cx.fillStyle = '#fff';
+      cx.fillRect(0, 0, comp.width, comp.height);
+      shots.forEach((s, i) => cx.drawImage(s, (i % 2) * W, Math.floor(i / 2) * H));
+      const blob = await toBlob(comp, 'image/jpeg', 0.9);
+      if (blob) addItem('image', blob, 'jpg');
+    };
+
+    /* ---- video clips: the canvas (look included) is recorded, with the microphone if allowed ---- */
+    const pickMime = () =>
+      ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m)) ?? '';
+    const startRecording = async () => {
+      if (recorder) return;
+      if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') return showNote('เบราว์เซอร์นี้อัดวิดีโอไม่ได้');
+      if (!audioStream) {
+        try {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch {
+          audioStream = null; // silent movie it is
+        }
+      }
+      if (state !== 'live') return;
+      const canvasStream = canvas.captureStream(30);
+      recStream = new MediaStream([...canvasStream.getVideoTracks(), ...(audioStream?.getAudioTracks() ?? [])]);
+      const mime = pickMime();
+      let r: MediaRecorder;
+      try {
+        r = new MediaRecorder(recStream, mime ? { mimeType: mime } : undefined);
+      } catch {
+        return showNote('อัดวิดีโอไม่ได้ในเบราว์เซอร์นี้');
+      }
+      recorder = r;
+      const chunks: Blob[] = [];
+      const poster = snapshot();
+      r.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data);
+      };
+      r.onstop = async () => {
+        const type = r.mimeType || mime || 'video/webm';
+        const thumbBlob = await toBlob(poster, 'image/jpeg', 0.6);
+        addItem('video', new Blob(chunks, { type }), type.includes('mp4') ? 'mp4' : 'webm', thumbBlob);
+        recStream?.getVideoTracks().forEach((track) => track.stop());
+        recStream = null;
+        recorder = null;
+        delete root.dataset.recording;
+        rec.hidden = true;
+        clearInterval(recTimer);
+      };
+      r.start(250);
+      tone(880, 90);
+      buzz(30);
+      recStart = Date.now();
+      root.dataset.recording = '';
+      rec.hidden = false;
+      recTime.textContent = '00:00';
+      recTimer = window.setInterval(() => {
+        const s = Math.floor((Date.now() - recStart) / 1000);
+        recTime.textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
+        if (s >= 60) stopRecording(); // one minute is plenty of stupidity
+      }, 250);
+    };
+    function stopRecording() {
+      if (!recorder || recorder.state === 'inactive') return;
+      recorder.stop();
+      tone(660, 70);
+      setTimeout(() => tone(660, 70), 110);
+    }
+
+    /* ---- review ---- */
+    const openReview = (i: number) => {
+      if (!items.length || recorder) return;
+      reviewIndex = Math.max(0, Math.min(items.length - 1, i));
+      const it = items[reviewIndex];
+      root.dataset.kind = it.kind;
+      if (it.kind === 'image') {
+        shot.src = it.url;
+        play.removeAttribute('src');
+      } else {
+        play.src = it.url;
+        shot.removeAttribute('src');
+      }
+      save.href = it.url;
+      save.download = it.name;
+      shareBtn.hidden = !canShareFiles;
+      hint.hidden = !(isApple && canShareFiles);
+      reviewPos.textContent = `${reviewIndex + 1}/${items.length}`;
+      setView('review');
+      for (const b of strip.querySelectorAll<HTMLElement>('button')) b.setAttribute('aria-current', String(Number(b.dataset.index) === reviewIndex));
+    };
+    const deleteCurrent = () => {
+      const [it] = items.splice(reviewIndex, 1);
+      if (!it) return;
+      URL.revokeObjectURL(it.url);
+      if (it.thumb !== it.url) URL.revokeObjectURL(it.thumb);
+      renderStrip();
+      if (items.length) openReview(Math.min(reviewIndex, items.length - 1));
+      else setView('live');
+    };
+    const share = async () => {
+      const it = items[reviewIndex];
+      if (!it) return;
+      try {
+        await navigator.share({ files: [new File([it.blob], it.name, { type: it.blob.type })], title: 'Stupid Hackathon X' });
+      } catch {
+        /* user cancelled */
+      }
+    };
+
+    const onShutter = async () => {
+      if (state !== 'live' || busy) return;
+      if (mode === 'video') return recorder ? stopRecording() : startRecording();
+      busy = true;
+      try {
+        if (mode === 'burst') await takeBurst();
+        else await takePhoto();
+      } finally {
+        busy = false;
+      }
+    };
+
+    root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const lookBtn = target.closest<HTMLElement>('[data-filter]');
+      if (lookBtn) {
+        selectLook(lookBtn.dataset.filter!);
+        if (view === 'effects') setView('live');
+        return;
+      }
+      if (target.closest('#cam-zoom')) return;
+      const modeBtn = target.closest<HTMLElement>('[data-cam-mode]');
+      if (modeBtn) return setMode(modeBtn.dataset.camMode as Mode);
+      const btn = target.closest<HTMLElement>('[data-cam]');
+      if (!btn) return;
+      switch (btn.dataset.cam) {
+        case 'start':
+          start();
+          break;
+        case 'shutter':
+          onShutter();
+          break;
+        case 'flip':
+          if (recorder || busy) break;
+          facing = facing === 'user' ? 'environment' : 'user';
+          start();
+          break;
+        case 'flash':
+          flashOn = !flashOn;
+          btn.setAttribute('aria-pressed', String(flashOn));
+          break;
+        case 'grid':
+          root.classList.toggle('grid-on');
+          btn.setAttribute('aria-pressed', String(root.classList.contains('grid-on')));
+          break;
+        case 'filters':
+          filtersOpen = !filtersOpen;
+          btn.setAttribute('aria-pressed', String(filtersOpen));
+          syncEffects();
+          break;
+        case 'fakemode':
+          showNote('โหมดนี้ยังโง่ไม่พอ ใช้ PHOTO หรือ VIDEO');
+          break;
+        case 'effects':
+          if (state === 'live') setView(view === 'effects' ? 'live' : 'effects');
+          break;
+        case 'review':
+          openReview(btn.dataset.index !== undefined ? Number(btn.dataset.index) : items.length - 1);
+          break;
+        case 'prev':
+          openReview(reviewIndex - 1);
+          break;
+        case 'next':
+          openReview(reviewIndex + 1);
+          break;
+        case 'back':
+          setView('live');
+          break;
+        case 'delete':
+          deleteCurrent();
+          break;
+        case 'share':
+          share();
+          break;
+      }
+    });
+    // iPhone/iPad: a download would land in Files, so Save opens the share sheet instead ("Save Image" → Photos)
+    save.addEventListener('click', (e) => {
+      if (!(isApple && canShareFiles)) return;
+      e.preventDefault();
+      share();
+    });
+
+    // Release the camera whenever the window is closed, minimized, or the tab goes to the background.
+    // body.camera-open hides the phone tab bar so the camera app gets the whole screen.
+    const syncOpen = () => {
+      const open = !win.hidden && !win.hasAttribute('data-minimized');
+      document.body.classList.toggle('camera-open', open);
+      if (!open) stop();
+      else requestAnimationFrame(() => centerMode());
+    };
+    new MutationObserver(syncOpen).observe(win, { attributes: true, attributeFilter: ['hidden', 'data-minimized'] });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+    });
+    window.addEventListener('pagehide', stop);
+    window.matchMedia('(max-width: 767px)').addEventListener('change', () => {
+      syncEffects();
+      renderZoomPill();
+      centerMode();
+    });
+    window.addEventListener('resize', () => centerMode());
+    syncOpen();
+    setMode('photo');
+    selectLook('normal');
+    renderStrip();
+    syncEffects();
+  }
+
+  setupCamera();
+</script>

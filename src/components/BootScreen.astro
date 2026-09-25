@@ -19,6 +19,13 @@ import { event } from '../data/event';
       <div class="boot-title">Stupid Hackathon<sup>®</sup><span class="boot-x">X</span></div>
       <div class="boot-edition">X Edition</div>
     </div>
+    <!-- Android phones: the glowing "android" wordmark instead of the XP logo and progress bar -->
+    <div class="boot-android" aria-hidden="true"><span>android</span></div>
+    <!-- Macs: Leopard gray boot with a big X (it is OS X and shtX) and the spinning gear -->
+    <div class="boot-mac" aria-hidden="true">
+      <span class="x">X</span>
+      <span class="spinner">{Array.from({ length: 12 }).map(() => <i></i>)}</span>
+    </div>
 
     <div class="boot-bar xp-bootbar" aria-hidden="true"><div></div></div>
     <div
@@ -183,6 +190,96 @@ import { event } from '../data/event';
     font-size: calc(10 * var(--u));
     color: #3a3a3a;
   }
+  /* Android phones (html.android, see Layout.astro): Gingerbread boot animation */
+  .boot-android { display: none; }
+  :global(html.android) .boot-group,
+  :global(html.android) .boot-bar { display: none; }
+  :global(html.android) .boot-android {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: calc(215 * var(--u));
+    transform: translate(-50%, -50%);
+    font-family: "Droid Sans", Roboto, "Open Sans", Arial, sans-serif;
+    font-size: calc(76 * var(--u));
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+  :global(html.android) .boot-android span {
+    background: linear-gradient(90deg, #7a7a7a 0%, #7a7a7a 36%, #fff 50%, #7a7a7a 64%, #7a7a7a 100%);
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: android-sweep 1.6s linear infinite;
+  }
+  @keyframes android-sweep {
+    from { background-position: 100% 0; }
+    to { background-position: 0% 0; }
+  }
+  /* Macs (html.mac, see Layout.astro): Mac OS X Leopard boot */
+  .boot-mac { display: none; }
+  :global(html.mac) .boot { background: #bfbfbf; }
+  :global(html.mac) .boot-group,
+  :global(html.mac) .boot-bar { display: none; }
+  :global(html.mac) .boot-mac {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(44 * var(--u));
+    position: absolute;
+    left: 50%;
+    top: calc(120 * var(--u));
+    transform: translateX(-50%);
+  }
+  :global(html.mac) .boot-mac .x {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    font-size: calc(170 * var(--u));
+    line-height: 1;
+    color: #5a5a5a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  :global(html.mac) .boot-mac .spinner {
+    position: relative;
+    width: calc(34 * var(--u));
+    height: calc(34 * var(--u));
+  }
+  :global(html.mac) .boot-mac .spinner i {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: calc(3 * var(--u));
+    height: calc(10 * var(--u));
+    margin-left: calc(-1.5 * var(--u));
+    border-radius: calc(2 * var(--u));
+    background: #4a4a4a;
+    transform-origin: 50% calc(17 * var(--u));
+    animation: mac-spin 1s linear infinite;
+  }
+  :global(html.mac) .boot-mac .spinner i:nth-child(1) { transform: rotate(0deg); animation-delay: -0.917s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(2) { transform: rotate(30deg); animation-delay: -0.833s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(3) { transform: rotate(60deg); animation-delay: -0.750s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(4) { transform: rotate(90deg); animation-delay: -0.667s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(5) { transform: rotate(120deg); animation-delay: -0.583s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(6) { transform: rotate(150deg); animation-delay: -0.500s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(7) { transform: rotate(180deg); animation-delay: -0.417s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(8) { transform: rotate(210deg); animation-delay: -0.333s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(9) { transform: rotate(240deg); animation-delay: -0.250s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(10) { transform: rotate(270deg); animation-delay: -0.167s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(11) { transform: rotate(300deg); animation-delay: -0.083s; }
+  :global(html.mac) .boot-mac .spinner i:nth-child(12) { transform: rotate(330deg); animation-delay: 0.000s; }
+  @keyframes mac-spin {
+    from { opacity: 1; }
+    to { opacity: 0.12; }
+  }
+  :global(html.mac) .boot-funding { color: #666; }
+  :global(html.mac) .boot-funding .dim { color: #8a8a8a; }
+  :global(html.mac) .boot-copyright { color: #5a5a5a; }
+  :global(html.mac) .boot-cg { filter: brightness(0.35); }
+  :global(html.mac) .boot-skip { color: #8a8a8a; }
   /* Phones: the stage is narrow, so keep footer text readable */
   @media (max-width: 480px) {
     .boot-copyright { font-size: 11px; }

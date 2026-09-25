@@ -1,4 +1,6 @@
 // Windows XP desktop behaviour: boot sequence, window management, taskbar, start menu, clock.
+// On phones the same window manager drives the iPhone shell (IosShell.astro) or the Android shell (AndroidShell.astro);
+// on Macs it drives the Leopard chrome (MacShell.astro) instead of the XP taskbar.
 
 const $ = <T extends HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel);
 const $$ = <T extends HTMLElement>(sel: string, root: ParentNode = document) => Array.from(root.querySelectorAll<T>(sel));
@@ -8,6 +10,12 @@ const isMobile = () => mobileQuery.matches;
 const isDesktop = () => !mobileQuery.matches;
 const isFinePointer = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Phone shell: Android (Gingerbread) when <html> has the `android` class (set in Layout.astro), iPhone otherwise */
+const isAndroid = () => document.documentElement.classList.contains('android');
+const isLocked = () => document.body.classList.contains('mobile-locked');
+const lockScreen = () => $(isAndroid() ? '#android-lock' : '#ios-lock');
+/* Desktop shell: Mac OS X Leopard when <html> has the `mac` class (set in Layout.astro), Windows XP otherwise */
+const isMac = () => document.documentElement.classList.contains('mac');
 
 /* ---------------- Boot sequence ---------------- */
 
@@ -21,15 +29,15 @@ const BOOT_MESSAGES = [
   'Almost there. Probably.',
 ];
 
-/* Screen that follows the boot: XP "welcome" on desktop, iOS lock screen on mobile.
+/* Screen that follows the boot: XP "welcome" on desktop, a lock screen on mobile.
    revealNext() puts it in place *under* the boot screen so nothing else shows through the fade. */
 function revealNext() {
   if (isMobile()) {
-    const lock = $('#ios-lock');
+    const lock = lockScreen();
     if (lock) lock.hidden = false;
   } else {
     const welcome = $('#welcome');
-    if (welcome && !reducedMotion()) welcome.hidden = false;
+    if (welcome && !reducedMotion() && !isMac()) welcome.hidden = false; // Leopard boots straight to the desktop
   }
 }
 
@@ -47,20 +55,78 @@ function runNext(onDone: () => void) {
 }
 
 function unlockDone(onDone: () => void) {
-  document.body.classList.remove('ios-locked');
+  document.body.classList.remove('mobile-locked');
   $('#ios-lock')?.remove();
+  $('#android-lock')?.remove();
   $('#welcome')?.remove();
   onDone();
 }
 
-/* ---------------- iOS lock screen (mobile) ---------------- */
+/* ---------------- Lock screens (mobile) ---------------- */
+
+/* Drag a tab along one axis. onMove gets the distance (0..max); past 60% of max, onCommit fires.
+   sticky tabs stay at the end once committed (unlock); others spring back (toggles). */
+function slideTab(
+  tab: HTMLElement,
+  opts: { max: () => number; dir?: 1 | -1; sticky?: boolean; onMove: (x: number) => void; onCommit: () => void; onTap?: () => void },
+) {
+  const dir = opts.dir ?? 1;
+  let done = false;
+  tab.addEventListener('pointerdown', (e) => {
+    if (done) return;
+    e.preventDefault();
+    tab.setPointerCapture(e.pointerId);
+    tab.classList.add('dragging');
+    const startX = e.clientX;
+    let moved = 0;
+    const move = (ev: PointerEvent) => {
+      moved = Math.max(0, Math.min(opts.max(), (ev.clientX - startX) * dir));
+      opts.onMove(moved);
+    };
+    const up = () => {
+      tab.removeEventListener('pointermove', move);
+      tab.removeEventListener('pointerup', up);
+      tab.removeEventListener('pointercancel', up);
+      tab.classList.remove('dragging');
+      if (moved > opts.max() * 0.6) {
+        if (opts.sticky ?? true) {
+          opts.onMove(opts.max());
+          done = true;
+        } else {
+          opts.onMove(0);
+        }
+        opts.onCommit();
+      } else {
+        opts.onMove(0);
+        if (moved < 6) opts.onTap?.();
+      }
+    };
+    tab.addEventListener('pointermove', move);
+    tab.addEventListener('pointerup', up);
+    tab.addEventListener('pointercancel', up);
+  });
+}
+
+/* A tap on a tab: nudge it as a hint that it slides */
+function nudge(tab: HTMLElement) {
+  tab.classList.remove('hint');
+  void tab.offsetWidth;
+  tab.classList.add('hint');
+}
 
 function runLockScreen(onDone: () => void) {
-  const lock = $('#ios-lock');
-  const slider = $('#ios-slider');
-  const knob = $('#ios-knob');
-  if (!lock || !slider || !knob) return unlockDone(onDone);
+  const lock = lockScreen();
+  if (!lock) return unlockDone(onDone);
   lock.hidden = false;
+  if (isAndroid()) runAndroidLock(lock, onDone);
+  else runIosLock(lock, onDone);
+}
+
+/* iOS: slide to unlock */
+function runIosLock(lock: HTMLElement, onDone: () => void) {
+  const slider = $('#ios-slider', lock);
+  const knob = $('#ios-knob', lock);
+  if (!slider || !knob) return unlockDone(onDone);
   const label = slider.querySelector('.label') as HTMLElement | null;
   let unlocked = false;
 
@@ -75,40 +141,7 @@ function runLockScreen(onDone: () => void) {
     knob.style.left = `${3 + x}px`;
     if (label) label.style.opacity = String(Math.max(0, 1 - x / (maxX() * 0.55)));
   };
-
-  knob.addEventListener('pointerdown', (e) => {
-    if (unlocked) return;
-    e.preventDefault();
-    knob.setPointerCapture(e.pointerId);
-    knob.classList.add('dragging');
-    const startX = e.clientX;
-    let moved = 0;
-    const move = (ev: PointerEvent) => {
-      moved = Math.max(0, Math.min(maxX(), ev.clientX - startX));
-      settle(moved);
-    };
-    const up = () => {
-      knob.removeEventListener('pointermove', move);
-      knob.removeEventListener('pointerup', up);
-      knob.removeEventListener('pointercancel', up);
-      knob.classList.remove('dragging');
-      if (moved > maxX() * 0.6) {
-        settle(maxX());
-        unlock();
-      } else {
-        settle(0);
-        if (moved < 6) {
-          // A tap: nudge the knob as a hint that it slides
-          knob.classList.remove('hint');
-          void knob.offsetWidth;
-          knob.classList.add('hint');
-        }
-      }
-    };
-    knob.addEventListener('pointermove', move);
-    knob.addEventListener('pointerup', up);
-    knob.addEventListener('pointercancel', up);
-  });
+  slideTab(knob, { max: maxX, onMove: settle, onCommit: unlock, onTap: () => nudge(knob) });
   slider.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
       e.preventDefault();
@@ -116,6 +149,60 @@ function runLockScreen(onDone: () => void) {
       unlock();
     }
   });
+}
+
+/* Gingerbread: drag the lock tab right to unlock, the sound tab left to toggle silent mode */
+function runAndroidLock(lock: HTMLElement, onDone: () => void) {
+  const track = $('#android-lock-track', lock);
+  const tab = $('#android-lock-tab', lock);
+  const sound = $('#android-sound-tab', lock);
+  const label = $('#android-lock-label', lock);
+  if (!track || !tab) return unlockDone(onDone);
+  let unlocked = false;
+
+  const unlock = () => {
+    if (unlocked) return;
+    unlocked = true;
+    lock.classList.add('android-unlock');
+    setTimeout(() => unlockDone(onDone), 300);
+  };
+  const maxX = () => track.clientWidth - tab.offsetWidth;
+  const settle = (x: number) => {
+    tab.style.left = `${x}px`;
+    tab.classList.toggle('armed', x > maxX() * 0.6);
+    if (label) label.style.opacity = String(Math.max(0, 1 - x / (maxX() * 0.5)));
+    if (sound) sound.style.opacity = x > 0 ? '0' : '';
+  };
+  slideTab(tab, { max: maxX, onMove: settle, onCommit: unlock, onTap: () => nudge(tab) });
+  tab.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      settle(maxX());
+      unlock();
+    }
+  });
+
+  if (sound) {
+    let silent = false;
+    const maxS = () => track.clientWidth - sound.offsetWidth;
+    slideTab(sound, {
+      max: maxS,
+      dir: -1,
+      sticky: false,
+      onMove: (x) => {
+        sound.style.right = `${x}px`;
+        sound.classList.toggle('armed', x > maxS() * 0.6);
+        tab.style.opacity = x > 0 ? '0' : '';
+        if (label) label.style.opacity = String(Math.max(0, 1 - x / (maxS() * 0.5)));
+      },
+      onCommit: () => {
+        silent = !silent;
+        sound.classList.toggle('muted', silent);
+        showToast(silent ? 'Silent mode. Stupid ideas are still loud.' : 'Sound on');
+      },
+      onTap: () => nudge(sound),
+    });
+  }
 }
 
 function runBoot(onDone: () => void) {
@@ -226,6 +313,26 @@ function syncTaskbar() {
       else btn.removeAttribute('data-active');
     }
   }
+  syncDock();
+}
+
+/* The focused, visible window (none on the desktop itself) */
+const frontWindow = () => allWindows().find((w) => isVisible(w) && !w.hasAttribute('data-inactive'));
+
+/* Mac Dock: glowing dot for open windows, dimmed when minimized; the menu bar shows the front window's name */
+function syncDock() {
+  for (const item of $$<HTMLElement>('#mac-dock [data-dock]')) {
+    const w = winEl(item.dataset.dock!);
+    if (!w) continue;
+    if (!w.hidden) item.setAttribute('data-running', '');
+    else item.removeAttribute('data-running');
+    if (w.hasAttribute('data-minimized')) item.setAttribute('data-minimized', '');
+    else item.removeAttribute('data-minimized');
+  }
+  const appName = $('#mac-appname');
+  const front = frontWindow();
+  const owner = front?.dataset.window === 'error' ? topApp() : front; // an alert belongs to the app under it
+  if (appName) appName.textContent = owner?.dataset.label ?? 'Finder';
 }
 
 function focusWindow(id: string) {
@@ -245,15 +352,19 @@ function focusTopMost() {
   else syncTaskbar();
 }
 
+/* Screen space taken by the desktop chrome: the XP taskbar, or the Mac menu bar and Dock */
+const desktopInsets = () => (isMac() ? { top: 22, bottom: 70 } : { top: 0, bottom: 30 });
+
 function clampIntoView(el: HTMLElement) {
   if (!isDesktop()) return;
+  const { top, bottom } = desktopInsets();
   const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
-  const maxY = Math.max(0, window.innerHeight - 30 - el.offsetHeight);
+  const maxY = Math.max(top, window.innerHeight - bottom - el.offsetHeight);
   const x = Math.min(Math.max(0, el.offsetLeft), maxX);
-  const y = Math.min(Math.max(0, el.offsetTop), maxY);
+  const y = Math.min(Math.max(top, el.offsetTop), maxY);
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
-  if (el.offsetHeight > window.innerHeight - 30) el.style.height = `${window.innerHeight - 40}px`;
+  if (el.offsetHeight > window.innerHeight - top - bottom) el.style.height = `${window.innerHeight - top - bottom - 10}px`;
   if (el.offsetWidth > window.innerWidth) el.style.width = `${window.innerWidth - 8}px`;
 }
 
@@ -270,7 +381,10 @@ function openWindow(id: string) {
     el.removeAttribute('data-minimizing');
     el.removeAttribute('data-inactive');
     el.scrollTop = 0;
-    if (!isAlert) document.body.classList.add('ios-app-open');
+    if (!isAlert) {
+      document.body.classList.add('mobile-app-open');
+      closeAndroidOverlays();
+    }
     syncTabbar();
     return;
   }
@@ -300,7 +414,7 @@ function closeWindow(id: string) {
     el.removeAttribute('data-maximized');
     if (isMobile()) {
       const stillOpen = allWindows().some((w) => isVisible(w) && w.dataset.window !== 'error');
-      if (!stillOpen) document.body.classList.remove('ios-app-open');
+      if (!stillOpen) document.body.classList.remove('mobile-app-open');
       syncTaskbar();
       syncTabbar();
       return;
@@ -478,8 +592,11 @@ function enableIcons() {
 
 /* ---------------- iOS tab bar + widgets ---------------- */
 
+/* The app currently showing on a phone (the error alert overlays it and does not count) */
+const topApp = () => allWindows().find((w) => isVisible(w) && w.dataset.window !== 'error');
+
 function syncTabbar() {
-  const open = allWindows().find((w) => isVisible(w) && w.dataset.window !== 'error')?.dataset.window ?? '';
+  const open = topApp()?.dataset.window ?? '';
   for (const tab of $$<HTMLElement>('.ios-tabbar [data-tab]')) {
     if (tab.dataset.tab === open) tab.setAttribute('data-active', '');
     else tab.removeAttribute('data-active');
@@ -487,27 +604,91 @@ function syncTabbar() {
 }
 
 function updateCountdown() {
-  const el = $<HTMLElement>('[data-countdown]');
-  if (!el) return;
-  const target = new Date(el.dataset.countdown!).getTime();
-  const days = Math.ceil((target - Date.now()) / 86_400_000);
-  const num = $('.days', el);
-  const unit = $('.unit', el);
-  if (!num || !unit) return;
-  if (days > 1) {
-    num.textContent = String(days);
-    unit.textContent = 'days to go';
-  } else if (days === 1) {
-    num.textContent = '1';
-    unit.textContent = 'day to go';
-  } else if (days > -2) {
-    num.textContent = 'NOW';
-    unit.textContent = 'hacking';
-  } else {
-    num.textContent = '✓';
-    unit.textContent = 'see you next year';
+  for (const el of $$<HTMLElement>('[data-countdown]')) {
+    const target = new Date(el.dataset.countdown!).getTime();
+    const days = Math.ceil((target - Date.now()) / 86_400_000);
+    const num = $('.days', el);
+    const unit = $('.unit', el);
+    if (!num || !unit) continue;
+    if (days > 1) {
+      num.textContent = String(days);
+      unit.textContent = 'days to go';
+    } else if (days === 1) {
+      num.textContent = '1';
+      unit.textContent = 'day to go';
+    } else if (days > -2) {
+      num.textContent = 'NOW';
+      unit.textContent = 'hacking';
+    } else {
+      num.textContent = '✓';
+      unit.textContent = 'see you next year';
+    }
   }
 }
+
+/* ---------------- Android: notification shade, app drawer, options menu, toast, hardware keys ---------------- */
+
+const androidShade = () => $('#android-shade');
+const androidDrawer = () => $('#android-drawer');
+const androidMenu = () => $('#android-menu');
+
+function setShade(open: boolean) {
+  const el = androidShade();
+  if (el) el.hidden = !open;
+}
+function setDrawer(open: boolean) {
+  const el = androidDrawer();
+  if (el) el.hidden = !open;
+}
+function setOptionsMenu(open: boolean) {
+  const el = androidMenu();
+  if (el) el.hidden = !open;
+}
+function closeAndroidOverlays() {
+  setShade(false);
+  setDrawer(false);
+  setOptionsMenu(false);
+}
+
+let toastTimer = 0;
+function showToast(message: string) {
+  const toast = $('#android-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => (toast.hidden = true), 2200);
+}
+
+/* Back key: dismiss whatever is on top, one layer at a time. On the home screen it does nothing, like Gingerbread. */
+function androidBack() {
+  if (isLocked()) return;
+  const shade = androidShade();
+  const menu = androidMenu();
+  const drawer = androidDrawer();
+  if (shade && !shade.hidden) return setShade(false);
+  if (menu && !menu.hidden) return setOptionsMenu(false);
+  const error = winEl('error');
+  if (error && !error.hidden) return closeWindow('error');
+  if (drawer && !drawer.hidden) return setDrawer(false);
+  const app = topApp();
+  if (app) closeWindow(app.dataset.window!);
+}
+
+/* ---------------- Mac menu bar ---------------- */
+
+/* Open one drop-down of the Mac menu bar (null closes them all) */
+function setMacMenu(name: string | null) {
+  for (const btn of $$<HTMLElement>('#mac-menubar [data-menu]')) {
+    const open = btn.dataset.menu === name;
+    btn.setAttribute('aria-expanded', String(open));
+    const menu = $(`#mac-menu-${btn.dataset.menu}`);
+    if (!menu) continue;
+    menu.hidden = !open;
+    if (open) menu.style.left = `${Math.max(0, Math.min(btn.offsetLeft, window.innerWidth - menu.offsetWidth - 4))}px`;
+  }
+}
+const macMenuOpen = () => !!$('#mac-menubar [data-menu][aria-expanded="true"]');
 
 /* ---------------- Start menu, context menu, balloon, clock ---------------- */
 
@@ -535,15 +716,26 @@ function startClock() {
   const iosClock = $('#ios-clock');
   const lockTime = $('#ios-lock-time');
   const lockDate = $('#ios-lock-date');
+  const androidClock = $('#android-clock');
+  const androidLockTime = $('#android-lock-time');
+  const androidLockDate = $('#android-lock-date');
+  const shadeDate = $('#android-shade-date');
+  const macClock = $('#mac-clock');
   const update = () => {
     const now = new Date();
     const t = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const t24 = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }).replace(/^0/, '');
     clock.textContent = t;
     clock.dateTime = now.toISOString();
     clock.title = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     if (iosClock) iosClock.textContent = t;
     if (lockTime) lockTime.textContent = t.replace(/ (AM|PM)$/, '');
     if (lockDate) lockDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    if (androidClock) androidClock.textContent = t24;
+    if (androidLockTime) androidLockTime.textContent = t24;
+    if (androidLockDate) androidLockDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    if (shadeDate) shadeDate.textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    if (macClock) macClock.textContent = `${now.toLocaleDateString('en-US', { weekday: 'short' })} ${t}`;
   };
   update();
   setInterval(update, 1000);
@@ -556,11 +748,19 @@ function bindEvents() {
     const target = e.target as HTMLElement;
     contextMenu.hidden = true;
 
+    // Mac menu bar titles toggle their drop-down
+    const menuBtn = target.closest<HTMLElement>('#mac-menubar [data-menu]');
+    if (menuBtn) {
+      setMacMenu(menuBtn.getAttribute('aria-expanded') === 'true' ? null : menuBtn.dataset.menu!);
+      return;
+    }
+
     const opener = target.closest<HTMLElement>('[data-open]');
     if (opener) {
       if (opener.classList.contains('xp-icon') && isFinePointer()) return; // handled by dblclick
       openWindow(opener.dataset.open!);
       setStartMenu(false);
+      setMacMenu(null);
       balloon.hidden = true;
       return;
     }
@@ -568,6 +768,7 @@ function bindEvents() {
     const actionEl = target.closest<HTMLElement>('[data-action]');
     if (actionEl) {
       const action = actionEl.dataset.action!;
+      setMacMenu(null);
       const win = actionEl.closest<HTMLElement>('[data-window]');
       const id = win?.dataset.window;
       switch (action) {
@@ -583,11 +784,48 @@ function bindEvents() {
         case 'close-balloon':
           balloon.hidden = true;
           break;
-        case 'ios-home': {
-          const open = allWindows().find((w) => isVisible(w) && w.dataset.window !== 'error');
+        case 'mobile-home': {
+          // iOS tab bar Home / Android Home key
+          closeAndroidOverlays();
+          const open = topApp();
           if (open) closeWindow(open.dataset.window!);
           break;
         }
+        case 'android-back':
+          androidBack();
+          break;
+        case 'android-menu': {
+          if (isLocked()) break;
+          const menu = androidMenu();
+          setShade(false);
+          setOptionsMenu(!!menu && menu.hidden);
+          break;
+        }
+        case 'android-search':
+          if (isLocked()) break;
+          closeAndroidOverlays();
+          showToast('No results for "useful ideas"');
+          break;
+        case 'android-shade': {
+          if (isLocked()) break;
+          const shade = androidShade();
+          setOptionsMenu(false);
+          setShade(!!shade && shade.hidden);
+          break;
+        }
+        case 'android-drawer': {
+          const drawer = androidDrawer();
+          setDrawer(!!drawer && drawer.hidden);
+          break;
+        }
+        case 'android-clear':
+          setShade(false);
+          showToast('Notifications cleared. The funding goal was not.');
+          break;
+        case 'android-settings':
+          closeAndroidOverlays();
+          showToast('Settings are stupid by default.');
+          break;
         case 'show-desktop':
           setStartMenu(false);
           showDesktop();
@@ -612,6 +850,30 @@ function bindEvents() {
           setStartMenu(false);
           showError('It is not safe to turn off your computer. งานยังไม่ได้ funding ครบ');
           break;
+        case 'mac-hide': {
+          const front = frontWindow();
+          if (front) minimizeWindow(front.dataset.window!);
+          break;
+        }
+        case 'mac-zoom': {
+          const front = frontWindow();
+          if (front) toggleMaximize(front.dataset.window!);
+          break;
+        }
+        case 'mac-quit': {
+          const front = frontWindow();
+          if (front) closeWindow(front.dataset.window!);
+          break;
+        }
+        case 'mac-spotlight':
+          showError('Spotlight: 0 useful things found · 9,999 stupid ideas found');
+          break;
+        case 'mac-update':
+          showError('Software Update: Stupid Hackathon X is already the latest version (X.0)');
+          break;
+        case 'mac-sleep':
+          showError('Sleep is not available during a hackathon.');
+          break;
       }
       return;
     }
@@ -619,7 +881,7 @@ function bindEvents() {
     const win = target.closest<HTMLElement>('[data-window]');
     if (win) {
       if (win.hasAttribute('data-inactive')) focusWindow(win.dataset.window!);
-    } else if (!target.closest('#startmenu') && !target.closest('#start-btn') && !target.closest('.xp-taskbar')) {
+    } else if (!target.closest('#startmenu') && !target.closest('#start-btn') && !target.closest('.xp-taskbar') && !target.closest('#mac-shell')) {
       // Clicked the desktop background
       clearIconSelection();
       for (const w of allWindows()) w.setAttribute('data-inactive', '');
@@ -627,6 +889,7 @@ function bindEvents() {
     }
 
     if (!target.closest('#startmenu') && !target.closest('#start-btn')) setStartMenu(false);
+    if (!target.closest('#mac-menubar') && !target.closest('.mac-menu')) setMacMenu(null);
     if (target.closest('#balloon') && !target.closest('[data-action]')) {
       balloon.hidden = true;
       openWindow('funding');
@@ -644,10 +907,18 @@ function bindEvents() {
 
   startBtn.addEventListener('click', () => setStartMenu(startMenu.hidden));
 
+  // Mac: while a menu is open, sliding the pointer across the titles switches menus
+  $('#mac-menubar')?.addEventListener('pointerover', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-menu]');
+    if (btn && macMenuOpen() && btn.getAttribute('aria-expanded') !== 'true') setMacMenu(btn.dataset.menu!);
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       setStartMenu(false);
+      setMacMenu(null);
       contextMenu.hidden = true;
+      closeAndroidOverlays();
       const errorWin = winEl('error');
       if (errorWin && !errorWin.hidden) closeWindow('error');
     }
@@ -668,11 +939,13 @@ function bindEvents() {
     if (e.matches) {
       // → mobile: go to the home screen
       for (const w of allWindows()) if (!w.hidden) w.setAttribute('data-minimized', '');
-      document.body.classList.remove('ios-app-open');
+      document.body.classList.remove('mobile-app-open');
+      closeAndroidOverlays();
       syncTabbar();
     } else {
       // → desktop: restore whatever was open
-      document.body.classList.remove('ios-app-open');
+      document.body.classList.remove('mobile-app-open');
+      closeAndroidOverlays();
       for (const w of allWindows()) {
         if (!w.hidden) {
           w.removeAttribute('data-minimized');
@@ -704,7 +977,12 @@ function init() {
   runBoot(() => {
     const wanted = new URLSearchParams(location.search).get('open');
     if (wanted && winEl(wanted)) openWindow(wanted);
-    if (isMobile()) return;
+    if (isMobile()) {
+      // Android: the XP funding balloon becomes a toast
+      const pct = $('#android-shell')?.dataset.fundingPercent;
+      if (isAndroid() && pct) setTimeout(() => showToast(`Funding goal ${pct}% reached. Pull down the status bar for details.`), 900);
+      return;
+    }
     setTimeout(() => {
       balloon.hidden = false;
       setTimeout(() => (balloon.hidden = true), 9000);

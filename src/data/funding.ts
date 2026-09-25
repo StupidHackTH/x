@@ -32,6 +32,7 @@ export const funding: Funding = {
     { name: 'Drawdy', tier: 'System32' },
     { name: 'DEV Forward Co., Ltd.', tier: 'Corporate' },
     { name: 'PaxaLabs', tier: 'Partner' },
+    { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode' },
     { name: 'Bier', tier: 'Individual' },
     { name: 'ครอบครัวนิมมานนรวงศ์', tier: 'Individual' },
   ],

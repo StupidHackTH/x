@@ -20,8 +20,8 @@ npm run preview
 - `src/data/windows.ts` — registry of desktop windows (title, icon, default position/size).
 - `src/components/BootScreen.astro` — XP boot screen that animates the funding progress bar before the desktop appears. Click or press a key to skip.
 - `src/components/Window.astro` — reusable XP window chrome (title bar, menu bar, status bar). Window contents live in `src/components/windows/`.
-- `src/scripts/desktop.ts` — client-side window manager: open/close/minimize/maximize, drag, focus, taskbar buttons, start menu, balloon tip, clock.
-- `src/styles/global.css` — Tailwind import plus all `xp-*` theme classes.
+- `src/scripts/desktop.ts` — client-side window manager: open/close/minimize/maximize, drag, focus, taskbar buttons, start menu, balloon tip, clock. On phones it also runs the lock screens and the Android shade, drawer, options menu, toast and hardware keys.
+- `src/styles/global.css` — Tailwind import plus all `xp-*` theme classes, then the iOS (`ios-*`) and Android (`android-*`) phone shells.
 
 ## XP behaviours
 
@@ -32,17 +32,55 @@ npm run preview
 - Right-click the desktop for a context menu. Win key or Ctrl+Esc opens the Start menu, Esc closes menus and dialogs.
 - Fonts: Tahoma / Trebuchet MS / Franklin Gothic are used when the visitor has them (Windows); other systems fall back to similar fonts.
 
-## Mobile mode (iPhone 4 / iOS 4)
+## Mac mode (Mac OS X Leopard)
 
-Below 768px wide the site switches to an original-iPhone look instead of the XP desktop.
+On large screens, Macs (user agent contains `Macintosh`) get a Mac OS X Leopard look instead of Windows XP; `?mac` and `?xp` force either one. The windows are the same components, restyled by the "DESKTOP MODE: Mac OS X Leopard" section of `src/styles/global.css`; the chrome lives in `src/components/MacShell.astro`.
 
-- Sequence: boot screen → lock screen → home screen. The lock screen is placed underneath the boot screen before it fades, and `body.ios-locked` keeps the home screen and apps invisible until the slider is released, so nothing flashes before unlock.
+- Boot: gray Leopard boot with a big "X" (OS X, shtX) and the spinning gear; the funding readout stays. No "welcome" screen; it goes straight to the desktop.
+- Menu bar: the shtX icon opens the Apple-style menu (About This Mac, Software Update, Sleep/Restart/Shut Down, Log Out — the last four are gags). The bold app name follows the front window. File/Edit/View/Go/Window/Help are real drop-downs; Go and Window list every window. Hovering across titles switches menus while one is open. Status area: funding percentage, Wi-Fi, volume, battery, clock, Spotlight (a gag).
+- Dock: Finder (the mascot, opens About), every window, a separator, Facebook, Discord and Trash (Recycle Bin). Icons magnify on hover with a label above, get a glowing dot when their window is open, and dim when it is minimized. Reflections use `-webkit-box-reflect` (WebKit/Blink only).
+- Windows: unified gray title bar with traffic lights (close, minimize, zoom; symbols appear on hover), centered title, no in-window menu bar, Aqua buttons (the default one pulses), candy-striped progress bar, Leopard resize grip. Minimize plays a genie-ish animation. The error dialog becomes a Leopard alert. The funding balloon becomes a Growl-style bubble at the top right. Desktop icons sit on the right.
+
+## Mobile mode
+
+Below 768px wide the site switches from the XP desktop to a phone shell. Android phones (user agent contains `Android`) get an Android 2.3 Gingerbread look; everything else gets the original iPhone look. A tiny inline script in `src/layouts/Layout.astro` picks the shell before first paint by adding `html.android`; `?android` and `?ios` force either one for testing.
+
+Both shells share the boot screen and the same window manager in `src/scripts/desktop.ts`. The lock screen is placed underneath the boot screen before it fades, and `body.mobile-locked` keeps the home screen and apps invisible until unlock, so nothing flashes. `body.mobile-app-open` marks that an app is showing.
+
+### iPhone 4 / iOS 4 (`src/components/IosShell.astro`)
+
+- Sequence: boot screen → lock screen → home screen.
 - Lock screen: real "slide to unlock" (drag past 60%). Tapping the knob only nudges it as a hint; Enter/Space unlock for keyboards.
 - Home screen: glossy app grid, two widgets (funding progress and a live countdown to 10 Oct), page dots, and a dock. The funding badge shows the current percentage.
 - Apps: each window opens full screen with an iOS navigation bar, a Home back button, and a bottom tab bar (Home, Register, Venue, Funding, FAQ). Info tables and the FAQ render as iOS grouped lists. The error dialog becomes an iOS alert that overlays the current screen.
-- `src/components/MobileShell.astro` holds the shell; the iOS styles live at the bottom of `src/styles/global.css`.
+- The iOS styles live in the "MOBILE MODE: iPhone 4 / iOS 4" section of `src/styles/global.css`.
+
+### Android 2.3 Gingerbread (`src/components/AndroidShell.astro`)
+
+- Boot: the glowing "android" wordmark replaces the XP logo and progress bar; the funding readout stays.
+- Lock screen: Gingerbread tab slider. Drag the lock tab right to unlock (it turns green past 60%); drag the sound tab left to toggle silent mode (it only shows a toast).
+- Home screen: search widget (a gag), app grid, funding and countdown widgets, and a hotseat with Register, the all-apps drawer, and Browser.
+- Status bar: green Gingerbread icons and a 24-hour clock. Tap it to pull down the notification shade (funding goal, registration, event date). "Clear" clears the notifications, not the funding goal.
+- Capacitive keys under the screen, Nexus S order: Back closes the top layer (shade → menu → dialog → drawer → app), Menu opens the options menu (Camera, Register, Venue, Funding, FAQ, Settings), Search shows a toast, Home goes home.
+- Apps: dark title bar with the app icon, flat lists with dividers, gray buttons that turn orange when pressed. There is no close button; use Back or Home. The error dialog becomes a Gingerbread AlertDialog.
+- The Android styles live in the "MOBILE MODE: Android 2.3 Gingerbread" section of `src/styles/global.css`.
+
+## Camera (Stupid Photo Booth)
+
+`src/components/windows/CameraWindow.astro` is a working camera: it opens the real camera with `getUserMedia`, draws every frame through a canvas with a 2000s look, and saves photos as JPEG (PNG for the 1-bit look) and clips as MP4 or WebM (whatever `MediaRecorder` supports). The clip is recorded from the canvas, so the look is baked into the video; the microphone is asked for on the first recording and skipped if refused. Nothing is uploaded.
+
+- Looks: Webcam '03, Cam Phone 0.3MP (orange date stamp, 30% JPEG quality), Camcorder (scanlines, red bleed, REC, timestamp), Lomo, Normal, Old Photo, Frutiger Aero (gloss and bubbles), Nokia 3310 (dithered 1-bit LCD), NightShot. Every look is a pixel function plus an overlay in the `looks` map of the component script.
+- On computers it is Photo Booth: three modes (still, four quick pictures composed into a 2×2, movie clip), the big red shutter with a 3-2-1 countdown and a full-screen white flash, an Effects button that shows nine live previews, and a film strip. Clicking a strip thumbnail opens review with previous/next, Delete, Share and Save.
+- On phones it is a camera app: full-screen viewfinder, SVG toolbar (screen flash for selfies, rule-of-thirds grid, filters on/off, close), a carousel of live filter previews over the viewfinder, an iOS-style mode strip (only PHOTO and VIDEO exist; TIME-LAPSE, SLO-MO, PORTRAIT and PANO just show a toast), round shutter (red square while recording), Flip (only with two cameras), and the last capture as a thumbnail that opens review. Tapping the viewfinder shows a yellow focus square (decorative). The window title bar and the iOS tab bar are hidden while it is open.
+- Zoom: a pill with .5 / 1x / 2 / 3 presets (.5 only when the camera reports a wide lens), pinch on the viewfinder, mouse wheel or trackpad on computers, up to 5×. The camera's own zoom is used when the browser exposes it (`MediaStreamTrack` zoom capability, Chrome on Android and iOS 17+), digital crop beyond that or on other browsers.
+- Shutter click and record beeps are generated with WebAudio (no files); Android phones also vibrate on the shutter.
+- Save downloads the file; on iPhone and iPad it opens the share sheet instead, whose "Save Image/Video" stores it in Photos (a plain download would land in Files, and Safari ignores download links to data: URLs, so files are blob URLs). Clips stop automatically after one minute.
+- The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press the start button again to resume.
+- Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480, or 960×720 once the window is wider than 900px, for example maximized). The preview, review media and effect tiles are sized by script to the largest box of their true aspect ratio that fits, so nothing is ever stretched, whatever the window shape or browser.
 
 ## URL parameters
 
 - `?skip` — skip the boot screen (and the lock screen on mobile). Add `&lock` to still show the lock screen.
-- `?open=funding` — open a window after boot (`about`, `register`, `schedule`, `venue`, `funding`, `sponsors`, `staff`, `faq`, `recycle`).
+- `?android` / `?ios` — force the Android or iPhone shell on small screens regardless of the user agent.
+- `?mac` / `?xp` — force the Mac or Windows XP shell on large screens regardless of the user agent.
+- `?open=funding` — open a window after boot (`about`, `register`, `schedule`, `venue`, `funding`, `sponsors`, `staff`, `faq`, `camera`, `recycle`).

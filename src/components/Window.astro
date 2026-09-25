@@ -20,6 +20,7 @@ if (!def) throw new Error(`Unknown window id: ${id}`);
   data-window={id}
   data-title={def.title}
   data-glyph={def.glyph}
+  data-label={def.label}
   data-inactive
   hidden={!def.open}
   role={dialog ? 'alertdialog' : 'dialog'}

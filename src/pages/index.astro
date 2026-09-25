@@ -13,8 +13,11 @@ import RegisterWindow from '../components/windows/RegisterWindow.astro';
 import RecycleWindow from '../components/windows/RecycleWindow.astro';
 import VenueWindow from '../components/windows/VenueWindow.astro';
 import StaffWindow from '../components/windows/StaffWindow.astro';
+import CameraWindow from '../components/windows/CameraWindow.astro';
 import ErrorDialog from '../components/windows/ErrorDialog.astro';
-import MobileShell from '../components/MobileShell.astro';
+import IosShell from '../components/IosShell.astro';
+import AndroidShell from '../components/AndroidShell.astro';
+import MacShell from '../components/MacShell.astro';
 ---
 
 <Layout>
@@ -32,13 +35,16 @@ import MobileShell from '../components/MobileShell.astro';
       <RegisterWindow />
       <VenueWindow />
       <StaffWindow />
+      <CameraWindow />
       <RecycleWindow />
       <ErrorDialog />
     </div>
 
     <StartMenu />
     <Taskbar />
-    <MobileShell />
+    <MacShell />
+    <IosShell />
+    <AndroidShell />
   </main>
 
   <script src="../scripts/desktop.ts"></script>

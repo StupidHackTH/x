@@ -1,0 +1,126 @@
+---
+// Mac OS X Leopard style desktop chrome: menu bar, menus and the Dock. Shown on large screens when <html>
+// has the `mac` class, which the inline script in Layout.astro sets from the user agent (or ?mac / ?xp to
+// force one). The windows are the same components as on XP; global.css restyles them.
+import { windows } from '../data/windows';
+import { event } from '../data/event';
+import { fundingPercent } from '../data/funding';
+
+const apps = windows.filter((w) => w.id !== 'error' && w.id !== 'recycle');
+const links = [
+  { label: 'Facebook', glyph: '📘', href: event.links.facebook },
+  { label: 'Discord', glyph: '💬', href: event.links.discord },
+  { label: 'stupid.hackathon.in.th', glyph: '🌐', href: event.links.website },
+];
+---
+
+<div class="mac-only" id="mac-shell">
+  <div class="mac-menubar" id="mac-menubar" role="menubar">
+    <button type="button" class="apple" data-menu="apple" aria-haspopup="true" aria-expanded="false" aria-label="shtX menu"><img src="/favicon-64.png" alt="" /></button>
+    <button type="button" class="appname" data-menu="app" aria-haspopup="true" aria-expanded="false" id="mac-appname">Finder</button>
+    <button type="button" data-menu="file" aria-haspopup="true" aria-expanded="false">File</button>
+    <button type="button" data-menu="edit" aria-haspopup="true" aria-expanded="false">Edit</button>
+    <button type="button" data-menu="view" aria-haspopup="true" aria-expanded="false">View</button>
+    <button type="button" data-menu="go" aria-haspopup="true" aria-expanded="false">Go</button>
+    <button type="button" data-menu="window" aria-haspopup="true" aria-expanded="false">Window</button>
+    <button type="button" data-menu="help" aria-haspopup="true" aria-expanded="false">Help</button>
+    <span class="status">
+      <button type="button" data-open="funding" title={`Funding goal ${fundingPercent}% reached`}>💰 {fundingPercent}%</button>
+      <span title="AirPort: Cleverse Wi-Fi" aria-hidden="true">📶</span>
+      <span title="Volume: stupid" aria-hidden="true">🔊</span>
+      <span title="Battery: 62% (mock)" aria-hidden="true">🔋</span>
+      <time id="mac-clock">Fri 1:41 PM</time>
+      <button type="button" data-action="mac-spotlight" aria-label="Spotlight">🔍</button>
+    </span>
+  </div>
+
+  <div class="mac-menu" id="mac-menu-apple" hidden role="menu">
+    <button type="button" role="menuitem" data-open="about">About This Mac</button>
+    <button type="button" role="menuitem" data-action="mac-update">Software Update…</button>
+    <hr />
+    <button type="button" role="menuitem" data-open="register">Registration…</button>
+    <button type="button" role="menuitem" data-open="funding">Funding Goal…</button>
+    <hr />
+    <button type="button" role="menuitem" data-action="mac-sleep">Sleep</button>
+    <button type="button" role="menuitem" data-action="shutdown">Restart…</button>
+    <button type="button" role="menuitem" data-action="shutdown">Shut Down…</button>
+    <hr />
+    <button type="button" role="menuitem" data-action="logoff">Log Out Stupid Hacker…</button>
+  </div>
+  <div class="mac-menu" id="mac-menu-app" hidden role="menu">
+    <button type="button" role="menuitem" data-open="about">About Stupid Hackathon X</button>
+    <hr />
+    <button type="button" role="menuitem" data-action="mac-hide">Hide <kbd>⌘H</kbd></button>
+    <button type="button" role="menuitem" data-action="mac-quit">Quit <kbd>⌘Q</kbd></button>
+  </div>
+  <div class="mac-menu" id="mac-menu-file" hidden role="menu">
+    <button type="button" role="menuitem" data-open="camera">New Photo <kbd>⌘N</kbd></button>
+    <button type="button" role="menuitem" data-open="register">Open Registration… <kbd>⌘O</kbd></button>
+    <hr />
+    <button type="button" role="menuitem" data-action="mac-quit">Close Window <kbd>⌘W</kbd></button>
+  </div>
+  <div class="mac-menu" id="mac-menu-edit" hidden role="menu">
+    <button type="button" role="menuitem" disabled>Undo <kbd>⌘Z</kbd></button>
+    <hr />
+    <button type="button" role="menuitem" disabled>Cut <kbd>⌘X</kbd></button>
+    <button type="button" role="menuitem" disabled>Copy <kbd>⌘C</kbd></button>
+    <button type="button" role="menuitem" disabled>Paste <kbd>⌘V</kbd></button>
+    <hr />
+    <button type="button" role="menuitem" data-action="mac-spotlight">Find Something Useful…</button>
+  </div>
+  <div class="mac-menu" id="mac-menu-view" hidden role="menu">
+    <button type="button" role="menuitem" disabled>✓ as Icons</button>
+    <button type="button" role="menuitem" disabled>as List</button>
+    <button type="button" role="menuitem" disabled>as Columns</button>
+    <button type="button" role="menuitem" disabled>as Cover Flow</button>
+    <hr />
+    <button type="button" role="menuitem" data-action="ctx-refresh">Clean Up</button>
+  </div>
+  <div class="mac-menu" id="mac-menu-go" hidden role="menu">
+    {apps.map((w) => (
+      <button type="button" role="menuitem" data-open={w.id}><span class="glyph" aria-hidden="true">{w.glyph}</span>{w.label}</button>
+    ))}
+    <hr />
+    {links.map((l) => (
+      <a role="menuitem" href={l.href} target="_blank" rel="noopener"><span class="glyph" aria-hidden="true">{l.glyph}</span>{l.label}</a>
+    ))}
+  </div>
+  <div class="mac-menu" id="mac-menu-window" hidden role="menu">
+    <button type="button" role="menuitem" data-action="mac-hide">Minimize <kbd>⌘M</kbd></button>
+    <button type="button" role="menuitem" data-action="mac-zoom">Zoom</button>
+    <hr />
+    {windows.filter((w) => w.id !== 'error').map((w) => (
+      <button type="button" role="menuitem" data-open={w.id}>{w.title}</button>
+    ))}
+  </div>
+  <div class="mac-menu" id="mac-menu-help" hidden role="menu">
+    <button type="button" role="menuitem" data-open="faq">Stupid Hackathon Help</button>
+    <button type="button" role="menuitem" data-action="mac-spotlight">Search</button>
+  </div>
+
+  <nav class="mac-dock" id="mac-dock" aria-label="Dock">
+    <button type="button" class="finder" data-dock="finder" data-open="about" data-running>
+      <img src="/logo-transparent.png" alt="" />
+      <span class="tip">Finder</span>
+    </button>
+    {apps.map((w) => (
+      <button type="button" data-dock={w.id} data-open={w.id}>
+        <span class="glyph" aria-hidden="true">{w.glyph}</span>
+        <span class="tip">{w.label}</span>
+      </button>
+    ))}
+    <span class="sep" aria-hidden="true"></span>
+    <a href={event.links.facebook} target="_blank" rel="noopener">
+      <span class="glyph" aria-hidden="true">📘</span>
+      <span class="tip">Facebook</span>
+    </a>
+    <a href={event.links.discord} target="_blank" rel="noopener">
+      <span class="glyph" aria-hidden="true">💬</span>
+      <span class="tip">Discord</span>
+    </a>
+    <button type="button" data-dock="recycle" data-open="recycle">
+      <span class="glyph" aria-hidden="true">🗑️</span>
+      <span class="tip">Trash</span>
+    </button>
+  </nav>
+</div>
