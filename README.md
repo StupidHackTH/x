@@ -67,12 +67,16 @@ Both shells share the boot screen and the same window manager in `src/scripts/de
 
 ## Camera (Stupid Photo Booth)
 
-`src/components/windows/CameraWindow.astro` is a working camera: it opens the real camera with `getUserMedia`, draws every frame through a canvas with a 2000s look, and saves the result as JPEG (or PNG for the 1-bit look). The preview and the saved photo are the same pixels. Nothing is uploaded.
+`src/components/windows/CameraWindow.astro` is a working camera: it opens the real camera with `getUserMedia`, draws every frame through a canvas with a 2000s look, and saves photos as JPEG (PNG for the 1-bit look) and clips as MP4 or WebM (whatever `MediaRecorder` supports). The clip is recorded from the canvas, so the look is baked into the video; the microphone is asked for on the first recording and skipped if refused. Nothing is uploaded.
 
-- Filters: Normal, Webcam '03, Cam Phone 0.3MP (with orange date stamp and 30% JPEG quality), Camcorder (scanlines, red bleed, REC, timestamp), Lomo, Old Photo, Frutiger Aero (gloss and bubbles), Nokia 3310 (80×60 dithered 1-bit LCD), NightShot.
-- Controls: Start camera, Flip (only shown when there are two cameras), Mirror, Take photo, Retake, Share (Web Share API, phones), Save (download). The last eight shots sit in a strip under the controls.
-- The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press Start again to resume.
-- Phones get a portrait 3:4 frame, desktop a 4:3 frame.
+- Looks: Webcam '03, Cam Phone 0.3MP (orange date stamp, 30% JPEG quality), Camcorder (scanlines, red bleed, REC, timestamp), Lomo, Normal, Old Photo, Frutiger Aero (gloss and bubbles), Nokia 3310 (dithered 1-bit LCD), NightShot. Every look is a pixel function plus an overlay in the `looks` map of the component script.
+- On computers it is Photo Booth: three modes (still, four quick pictures composed into a 2×2, movie clip), the big red shutter with a 3-2-1 countdown and a full-screen white flash, an Effects button that shows nine live previews, and a film strip. Clicking a strip thumbnail opens review with previous/next, Delete, Share and Save.
+- On phones it is a camera app: full-screen viewfinder, SVG toolbar (screen flash for selfies, rule-of-thirds grid, filters on/off, close), a carousel of live filter previews over the viewfinder, an iOS-style mode strip (only PHOTO and VIDEO exist; TIME-LAPSE, SLO-MO, PORTRAIT and PANO just show a toast), round shutter (red square while recording), Flip (only with two cameras), and the last capture as a thumbnail that opens review. Tapping the viewfinder shows a yellow focus square (decorative). The window title bar and the iOS tab bar are hidden while it is open.
+- Zoom: a pill with .5 / 1x / 2 / 3 presets (.5 only when the camera reports a wide lens), pinch on the viewfinder, mouse wheel or trackpad on computers, up to 5×. The camera's own zoom is used when the browser exposes it (`MediaStreamTrack` zoom capability, Chrome on Android and iOS 17+), digital crop beyond that or on other browsers.
+- Shutter click and record beeps are generated with WebAudio (no files); Android phones also vibrate on the shutter.
+- Save downloads the file; on iPhone and iPad it opens the share sheet instead, whose "Save Image/Video" stores it in Photos (a plain download would land in Files, and Safari ignores download links to data: URLs, so files are blob URLs). Clips stop automatically after one minute.
+- The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press the start button again to resume.
+- Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480).
 
 ## URL parameters
 

@@ -76,7 +76,7 @@ async function shot(name, caption, { device, url, wait = 700, steps = [] }) {
 }
 
 const start = { click: '[data-cam="start"]', wait: 1800 };
-const filter = (id) => ({ click: `.cam-filter[data-filter="${id}"]`, wait: 600 });
+const filter = (id) => ({ click: `[data-filter="${id}"]`, wait: 600 });
 const startMenu = (id) => ({ click: `.xp-startmenu-item[data-open="${id}"]`, wait: 300 });
 const goMenu = (id) => ({ click: `#mac-menu-go [data-open="${id}"]`, wait: 300 });
 
@@ -102,7 +102,10 @@ for (const [id, caption] of [
   ['nokia', 'Nokia 3310: 80×60, Bayer-dithered 1-bit LCD, pixel grid, saved as PNG'],
   ['nightshot', 'NightShot: green monochrome, gain, noise, blinking indicator'],
 ]) await shot(`12-camera-${id}`, caption, { device: XP, steps: [filter(id)] });
-await shot('13-camera-shot', 'After "Take photo": the frozen shot, Save link, and the photo strip', { device: XP, steps: [{ click: '[data-cam="shoot"]', wait: 800 }] });
+await shot('13-camera-effects', 'Photo Booth Effects chooser: nine live previews', { device: XP, steps: [{ click: '.cam-effectsbtn', wait: 900 }] });
+await shot('14-camera-countdown', 'Shutter: 3-2-1 countdown before the flash', { device: XP, steps: [{ click: '.cam-effect[data-filter="lomo"]', wait: 300 }, { click: '.cam-shutter', wait: 1300 }] });
+await shot('15-camera-strip', 'After a still, a 4-up and a clip: the film strip', { device: XP, steps: [{ click: '.cam-pbmodes [data-cam-mode="burst"]', wait: 3200 }, { click: '.cam-shutter', wait: 7000 }, { click: '.cam-pbmodes [data-cam-mode="video"]', wait: 200 }, { click: '.cam-shutter', wait: 2500 }, { click: '.cam-shutter', wait: 1500 }] });
+await shot('16-camera-review', 'Review of the clip with player, previous/next, Delete, Share, Save', { device: XP, steps: [{ click: '#cam-strip button', wait: 900 }] });
 
 // ---- Mac OS X Leopard (Mac user agent, no URL parameter) ----
 await shot('20-mac-boot', 'Leopard boot: gray screen, big X, spinning gear, funding readout', { device: MAC, url: '/', wait: 1500 });
@@ -113,7 +116,7 @@ await shot('24-mac-windows', 'Several windows: traffic lights, centered titles, 
 await shot('25-mac-dock', 'Dock magnification with label on hover', { device: MAC, steps: [{ hover: '#mac-dock [data-dock="camera"]', wait: 400 }] });
 await shot('26-mac-minimized', 'Window menu → Minimize: the front window shrinks into the Dock (dimmed icon)', { device: MAC, url: '/?skip&open=about', wait: 1200, steps: [{ click: '#mac-menubar [data-menu="window"]', wait: 200 }, { click: '#mac-menu-window [data-action="mac-hide"]', wait: 700 }] });
 await shot('27-mac-alert', 'Register → Go: Leopard alert', { device: MAC, url: '/?skip&open=register', wait: 1200, steps: [{ click: '[data-action="fake-register"]' }] });
-await shot('28-mac-camera', 'Camera in a Leopard window, Lomo filter', { device: MAC, url: '/?skip&open=camera', wait: 1200, steps: [start, filter('lomo')] });
+await shot('28-mac-camera', 'Photo Booth in a Leopard window, Lomo look', { device: MAC, url: '/?skip&open=camera', wait: 1200, steps: [start, filter('lomo')] });
 
 // ---- iPhone (chosen because the user agent is not Android) ----
 await shot('30-ios-boot', 'Boot screen on a phone', { device: IPHONE, url: '/', wait: 1500 });
@@ -122,7 +125,9 @@ await shot('32-ios-home', 'Home screen: app grid (Camera added), widgets, dock',
 await shot('33-ios-about', 'App view with iOS navigation bar and tab bar', { device: IPHONE, url: '/?skip&open=about', wait: 900 });
 await shot('34-ios-faq', 'FAQ as grouped lists', { device: IPHONE, url: '/?skip&open=faq', wait: 900 });
 await shot('35-ios-alert', 'Error dialog as an iOS alert', { device: IPHONE, url: '/?skip&open=register', wait: 900, steps: [{ click: '[data-action="fake-register"]' }] });
-await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero filter, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
+await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero look, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
+await shot('37-ios-recording', 'VIDEO mode while recording: timer and red stop square', { device: IPHONE, steps: [{ click: '.cam-modes [data-cam-mode="video"]', wait: 300 }, { click: '.cam-shutter', wait: 2500 }] });
+await shot('38-ios-review', 'Review of the clip from the thumbnail: Share and Save (share sheet on iPhone)', { device: IPHONE, steps: [{ click: '.cam-shutter', wait: 1500 }, { click: '.cam-thumb', wait: 900 }] });
 
 // ---- Android (chosen from the user agent, no URL parameter) ----
 await shot('40-android-boot', 'Boot: glowing "android" wordmark, funding readout stays', { device: ANDROID, url: '/', wait: 1500 });
@@ -134,7 +139,7 @@ await shot('45-android-shade', 'Tap the status bar: notification shade', { devic
 await shot('46-android-about', 'App view: dark title bar with icon, flat lists', { device: ANDROID, url: '/?skip&open=about', wait: 3400 });
 await shot('47-android-funding', 'Funding Goal: orange progress bar, gray buttons', { device: ANDROID, url: '/?skip&open=funding', wait: 3400 });
 await shot('48-android-dialog', 'Error dialog as a Gingerbread AlertDialog', { device: ANDROID, url: '/?skip&open=register', wait: 3400, steps: [{ click: '[data-action="fake-register"]' }] });
-await shot('49-android-camera', 'Camera app on Android, Camcorder filter', { device: ANDROID, url: '/?skip&open=camera', wait: 3400, steps: [start, filter('camcorder')] });
+await shot('49-android-camera', 'Camera app on Android, Camcorder look', { device: ANDROID, url: '/?skip&open=camera', wait: 3400, steps: [start, filter('camcorder')] });
 
 chrome.kill();
 
