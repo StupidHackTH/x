@@ -1,4 +1,5 @@
-// Sponsor tiers and sponsor list are real. Goal/raised/backers are placeholder numbers until finance publishes them.
+// Sponsor tiers, sponsor list and the goal/raised/backers figures are real. Set `mock: true` to show the
+// "estimate" notice in the Funding window while numbers are provisional.
 export type SponsorTier = 'System32' | 'Full Screen' | 'Normal Mode' | 'Safe Mode' | 'Individual' | 'Venue' | 'Corporate' | 'Partner';
 
 export interface Sponsor {
@@ -12,7 +13,7 @@ export interface Funding {
   currency: string;
   goal: number;
   raised: number;
-  backers: number;
+  backers: number; // counted from the sponsor list below
   deadline: string; // ISO date
   updatedAt: string; // ISO datetime
   mock: boolean;
@@ -21,12 +22,14 @@ export interface Funding {
 
 export const funding: Funding = {
   currency: 'THB',
-  goal: 150_000, // MOCK
-  raised: 93_000.1, // MOCK
-  backers: 6, // MOCK
+  goal: 150_000,
+  raised: 93_000.1,
+  get backers() {
+    return this.sponsors.length;
+  },
   deadline: '2026-10-10',
   updatedAt: '2026-09-18T09:00:00+07:00',
-  mock: true,
+  mock: false,
   sponsors: [
     { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com' },
     { name: 'Drawdy', tier: 'System32' },

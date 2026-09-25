@@ -79,13 +79,31 @@
 }
 
 @layer components {
-  /* Bliss-ish wallpaper made from gradients */
+  /* Sprite icons (Icons.astro): 1em square, sized by their context */
+  .icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; }
+  .icon.mono { color: currentColor; }
+  .xp-icon .glyph { width: 34px; height: 34px; }
+  .xp-startmenu-item .glyph { width: 24px; height: 24px; }
+  .xp-task-btn .glyph { width: 16px; height: 16px; }
+  .xp-title-icon .icon { width: 16px; height: 16px; }
+  .xp-quicklaunch .icon, .xp-tray-icon .icon { width: 16px; height: 16px; }
+  .xp-balloon .icon { width: 16px; height: 16px; }
+  .ios-app-icon .tile > .icon { position: relative; z-index: 1; width: 40px; height: 40px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
+  .ios-app-icon .tile > .icon.fill { width: 57px; height: 57px; }
+  .ios-tabbar .tab-icon { width: 22px; height: 22px; color: #8e8e93; filter: grayscale(1) brightness(1.4); }
+  .ios-tabbar button[data-active] .tab-icon { filter: none; }
+  .android-app > .icon { width: 50px; height: 50px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+  .android-hotseat .android-app > .icon { width: 44px; height: 44px; }
+  .android-statusbar .notif .icon { width: 14px; height: 14px; }
+  .android-shade .item .glyph { width: 28px; height: 28px; }
+  .android-menu .panel .glyph { width: 28px; height: 28px; }
+  .android-lock-middle .note .icon { width: 14px; height: 14px; }
+  .mac-dock .glyph { width: 40px; height: 40px; }
+  .mac-menu .glyph { width: 18px; height: 18px; }
+  .mac-menubar .status .icon { width: 15px; height: 15px; color: #111; }
+  /* Wallpaper: a Bliss-like hill and sky, drawn as SVG */
   .xp-wallpaper {
-    background:
-      radial-gradient(ellipse 90% 55% at 30% 100%, #4c9a2a 0%, #3d8a1f 35%, transparent 70%),
-      radial-gradient(ellipse 120% 50% at 75% 105%, #6ab04c 0%, #4b9a2b 40%, transparent 72%),
-      radial-gradient(ellipse 60% 25% at 50% 62%, rgba(255, 255, 255, 0.35), transparent 70%),
-      linear-gradient(180deg, #1c5fbf 0%, #3d8be0 35%, #7fbfef 60%, #b9def8 72%, #dfefff 76%, #8fc2f0 78%);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E %3Cdefs%3E %3ClinearGradient id='sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%232461c4'/%3E%3Cstop offset='.45' stop-color='%235f9fe3'/%3E%3Cstop offset='.62' stop-color='%23a9d2f4'/%3E%3Cstop offset='.7' stop-color='%23dcecf9'/%3E%3C/linearGradient%3E %3ClinearGradient id='hill' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238fd44f'/%3E%3Cstop offset='.35' stop-color='%235fb531'/%3E%3Cstop offset='1' stop-color='%232f7d1c'/%3E%3C/linearGradient%3E %3ClinearGradient id='hill2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%236cbf3a'/%3E%3Cstop offset='1' stop-color='%23276a16'/%3E%3C/linearGradient%3E %3Cfilter id='soft' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeGaussianBlur stdDeviation='14'/%3E%3C/filter%3E %3Cfilter id='haze' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeGaussianBlur stdDeviation='40'/%3E%3C/filter%3E %3C/defs%3E %3Crect width='1600' height='1000' fill='url(%23sky)'/%3E %3Cg fill='%23fff' filter='url(%23soft)' opacity='.9'%3E %3Cellipse cx='260' cy='150' rx='150' ry='34'/%3E%3Cellipse cx='330' cy='125' rx='90' ry='40'/%3E %3Cellipse cx='900' cy='110' rx='200' ry='30'/%3E%3Cellipse cx='960' cy='90' rx='110' ry='42'/%3E%3Cellipse cx='820' cy='100' rx='80' ry='30'/%3E %3Cellipse cx='1400' cy='190' rx='170' ry='30'/%3E%3Cellipse cx='1350' cy='170' rx='80' ry='36'/%3E %3Cellipse cx='600' cy='300' rx='120' ry='18' opacity='.6'/%3E%3Cellipse cx='1200' cy='330' rx='150' ry='16' opacity='.5'/%3E %3C/g%3E %3Cellipse cx='800' cy='690' rx='1100' ry='90' fill='%23fff' opacity='.55' filter='url(%23haze)'/%3E %3Cpath d='M0 760 C 250 560 550 500 850 560 S 1350 700 1600 600 L1600 1000 L0 1000 Z' fill='url(%23hill)'/%3E %3Cpath d='M0 760 C 250 560 550 500 850 560 S 1350 700 1600 600 L1600 650 C 1350 730 1150 620 850 600 S 300 640 0 800 Z' fill='%23b7ea7a' opacity='.35'/%3E %3Cpath d='M0 900 C 300 800 600 780 900 840 S 1400 900 1600 860 L1600 1000 L0 1000 Z' fill='url(%23hill2)'/%3E %3C/svg%3E") center / cover no-repeat, #3a6ea5;
   }
 
   /* ---------- Window chrome ---------- */
@@ -745,7 +763,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #5a7edc 0%, #3f6ad1 48%, #2d55bf 50%, #1e4aa8 100%);
+    gap: 48px;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0) 60px, rgba(0, 0, 0, 0) calc(100% - 60px)),
+      linear-gradient(180deg, #5a7edc 0%, #3f6ad1 48%, #2d55bf 50%, #1e4aa8 100%);
     color: #fff;
     font-family: var(--font-xp-start);
     font-style: italic;
@@ -754,6 +775,19 @@
     text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.45);
     animation: xp-fade-in 0.4s ease-out;
   }
+  .xp-welcome::before,
+  .xp-welcome::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0), #f0a030 25%, #ffcc66 50%, #f0a030 75%, rgba(255, 255, 255, 0));
+  }
+  .xp-welcome::before { top: 60px; }
+  .xp-welcome::after { bottom: 60px; }
+  .xp-welcome .flag { width: 110px; height: 100px; filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.4)); }
+  .xp-welcome .divider { width: 1px; height: 120px; background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)); }
   .xp-welcome::before,
   .xp-welcome::after {
     content: "";
@@ -821,15 +855,7 @@
 
     /* iOS wallpaper: water drops on dark glass */
     .ios-wallpaper {
-      background:
-        radial-gradient(circle at 18% 22%, rgba(255,255,255,0.28) 0 6px, rgba(255,255,255,0.05) 7px 14px, transparent 15px),
-        radial-gradient(circle at 72% 12%, rgba(255,255,255,0.22) 0 4px, rgba(255,255,255,0.05) 5px 10px, transparent 11px),
-        radial-gradient(circle at 85% 38%, rgba(255,255,255,0.3) 0 9px, rgba(255,255,255,0.06) 10px 22px, transparent 23px),
-        radial-gradient(circle at 30% 55%, rgba(255,255,255,0.2) 0 5px, rgba(255,255,255,0.05) 6px 12px, transparent 13px),
-        radial-gradient(circle at 60% 70%, rgba(255,255,255,0.25) 0 12px, rgba(255,255,255,0.05) 13px 30px, transparent 31px),
-        radial-gradient(circle at 12% 82%, rgba(255,255,255,0.22) 0 7px, rgba(255,255,255,0.05) 8px 16px, transparent 17px),
-        radial-gradient(circle at 88% 88%, rgba(255,255,255,0.18) 0 5px, rgba(255,255,255,0.04) 6px 11px, transparent 12px),
-        radial-gradient(ellipse 120% 80% at 50% 0%, #1f3a5f 0%, #0c1a30 45%, #04080f 100%);
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 1136' preserveAspectRatio='xMidYMid slice'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231c3f6f'/%3E%3Cstop offset='.5' stop-color='%230b1f3d'/%3E%3Cstop offset='1' stop-color='%2304080f'/%3E%3C/linearGradient%3E %3CradialGradient id='drop' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.55'/%3E%3Cstop offset='.45' stop-color='%238fc4ff' stop-opacity='.2'/%3E%3Cstop offset='.85' stop-color='%230a2447' stop-opacity='.55'/%3E%3Cstop offset='1' stop-color='%23cfe6ff' stop-opacity='.7'/%3E%3C/radialGradient%3E %3Cfilter id='sh' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeGaussianBlur stdDeviation='3'/%3E%3C/filter%3E %3C/defs%3E %3Crect width='640' height='1136' fill='url(%23bg)'/%3E %3Cg transform='translate(367 306)'%3E%3Cellipse cx='2.0' cy='2.8' rx='8' ry='7.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='8' fill='url(%23drop)'/%3E%3Cellipse cx='-2.8' cy='-3.2' rx='2.24' ry='1.44' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(472 520)'%3E%3Cellipse cx='7.0' cy='9.799999999999999' rx='28' ry='25.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='28' fill='url(%23drop)'/%3E%3Cellipse cx='-9.799999999999999' cy='-11.200000000000001' rx='7.840000000000001' ry='5.04' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(432 211)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(38 644)'%3E%3Cellipse cx='1.5' cy='2.0999999999999996' rx='6' ry='5.4' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='6' fill='url(%23drop)'/%3E%3Cellipse cx='-2.0999999999999996' cy='-2.4000000000000004' rx='1.6800000000000002' ry='1.08' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(381 525)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(499 49)'%3E%3Cellipse cx='2.0' cy='2.8' rx='8' ry='7.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='8' fill='url(%23drop)'/%3E%3Cellipse cx='-2.8' cy='-3.2' rx='2.24' ry='1.44' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(224 1068)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(457 704)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(267 515)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(538 957)'%3E%3Cellipse cx='1.5' cy='2.0999999999999996' rx='6' ry='5.4' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='6' fill='url(%23drop)'/%3E%3Cellipse cx='-2.0999999999999996' cy='-2.4000000000000004' rx='1.6800000000000002' ry='1.08' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(108 221)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(501 355)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(220 982)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(400 317)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(440 784)'%3E%3Cellipse cx='7.0' cy='9.799999999999999' rx='28' ry='25.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='28' fill='url(%23drop)'/%3E%3Cellipse cx='-9.799999999999999' cy='-11.200000000000001' rx='7.840000000000001' ry='5.04' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(574 141)'%3E%3Cellipse cx='1.5' cy='2.0999999999999996' rx='6' ry='5.4' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='6' fill='url(%23drop)'/%3E%3Cellipse cx='-2.0999999999999996' cy='-2.4000000000000004' rx='1.6800000000000002' ry='1.08' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(555 1097)'%3E%3Cellipse cx='2.0' cy='2.8' rx='8' ry='7.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='8' fill='url(%23drop)'/%3E%3Cellipse cx='-2.8' cy='-3.2' rx='2.24' ry='1.44' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(607 382)'%3E%3Cellipse cx='1.5' cy='2.0999999999999996' rx='6' ry='5.4' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='6' fill='url(%23drop)'/%3E%3Cellipse cx='-2.0999999999999996' cy='-2.4000000000000004' rx='1.6800000000000002' ry='1.08' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(151 763)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(248 940)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(548 210)'%3E%3Cellipse cx='3.5' cy='4.8999999999999995' rx='14' ry='12.6' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='14' fill='url(%23drop)'/%3E%3Cellipse cx='-4.8999999999999995' cy='-5.6000000000000005' rx='3.9200000000000004' ry='2.52' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(108 940)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(514 489)'%3E%3Cellipse cx='7.0' cy='9.799999999999999' rx='28' ry='25.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='28' fill='url(%23drop)'/%3E%3Cellipse cx='-9.799999999999999' cy='-11.200000000000001' rx='7.840000000000001' ry='5.04' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(416 686)'%3E%3Cellipse cx='7.0' cy='9.799999999999999' rx='28' ry='25.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='28' fill='url(%23drop)'/%3E%3Cellipse cx='-9.799999999999999' cy='-11.200000000000001' rx='7.840000000000001' ry='5.04' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(603 395)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(327 760)'%3E%3Cellipse cx='1.5' cy='2.0999999999999996' rx='6' ry='5.4' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='6' fill='url(%23drop)'/%3E%3Cellipse cx='-2.0999999999999996' cy='-2.4000000000000004' rx='1.6800000000000002' ry='1.08' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(187 788)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(83 282)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(442 526)'%3E%3Cellipse cx='3.0' cy='4.199999999999999' rx='12' ry='10.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='12' fill='url(%23drop)'/%3E%3Cellipse cx='-4.199999999999999' cy='-4.800000000000001' rx='3.3600000000000003' ry='2.16' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(564 303)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(546 268)'%3E%3Cellipse cx='5.5' cy='7.699999999999999' rx='22' ry='19.8' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='22' fill='url(%23drop)'/%3E%3Cellipse cx='-7.699999999999999' cy='-8.8' rx='6.16' ry='3.96' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(237 290)'%3E%3Cellipse cx='4.5' cy='6.3' rx='18' ry='16.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='18' fill='url(%23drop)'/%3E%3Cellipse cx='-6.3' cy='-7.2' rx='5.040000000000001' ry='3.2399999999999998' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(393 141)'%3E%3Cellipse cx='2.0' cy='2.8' rx='8' ry='7.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='8' fill='url(%23drop)'/%3E%3Cellipse cx='-2.8' cy='-3.2' rx='2.24' ry='1.44' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3Cg transform='translate(469 329)'%3E%3Cellipse cx='4.5' cy='6.3' rx='18' ry='16.2' fill='%23000' opacity='.35' filter='url(%23sh)'/%3E%3Ccircle r='18' fill='url(%23drop)'/%3E%3Cellipse cx='-6.3' cy='-7.2' rx='5.040000000000001' ry='3.2399999999999998' fill='%23fff' opacity='.85'/%3E%3C/g%3E%3C/svg%3E") center / cover no-repeat, #06111f;
     }
 
     /* Status bar: above lock/home/apps, below the boot screen (z 20000) */
@@ -1323,13 +1349,7 @@
 
     /* Wallpaper: dark glass with the Gingerbread green and orange glow */
     .android-wallpaper {
-      background:
-        radial-gradient(ellipse 70% 45% at 85% 10%, rgba(164, 198, 57, 0.45), transparent 70%),
-        radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 136, 0, 0.35), transparent 70%),
-        radial-gradient(circle at 60% 60%, rgba(164, 198, 57, 0.12), transparent 40%),
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 24px),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 24px),
-        linear-gradient(180deg, #1b1f1a 0%, #0a0c0a 60%, #000 100%);
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 1280' preserveAspectRatio='xMidYMid slice'%3E %3Cdefs%3E %3Cfilter id='g' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeGaussianBlur stdDeviation='10'/%3E%3C/filter%3E %3Cfilter id='g2' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeGaussianBlur stdDeviation='2'/%3E%3C/filter%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%230a0d0a'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/linearGradient%3E %3C/defs%3E %3Crect width='720' height='1280' fill='url(%23bg)'/%3E %3Cg fill='none' stroke-linecap='round'%3E %3Cpath d='M-40 980 L 300 640 L 330 640 L 700 270' stroke='%237fdb3a' stroke-width='14' opacity='.55' filter='url(%23g)'/%3E %3Cpath d='M-40 980 L 300 640 L 330 640 L 700 270' stroke='%23c8ff8a' stroke-width='3' opacity='.9' filter='url(%23g2)'/%3E %3Cpath d='M120 1300 L 120 900 L 420 600 L 420 380 L 760 40' stroke='%23ff8a00' stroke-width='12' opacity='.5' filter='url(%23g)'/%3E %3Cpath d='M120 1300 L 120 900 L 420 600 L 420 380 L 760 40' stroke='%23ffd18a' stroke-width='2.5' opacity='.9' filter='url(%23g2)'/%3E %3Cpath d='M-40 420 L 200 420 L 520 100' stroke='%233aa0ff' stroke-width='10' opacity='.45' filter='url(%23g)'/%3E %3Cpath d='M-40 420 L 200 420 L 520 100' stroke='%23bfe0ff' stroke-width='2' opacity='.85' filter='url(%23g2)'/%3E %3Cpath d='M760 1000 L 560 1000 L 380 1180' stroke='%23b44cff' stroke-width='10' opacity='.4' filter='url(%23g)'/%3E %3Cpath d='M760 1000 L 560 1000 L 380 1180' stroke='%23e6c5ff' stroke-width='2' opacity='.8' filter='url(%23g2)'/%3E %3C/g%3E %3Cg fill='%23fff'%3E%3Ccircle cx='300' cy='640' r='5' opacity='.9'/%3E%3Ccircle cx='420' cy='600' r='4' opacity='.9'/%3E%3Ccircle cx='200' cy='420' r='4' opacity='.9'/%3E%3Ccircle cx='560' cy='1000' r='4' opacity='.8'/%3E%3Ccircle cx='420' cy='380' r='3' opacity='.8'/%3E%3C/g%3E %3C/svg%3E") center / cover no-repeat, #000;
     }
 
     /* Status bar: green Gingerbread icons. Tap to open the notification shade. */
@@ -1358,6 +1378,15 @@
     .android-statusbar .bat { position: relative; width: 9px; height: 14px; border: 1px solid #a4c639; border-radius: 1px; box-sizing: border-box; }
     .android-statusbar .bat::before { content: ""; position: absolute; top: -3px; left: 1px; width: 5px; height: 2px; background: #a4c639; }
     .android-statusbar .bat i { position: absolute; left: 1px; right: 1px; bottom: 1px; height: 65%; background: #a4c639; }
+
+    /* Full screen (Menu → Full screen): the status bar goes away, apps get the whole panel above the keys */
+    body.site-fullscreen .android-statusbar { display: none; }
+    body.site-fullscreen .android-shade,
+    body.site-fullscreen .android-lock,
+    body.site-fullscreen .android-home,
+    body.site-fullscreen .android-drawer,
+    body.site-fullscreen .android-menu { top: 0; }
+    html.android body.site-fullscreen .xp-window { inset: 0 0 48px 0 !important; }
 
     /* Notification shade */
     .android-shade {
@@ -1632,6 +1661,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .android-menu .panel button:active { background: linear-gradient(180deg, #ffbb33, #ff8800); color: #111; }
+    .android-menu .panel button:nth-child(7):last-child { grid-column: 1 / -1; } /* an odd last item spans the row, like Gingerbread */
     .android-menu .panel .glyph { font-size: 26px; line-height: 1; }
 
     /* Toast */
@@ -1799,11 +1829,7 @@
 
     /* Aurora wallpaper */
     html.mac .xp-wallpaper {
-      background:
-        radial-gradient(ellipse 70% 35% at 62% 52%, rgba(140, 190, 255, 0.4), transparent 70%),
-        radial-gradient(ellipse 45% 30% at 28% 42%, rgba(190, 130, 255, 0.35), transparent 70%),
-        radial-gradient(ellipse 60% 20% at 50% 58%, rgba(255, 255, 255, 0.18), transparent 70%),
-        linear-gradient(180deg, #06123a 0%, #12237a 38%, #3a1f78 68%, #04071c 100%);
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E %3Cdefs%3E %3ClinearGradient id='bg' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23020a2c'/%3E%3Cstop offset='.4' stop-color='%230f1c66'/%3E%3Cstop offset='.7' stop-color='%23341a6b'/%3E%3Cstop offset='1' stop-color='%2305071c'/%3E%3C/linearGradient%3E %3Cfilter id='b1' x='-30%' y='-100%' width='160%' height='300%'%3E%3CfeGaussianBlur stdDeviation='46'/%3E%3C/filter%3E %3Cfilter id='b2' x='-30%' y='-100%' width='160%' height='300%'%3E%3CfeGaussianBlur stdDeviation='18'/%3E%3C/filter%3E %3C/defs%3E %3Crect width='1600' height='1000' fill='url(%23bg)'/%3E %3Cg fill='none' stroke-linecap='round'%3E %3Cpath d='M-100 700 C 300 380 700 720 1100 420 S 1500 300 1750 260' stroke='%236ad0ff' stroke-width='150' opacity='.45' filter='url(%23b1)'/%3E %3Cpath d='M-100 760 C 350 460 650 760 1050 480 S 1450 340 1750 320' stroke='%23d47bff' stroke-width='110' opacity='.45' filter='url(%23b1)'/%3E %3Cpath d='M-100 720 C 300 420 700 700 1100 440 S 1500 320 1750 290' stroke='%23ffffff' stroke-width='26' opacity='.55' filter='url(%23b2)'/%3E %3Cpath d='M-100 730 C 300 430 700 705 1100 445 S 1500 325 1750 295' stroke='%239fe6ff' stroke-width='6' opacity='.8'/%3E %3Cpath d='M-100 300 C 400 260 800 560 1300 500 S 1600 420 1750 460' stroke='%233a7bff' stroke-width='120' opacity='.22' filter='url(%23b1)'/%3E %3C/g%3E %3C/svg%3E") center / cover no-repeat, #0b1246;
     }
 
     /* Desktop icons sit on the right, Finder style (!important beats the md:left-2 utilities) */
@@ -1890,11 +1916,31 @@
       height: 64px;
       padding: 0 14px 8px;
       transform: translateX(-50%);
-      background: linear-gradient(180deg, rgba(190, 190, 190, 0.55), rgba(255, 255, 255, 0.35));
-      border: 1px solid rgba(255, 255, 255, 0.55);
-      border-bottom: 0;
-      border-radius: 10px 10px 0 0;
-      box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+    /* The shelf: a glass floor in perspective, with the front edge catching the light */
+    .mac-dock::before {
+      content: "";
+      position: absolute;
+      left: -34px;
+      right: -34px;
+      bottom: 0;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(150, 150, 150, 0.35), rgba(255, 255, 255, 0.45));
+      border-top: 1px solid rgba(255, 255, 255, 0.85);
+      transform: perspective(240px) rotateX(58deg);
+      transform-origin: 50% 100%;
+      box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.25);
+      z-index: -1;
+    }
+    .mac-dock::after {
+      content: "";
+      position: absolute;
+      left: -8px;
+      right: -8px;
+      bottom: 0;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9) 20%, rgba(255, 255, 255, 0.9) 80%, rgba(255, 255, 255, 0));
+      z-index: -1;
     }
     .mac-dock > button,
     .mac-dock > a {
@@ -1969,6 +2015,17 @@
       to { transform: scaleX(0.06) scaleY(0.25) translateY(95vh); opacity: 0; }
     }
     html.mac .xp-window[data-inactive] { border-color: transparent; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.35); }
+    html.mac .xp-window.zooming { transition: top 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    /* Lion-style full screen: the front window owns the display, the menu bar and Dock slide away */
+    html.mac .xp-window[data-fullscreen] { top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; z-index: 9500 !important; box-shadow: none; }
+    html.mac .xp-window[data-fullscreen] .xp-titlebar { border-radius: 0; }
+    html.mac .xp-window[data-fullscreen] .xp-resize { display: none; }
+    .mac-menubar, .mac-dock { transition: transform 0.3s ease; }
+    body.site-fullscreen .mac-menubar { transform: translateY(-100%); z-index: 9600; }
+    body.site-fullscreen .mac-menubar.peek { transform: none; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4); }
+    body.site-fullscreen .mac-menu { z-index: 9601; }
+    body.site-fullscreen .mac-dock { transform: translate(-50%, 110%); }
+    body.site-fullscreen #desktop-icons, body.site-fullscreen .xp-balloon { display: none !important; }
     html.mac .xp-window[data-maximized] {
       top: 22px !important;
       height: calc(100% - 22px - 70px) !important;

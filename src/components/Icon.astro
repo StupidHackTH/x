@@ -1,0 +1,7 @@
+---
+// One icon from the sprite in Icons.astro. Sizes come from CSS (.icon is 1em square by default).
+interface Props { name: string; class?: string; label?: string }
+const { name, class: className, label } = Astro.props;
+---
+
+<svg class:list={['icon', className]} aria-hidden={label ? undefined : 'true'} role={label ? 'img' : undefined} aria-label={label}><use href={`#i-${name}`} /></svg>

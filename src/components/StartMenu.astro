@@ -1,6 +1,7 @@
 ---
 import { windows } from '../data/windows';
 import { event } from '../data/event';
+import Icon from './Icon.astro';
 const items = windows.filter((w) => w.id !== 'error');
 const left = items.slice(0, 5);
 const right = items.slice(5);
@@ -15,34 +16,34 @@ const right = items.slice(5);
     <div class="bg-white py-2 border-r border-[#a9c3f3]">
       {left.map((w) => (
         <button type="button" class="xp-startmenu-item" role="menuitem" data-open={w.id}>
-          <span class="glyph" aria-hidden="true">{w.glyph}</span>
+          <Icon name={w.id} class="glyph" />
           <span><b>{w.label}</b><br /><span class="text-[10px] text-neutral-500">{w.title}</span></span>
         </button>
       ))}
       <div class="border-t border-[#d2d2d2] my-2"></div>
-      <a class="xp-startmenu-item" role="menuitem" href={event.links.sponsor}>
-        <span class="glyph" aria-hidden="true">💸</span>
+      <a class="xp-startmenu-item" role="menuitem" href={event.links.sponsor} target="_blank" rel="noopener">
+        <Icon name="funding" class="glyph" />
         <span><b>Become a sponsor</b><br /><span class="text-[10px] text-neutral-500">ทุก tier ลงท้ายด้วย .10</span></span>
       </a>
     </div>
     <div class="bg-[#d3e5fa] py-2">
       {right.map((w) => (
         <button type="button" class="xp-startmenu-item" role="menuitem" data-open={w.id}>
-          <span class="glyph" aria-hidden="true">{w.glyph}</span>
+          <Icon name={w.id} class="glyph" />
           <span>{w.label}</span>
         </button>
       ))}
       <div class="border-t border-[#a9c3f3] my-2"></div>
       <a class="xp-startmenu-item" role="menuitem" href={event.links.discord} target="_blank" rel="noopener">
-        <span class="glyph" aria-hidden="true">💬</span>
+        <Icon name="discord" class="glyph" />
         <span>Discord</span>
       </a>
       <a class="xp-startmenu-item" role="menuitem" href={event.links.website} target="_blank" rel="noopener">
-        <span class="glyph" aria-hidden="true">🌐</span>
+        <Icon name="website" class="glyph" />
         <span>stupid.hackathon.in.th</span>
       </a>
       <a class="xp-startmenu-item" role="menuitem" href={event.links.facebook} target="_blank" rel="noopener">
-        <span class="glyph" aria-hidden="true">📘</span>
+        <Icon name="facebook" class="glyph" />
         <span>Facebook</span>
       </a>
     </div>

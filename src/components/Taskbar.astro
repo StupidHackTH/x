@@ -1,5 +1,6 @@
 ---
 import { fundingPercent } from '../data/funding';
+import Icon from './Icon.astro';
 ---
 
 <nav class="xp-taskbar" aria-label="Taskbar">
@@ -15,9 +16,9 @@ import { fundingPercent } from '../data/funding';
 
   <div class="xp-grip" aria-hidden="true"></div>
   <div class="xp-quicklaunch" aria-label="Quick Launch">
-    <button type="button" data-action="show-desktop" title="Show Desktop">🖥️</button>
-    <button type="button" data-open="about" title="Stupid Hackathon X">💾</button>
-    <button type="button" data-open="register" title="Registration">🎟️</button>
+    <button type="button" data-action="show-desktop" title="Show Desktop"><Icon name="desktop" /></button>
+    <button type="button" data-open="about" title="Stupid Hackathon X"><Icon name="about" /></button>
+    <button type="button" data-open="register" title="Registration"><Icon name="register" /></button>
   </div>
   <div class="xp-grip" aria-hidden="true"></div>
 
@@ -27,22 +28,23 @@ import { fundingPercent } from '../data/funding';
     <button type="button" class="xp-tray-chevron" title="Show hidden icons" data-action="tray-chevron" aria-label="Show hidden icons">
       <svg viewBox="0 0 7 7" aria-hidden="true"><path d="M5 0.5 1.5 3.5 5 6.5" fill="none" stroke="#1d4bb0" stroke-width="1.6"/></svg>
     </button>
-    <button type="button" class="xp-tray-icon" data-open="funding" title={`Funding goal ${fundingPercent}% reached`} id="tray-funding">💰</button>
-    <span class="xp-tray-icon hidden sm:inline-flex" title="Volume: stupid">🔊</span>
-    <span class="xp-tray-icon hidden sm:inline-flex" title="Connected: Cleverse Wi-Fi · 56.0 Kbps">📶</span>
+    <button type="button" class="xp-tray-icon" data-open="funding" title={`Funding goal ${fundingPercent}% reached`} id="tray-funding"><Icon name="funding" /></button>
+    <span class="xp-tray-icon hidden sm:inline-flex" title="Volume: stupid"><Icon name="speaker" /></span>
+    <span class="xp-tray-icon hidden sm:inline-flex" title="Connected: Cleverse Wi-Fi · 56.0 Kbps"><Icon name="network" /></span>
     <time id="clock" datetime="" title="">--:--</time>
   </div>
 </nav>
 
 <div class="xp-balloon" id="balloon" hidden role="status">
   <button type="button" class="absolute top-1.5 right-2 text-[10px] leading-none" data-action="close-balloon" aria-label="Close">✕</button>
-  <div class="font-bold mb-1">💰 Funding goal: {fundingPercent}% reached</div>
+  <div class="font-bold mb-1 flex items-center gap-1"><Icon name="funding" /> Funding goal: {fundingPercent}% reached</div>
   <div>shtX ยังเปิดรับสปอนเซอร์ คลิกเพื่อดูสถานะ funding และ tier ต่าง ๆ</div>
 </div>
 
 <div class="xp-contextmenu" id="contextmenu" hidden role="menu">
   <button type="button" role="menuitem" data-action="ctx-arrange">Arrange Icons By ▸</button>
   <button type="button" role="menuitem" data-action="ctx-refresh">Refresh</button>
+  <button type="button" role="menuitem" data-action="fullscreen">Full Screen</button>
   <hr />
   <button type="button" role="menuitem" data-open="register">Register…</button>
   <button type="button" role="menuitem" data-open="funding">Sponsor…</button>

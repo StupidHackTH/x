@@ -22,7 +22,7 @@ export const event = {
     platform: 'Eventpop',
     opens: '21 ก.ย. 2026',
     price: 'ฟรี + มัดจำ ฿300 (คืนได้)',
-    url: '', // TBD — Eventpop link not published yet
+    url: 'https://www.eventpop.me/s/shtx',
     note: 'ลงทะเบียนผ่านเว็บนี้ไม่ได้ ต้องไปที่ Eventpop เท่านั้น',
   },
   links: {
@@ -32,7 +32,7 @@ export const event = {
     discord: 'https://creatorsgarten.org/discord',
     creatorsgarten: 'https://creatorsgarten.org',
     instagram: '', // TBD
-    sponsor: 'mailto:team@creatorsgarten.org',
+    sponsor: 'https://grtn.org/e/shtx/spon', // sponsor form
   },
   about: [
     'Stupid Hackathon in Thailand คือเทศกาลแฮกกาธอน "สร้างของโง่ ๆ ที่ไม่มีใครต้องการ" จัดโดย Creatorsgarten ตั้งแต่ปี 2017 เป็นงานฟรี ไม่แสวงผลกำไร community-first และเป็นส่วนหนึ่งของเครือข่าย Stupid Hackathon ทั่วโลก (เริ่มต้นจากนิวยอร์ก)',

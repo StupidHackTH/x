@@ -3,6 +3,7 @@
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { funding, fundingPercent, formatTHB } from '../data/funding';
+import Icon from './Icon.astro';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 
@@ -66,20 +67,20 @@ const eventDay = 10;
             {id === 'schedule' ? (
               <span class="tile calendar"><b>Oct</b><span>{eventDay}</span></span>
             ) : (
-              <span class="tile" style={`background:${t.bg}`}><span>{t.glyph ?? w.glyph}</span></span>
+              <span class="tile" style={`background:${t.bg}`}><Icon name={id} /></span>
             )}
             <span class="name">{w.label}</span>
           </button>
         );
       })}
       <a class="ios-app-icon" href={event.links.website} target="_blank" rel="noopener" role="listitem">
-        <span class="tile" style="background:linear-gradient(180deg,#7fd0ff,#1a7bd8)"><span>🧭</span></span>
+        <span class="tile" style="background:linear-gradient(180deg,#7fd0ff,#1a7bd8)"><Icon name="website" /></span>
         <span class="name">Website</span>
       </a>
     </div>
     <div class="ios-widgets">
       <button type="button" class="ios-widget" data-open="funding" aria-label="Funding goal widget">
-        <div class="widget-head"><span>💰 Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
+        <div class="widget-head"><span class="flex items-center gap-1"><Icon name="funding" /> Funding Goal</span><span class="pct">{fundingPercent}%</span></div>
         <div class="widget-bar"><div style={`width:${fundingPercent}%`}></div></div>
         <div class="widget-foot">{formatTHB(funding.raised)} of {formatTHB(funding.goal)} · {funding.backers} sponsors</div>
       </button>
@@ -96,28 +97,28 @@ const eventDay = 10;
         const t = tiles[id];
         return (
           <button type="button" class="ios-app-icon" data-open={id}>
-            <span class="tile" style={`background:${t.bg}`}><span>{w.glyph}</span></span>
+            <span class="tile" style={`background:${t.bg}`}><Icon name={id} /></span>
             {id === 'funding' && <span class="badge">{fundingPercent}%</span>}
             <span class="name">{w.label}</span>
           </button>
         );
       })}
       <a class="ios-app-icon" href={event.links.facebook} target="_blank" rel="noopener">
-        <span class="tile" style="background:linear-gradient(180deg,#6d8fd6,#2d4a8f)"><span class="font-bold text-white text-3xl" style="font-family:Helvetica,Arial,sans-serif">f</span></span>
+        <span class="tile" style="background:linear-gradient(180deg,#6d8fd6,#2d4a8f)"><Icon name="facebook" class="fill" /></span>
         <span class="name">Facebook</span>
       </a>
       <a class="ios-app-icon" href={event.links.discord} target="_blank" rel="noopener">
-        <span class="tile" style="background:linear-gradient(180deg,#8ea1ff,#4752c4)"><span>💬</span></span>
+        <span class="tile" style="background:linear-gradient(180deg,#8ea1ff,#4752c4)"><Icon name="discord" class="fill" /></span>
         <span class="name">Discord</span>
       </a>
     </div>
   </div>
 
   <nav class="ios-tabbar" aria-label="App tabs">
-    <button type="button" data-action="mobile-home"><span class="tab-icon">🏠</span><span>Home</span></button>
-    <button type="button" data-open="register" data-tab="register"><span class="tab-icon">🎟️</span><span>Register</span></button>
-    <button type="button" data-open="venue" data-tab="venue"><span class="tab-icon">🗺️</span><span>Venue</span></button>
-    <button type="button" data-open="funding" data-tab="funding"><span class="tab-icon">💰</span><span>Funding</span></button>
-    <button type="button" data-open="faq" data-tab="faq"><span class="tab-icon">❓</span><span>FAQ</span></button>
+    <button type="button" data-action="mobile-home"><Icon name="home" class="tab-icon" /><span>Home</span></button>
+    <button type="button" data-open="register" data-tab="register"><Icon name="register" class="tab-icon" /><span>Register</span></button>
+    <button type="button" data-open="venue" data-tab="venue"><Icon name="venue" class="tab-icon" /><span>Venue</span></button>
+    <button type="button" data-open="funding" data-tab="funding"><Icon name="funding" class="tab-icon" /><span>Funding</span></button>
+    <button type="button" data-open="faq" data-tab="faq"><Icon name="faq" class="tab-icon" /><span>FAQ</span></button>
   </nav>
 </div>

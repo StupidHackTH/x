@@ -1,22 +1,23 @@
 ---
 import { windows } from '../data/windows';
 import { event } from '../data/event';
+import Icon from './Icon.astro';
 const icons = windows.filter((w) => w.id !== 'error');
 ---
 
 <div class="flex flex-row overflow-x-auto gap-1 p-2 md:absolute md:top-2 md:left-2 md:p-0 md:flex-col md:gap-2 md:overflow-visible z-0" id="desktop-icons">
   {icons.map((w) => (
     <button type="button" class="xp-icon shrink-0" data-open={w.id} title={w.title}>
-      <span class="glyph" aria-hidden="true">{w.glyph}</span>
+      <Icon name={w.id} class="glyph" />
       <span>{w.label}</span>
     </button>
   ))}
   <a class="xp-icon shrink-0" href={event.links.facebook} target="_blank" rel="noopener" title="Facebook Creatorsgarten">
-    <span class="glyph" aria-hidden="true">📘</span>
+    <Icon name="facebook" class="glyph" />
     <span>Facebook</span>
   </a>
   <a class="xp-icon shrink-0" href={event.links.discord} target="_blank" rel="noopener" title="Discord">
-    <span class="glyph" aria-hidden="true">💬</span>
+    <Icon name="discord" class="glyph" />
     <span>Discord</span>
   </a>
 </div>

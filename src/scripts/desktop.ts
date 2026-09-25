@@ -291,7 +291,7 @@ function syncTaskbar() {
       btn.className = 'xp-task-btn';
       btn.dataset.task = id;
       btn.title = w.dataset.title ?? id;
-      btn.innerHTML = `<span class="glyph" aria-hidden="true">${w.dataset.glyph ?? ''}</span><span class="truncate">${w.dataset.title ?? id}</span>`;
+      btn.innerHTML = `<svg class="icon glyph" aria-hidden="true"><use href="#i-${id}"></use></svg><span class="truncate">${w.dataset.title ?? id}</span>`;
       btn.addEventListener('click', () => {
         const el = winEl(id)!;
         if (el.hasAttribute('data-minimized')) {
@@ -443,8 +443,9 @@ function minimizeWindow(id: string) {
 function toggleMaximize(id: string) {
   const el = winEl(id);
   if (!el) return;
-  if (el.hasAttribute('data-maximized')) el.removeAttribute('data-maximized');
-  else el.setAttribute('data-maximized', '');
+  const flip = () => (el.hasAttribute('data-maximized') ? el.removeAttribute('data-maximized') : el.setAttribute('data-maximized', ''));
+  if (isMac()) zoomWindow(el, flip);
+  else flip();
   focusWindow(id);
 }
 
@@ -675,6 +676,42 @@ function androidBack() {
   if (app) closeWindow(app.dataset.window!);
 }
 
+/* ---------------- Full screen (browser Fullscreen API; iPhone Safari has none for pages) ---------------- */
+
+function toggleFullscreen(el: HTMLElement = document.documentElement) {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else el.requestFullscreen?.().catch(() => showError('เบราว์เซอร์นี้ไม่ยอมให้เต็มจอ'));
+}
+
+/* Mac, Lion style: the front window zooms to fill the screen while the menu bar and Dock slide away;
+   the menu bar peeks back when the pointer touches the top edge. Android hides its status bar (CSS). */
+let macFullWindow: HTMLElement | null = null;
+function syncSiteFullscreen() {
+  const on = document.fullscreenElement === document.documentElement;
+  document.body.classList.toggle('site-fullscreen', on);
+  if (!isMac()) return;
+  if (on) {
+    const front = frontWindow();
+    if (front) {
+      macFullWindow = front;
+      zoomWindow(front, () => front.setAttribute('data-fullscreen', ''));
+    }
+  } else if (macFullWindow) {
+    const w = macFullWindow;
+    macFullWindow = null;
+    zoomWindow(w, () => w.removeAttribute('data-fullscreen'));
+  }
+  for (const b of $$<HTMLElement>('#mac-shell [data-action="fullscreen"]')) b.childNodes[0].textContent = on ? 'Exit Full Screen ' : 'Enter Full Screen ';
+  $('#mac-menubar')?.classList.remove('peek');
+}
+/* Animate a window's frame change (Mac zoom / full screen) */
+function zoomWindow(el: HTMLElement, change: () => void) {
+  if (reducedMotion()) return change();
+  el.classList.add('zooming');
+  change();
+  setTimeout(() => el.classList.remove('zooming'), 400);
+}
+
 /* ---------------- Mac menu bar ---------------- */
 
 /* Open one drop-down of the Mac menu bar (null closes them all) */
@@ -865,6 +902,11 @@ function bindEvents() {
           if (front) closeWindow(front.dataset.window!);
           break;
         }
+        case 'fullscreen':
+          setStartMenu(false);
+          closeAndroidOverlays();
+          toggleFullscreen();
+          break;
         case 'mac-spotlight':
           showError('Spotlight: 0 useful things found · 9,999 stupid ideas found');
           break;
@@ -961,6 +1003,16 @@ function bindEvents() {
 
 function init() {
   bindEvents();
+  // Hide the full-screen commands where the browser has no Fullscreen API for pages (iPhone Safari)
+  if (!document.documentElement.requestFullscreen) for (const b of $$<HTMLElement>('[data-action="fullscreen"]')) b.hidden = true;
+  document.addEventListener('fullscreenchange', syncSiteFullscreen);
+  // Mac full screen: the hidden menu bar peeks out when the pointer hits the top edge, hides again when it leaves
+  document.addEventListener('pointermove', (e) => {
+    if (!isMac() || !document.body.classList.contains('site-fullscreen')) return;
+    const bar = $('#mac-menubar');
+    if (!bar) return;
+    bar.classList.toggle('peek', e.clientY < 4 || macMenuOpen() || (bar.classList.contains('peek') && e.clientY < 60));
+  });
   enableDragging();
   enableResizing();
   enableIcons();

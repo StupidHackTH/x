@@ -5,12 +5,13 @@
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { fundingPercent } from '../data/funding';
+import Icon from './Icon.astro';
 
 const apps = windows.filter((w) => w.id !== 'error' && w.id !== 'recycle');
 const links = [
-  { label: 'Facebook', glyph: '📘', href: event.links.facebook },
-  { label: 'Discord', glyph: '💬', href: event.links.discord },
-  { label: 'stupid.hackathon.in.th', glyph: '🌐', href: event.links.website },
+  { label: 'Facebook', icon: 'facebook', href: event.links.facebook },
+  { label: 'Discord', icon: 'discord', href: event.links.discord },
+  { label: 'stupid.hackathon.in.th', icon: 'website', href: event.links.website },
 ];
 ---
 
@@ -25,10 +26,10 @@ const links = [
     <button type="button" data-menu="window" aria-haspopup="true" aria-expanded="false">Window</button>
     <button type="button" data-menu="help" aria-haspopup="true" aria-expanded="false">Help</button>
     <span class="status">
-      <button type="button" data-open="funding" title={`Funding goal ${fundingPercent}% reached`}>💰 {fundingPercent}%</button>
-      <span title="AirPort: Cleverse Wi-Fi" aria-hidden="true">📶</span>
-      <span title="Volume: stupid" aria-hidden="true">🔊</span>
-      <span title="Battery: 62% (mock)" aria-hidden="true">🔋</span>
+      <button type="button" data-open="funding" title={`Funding goal ${fundingPercent}% reached`}><Icon name="funding" /> {fundingPercent}%</button>
+      <span title="AirPort: Cleverse Wi-Fi" aria-hidden="true"><Icon name="wifi" class="mono" /></span>
+      <span title="Volume: stupid" aria-hidden="true"><Icon name="speaker" class="mono" /></span>
+      <span title="Battery: 62%" aria-hidden="true"><Icon name="battery" class="mono" /></span>
       <time id="mac-clock">Fri 1:41 PM</time>
       <button type="button" data-action="mac-spotlight" aria-label="Spotlight">🔍</button>
     </span>
@@ -40,6 +41,8 @@ const links = [
     <hr />
     <button type="button" role="menuitem" data-open="register">Registration…</button>
     <button type="button" role="menuitem" data-open="funding">Funding Goal…</button>
+    <hr />
+    <button type="button" role="menuitem" data-action="fullscreen">Enter Full Screen <kbd>⌃⌘F</kbd></button>
     <hr />
     <button type="button" role="menuitem" data-action="mac-sleep">Sleep</button>
     <button type="button" role="menuitem" data-action="shutdown">Restart…</button>
@@ -78,16 +81,17 @@ const links = [
   </div>
   <div class="mac-menu" id="mac-menu-go" hidden role="menu">
     {apps.map((w) => (
-      <button type="button" role="menuitem" data-open={w.id}><span class="glyph" aria-hidden="true">{w.glyph}</span>{w.label}</button>
+      <button type="button" role="menuitem" data-open={w.id}><Icon name={w.id} class="glyph" />{w.label}</button>
     ))}
     <hr />
     {links.map((l) => (
-      <a role="menuitem" href={l.href} target="_blank" rel="noopener"><span class="glyph" aria-hidden="true">{l.glyph}</span>{l.label}</a>
+      <a role="menuitem" href={l.href} target="_blank" rel="noopener"><Icon name={l.icon} class="glyph" />{l.label}</a>
     ))}
   </div>
   <div class="mac-menu" id="mac-menu-window" hidden role="menu">
     <button type="button" role="menuitem" data-action="mac-hide">Minimize <kbd>⌘M</kbd></button>
     <button type="button" role="menuitem" data-action="mac-zoom">Zoom</button>
+    <button type="button" role="menuitem" data-action="fullscreen">Enter Full Screen</button>
     <hr />
     {windows.filter((w) => w.id !== 'error').map((w) => (
       <button type="button" role="menuitem" data-open={w.id}>{w.title}</button>
@@ -105,21 +109,21 @@ const links = [
     </button>
     {apps.map((w) => (
       <button type="button" data-dock={w.id} data-open={w.id}>
-        <span class="glyph" aria-hidden="true">{w.glyph}</span>
+        <Icon name={w.id} class="glyph" />
         <span class="tip">{w.label}</span>
       </button>
     ))}
     <span class="sep" aria-hidden="true"></span>
     <a href={event.links.facebook} target="_blank" rel="noopener">
-      <span class="glyph" aria-hidden="true">📘</span>
+      <Icon name="facebook" class="glyph" />
       <span class="tip">Facebook</span>
     </a>
     <a href={event.links.discord} target="_blank" rel="noopener">
-      <span class="glyph" aria-hidden="true">💬</span>
+      <Icon name="discord" class="glyph" />
       <span class="tip">Discord</span>
     </a>
     <button type="button" data-dock="recycle" data-open="recycle">
-      <span class="glyph" aria-hidden="true">🗑️</span>
+      <Icon name="recycle" class="glyph" />
       <span class="tip">Trash</span>
     </button>
   </nav>

@@ -20,10 +20,13 @@ import { event } from '../data/event';
       <div class="boot-edition">X Edition</div>
     </div>
     <!-- Android phones: the glowing "android" wordmark instead of the XP logo and progress bar -->
-    <div class="boot-android" aria-hidden="true"><span>android</span></div>
+    <div class="boot-android" aria-hidden="true">
+      <img src="/logo-transparent.png" alt="" class="logo" />
+      <span>android</span>
+    </div>
     <!-- Macs: Leopard gray boot with a big X (it is OS X and shtX) and the spinning gear -->
     <div class="boot-mac" aria-hidden="true">
-      <span class="x">X</span>
+      <img src="/logo-transparent.png" alt="" class="logo" />
       <span class="spinner">{Array.from({ length: 12 }).map(() => <i></i>)}</span>
     </div>
 
@@ -49,6 +52,13 @@ import { event } from '../data/event';
 </div>
 
 <div id="welcome" class="xp-welcome" hidden aria-hidden="true">
+  <svg class="flag" viewBox="0 0 22 20" aria-hidden="true">
+    <path d="M2 4.5c2.5-1.6 4.5-1.6 7 0v6.5c-2.5-1.6-4.5-1.6-7 0z" fill="#f35325"/>
+    <path d="M10.5 4.5c2.5-1.6 5-1.6 8.5 0v6.5c-3.5-1.6-6-1.6-8.5 0z" fill="#81bc06"/>
+    <path d="M2 12.5c2.5-1.6 4.5-1.6 7 0V19c-2.5-1.6-4.5-1.6-7 0z" fill="#05a6f0"/>
+    <path d="M10.5 12.5c2.5-1.6 5-1.6 8.5 0V19c-3.5-1.6-6-1.6-8.5 0z" fill="#ffba08"/>
+  </svg>
+  <span class="divider"></span>
   <span>welcome</span>
 </div>
 
@@ -195,16 +205,23 @@ import { event } from '../data/event';
   :global(html.android) .boot-group,
   :global(html.android) .boot-bar { display: none; }
   :global(html.android) .boot-android {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(14 * var(--u));
     position: absolute;
     left: 50%;
-    top: calc(215 * var(--u));
+    top: calc(180 * var(--u));
     transform: translate(-50%, -50%);
     font-family: "Droid Sans", Roboto, "Open Sans", Arial, sans-serif;
     font-size: calc(76 * var(--u));
     font-weight: 700;
     letter-spacing: -0.03em;
     white-space: nowrap;
+  }
+  :global(html.android) .boot-android .logo {
+    width: calc(150 * var(--u));
+    filter: drop-shadow(0 0 calc(12 * var(--u)) rgba(120, 200, 255, 0.35));
   }
   :global(html.android) .boot-android span {
     background: linear-gradient(90deg, #7a7a7a 0%, #7a7a7a 36%, #fff 50%, #7a7a7a 64%, #7a7a7a 100%);
@@ -228,19 +245,15 @@ import { event } from '../data/event';
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(44 * var(--u));
+    gap: calc(30 * var(--u));
     position: absolute;
     left: 50%;
-    top: calc(120 * var(--u));
+    top: calc(96 * var(--u));
     transform: translateX(-50%);
   }
-  :global(html.mac) .boot-mac .x {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-weight: 300;
-    font-size: calc(170 * var(--u));
-    line-height: 1;
-    color: #5a5a5a;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  :global(html.mac) .boot-mac .logo {
+    width: calc(160 * var(--u));
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
   }
   :global(html.mac) .boot-mac .spinner {
     position: relative;

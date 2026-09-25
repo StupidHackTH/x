@@ -27,6 +27,9 @@ const filters = [
       <button type="button" class="cam-iconbtn" data-cam="grid" aria-pressed="false" aria-label="Grid">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M3.5 3.5h17v17h-17zM9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17" /></svg>
       </button>
+      <button type="button" class="cam-iconbtn cam-fs" data-cam="fullscreen" aria-pressed="false" aria-label="Full screen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" /></svg>
+      </button>
       <button type="button" class="cam-iconbtn" data-cam="filters" aria-pressed="true" aria-label="Filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="stroke" cx="9" cy="9.5" r="5" /><circle class="stroke" cx="15" cy="9.5" r="5" /><circle class="stroke" cx="12" cy="14.5" r="5" /></svg>
       </button>
@@ -85,17 +88,20 @@ const filters = [
       <div class="cam-bar-left">
         <button type="button" class="cam-thumb empty" data-cam="review" aria-label="Last capture"><img alt="" /><i class="play" hidden>▶</i></button>
         <div class="cam-pbmodes" role="group" aria-label="Photo Booth mode">
-          <button type="button" data-cam-mode="photo" aria-pressed="true" title="Take a still picture">📷</button>
-          <button type="button" data-cam-mode="burst" aria-pressed="false" title="Take four quick pictures">🎞️</button>
-          <button type="button" data-cam-mode="video" aria-pressed="false" title="Take a movie clip">🎬</button>
+          <button type="button" data-cam-mode="photo" aria-pressed="true" title="Take a still picture"><svg class="icon" aria-hidden="true"><use href="#i-still" /></svg></button>
+          <button type="button" data-cam-mode="burst" aria-pressed="false" title="Take four quick pictures"><svg class="icon" aria-hidden="true"><use href="#i-burst" /></svg></button>
+          <button type="button" data-cam-mode="video" aria-pressed="false" title="Take a movie clip"><svg class="icon" aria-hidden="true"><use href="#i-movie" /></svg></button>
         </div>
       </div>
-      <button type="button" class="cam-shutter" data-cam="shutter" aria-label="Take photo"><span></span></button>
+      <button type="button" class="cam-shutter" data-cam="shutter" aria-label="Take photo"><span><svg class="icon" aria-hidden="true"><use href="#i-still" /></svg></span></button>
       <div class="cam-bar-right">
         <button type="button" class="cam-iconbtn cam-flip" data-cam="flip" aria-label="Switch camera">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H21l-3.5 4-3.5-4h2.2A5 5 0 0 0 12 7zm0 14a7 7 0 0 1-6.3-4H3l3.5-4 3.5 4H7.8A5 5 0 0 0 12 17z" /></svg>
         </button>
         <button type="button" class="cam-effectsbtn" data-cam="effects" aria-pressed="false">Effects</button>
+        <button type="button" class="cam-iconbtn cam-fs cam-fs-pb" data-cam="fullscreen" aria-pressed="false" aria-label="Full screen" title="Full screen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" /></svg>
+        </button>
       </div>
     </div>
 
@@ -193,6 +199,10 @@ const filters = [
   .cam-thumb .play,
   .cam-strip .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; text-shadow: 0 0 4px #000; pointer-events: none; }
   .cam-thumb .play[hidden] { display: none; }
+  .cam-fs[hidden] { display: none; }
+  .cam:fullscreen { background: #000; }
+  .cam:fullscreen .cam-view { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .cam:fullscreen .cam-strip { background: #000; }
 
   /* Computer: Photo Booth */
   @media (min-width: 768px) {
@@ -208,12 +218,17 @@ const filters = [
     .cam-pbmodes button:last-child { border-right: 0; }
     .cam-pbmodes button[aria-pressed="true"] { background: linear-gradient(180deg, #262626, #3a3a3a); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6); }
     .cam-shutter { border: 2px solid #5a0f0c; background: radial-gradient(circle at 50% 35%, #ff8a80, #e3342f 55%, #9b1c17); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.35); }
-    .cam-shutter span::before { content: "📷"; font-size: 24px; line-height: 1; }
+    .cam-shutter span .icon { width: 26px; height: 26px; color: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
+    .cam[data-mode="video"] .cam-shutter span .icon { display: none; }
     .cam[data-mode="video"] .cam-shutter span::before { content: "●"; color: #fff; font-size: 26px; }
     .cam[data-recording] .cam-shutter span::before { content: "■"; color: #fff; font-size: 26px; }
+    .cam-pbmodes .icon { width: 18px; height: 18px; }
     .cam-shutter:active { filter: brightness(0.8); }
     .cam-effectsbtn { height: 26px; padding: 0 14px; border: 1px solid #111; border-radius: 13px; background: linear-gradient(180deg, #777, #4a4a4a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); color: #fff; font-size: 12px; font-weight: 700; }
     .cam-effectsbtn[aria-pressed="true"] { background: linear-gradient(180deg, #4d8de8, #2f61c2); }
+    .cam-fs-pb { width: 30px; height: 30px; margin-left: 10px; background: linear-gradient(180deg, #777, #4a4a4a); border: 1px solid #111; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+    .cam-fs-pb svg { width: 16px; height: 16px; }
+    .cam-fs-pb[aria-pressed="true"] { background: linear-gradient(180deg, #4d8de8, #2f61c2); }
     .cam-strip { display: flex; gap: 6px; height: 74px; padding: 6px 8px; overflow-x: auto; background: #1a1a1a; border-top: 1px solid #000; }
     .cam-strip button { position: relative; flex: 0 0 auto; width: 80px; height: 60px; border: 2px solid #fff; background: #000; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
     .cam-strip button img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -231,6 +246,7 @@ const filters = [
     .cam-top-spacer { flex: 1; }
     .cam-top .cam-iconbtn { width: 38px; height: 38px; background: transparent; }
     .cam-top .cam-iconbtn[data-action="close"] { background: rgba(255, 255, 255, 0.14); }
+    .cam-fs-pb { display: none; }
     .cam-effects { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; padding: 10px 12px 8px; overflow-x: auto; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.65)); scrollbar-width: none; }
     .cam-effects::-webkit-scrollbar { display: none; }
     .cam-effect { flex: 0 0 auto; width: 62px; background: transparent; }
@@ -250,6 +266,7 @@ const filters = [
     .cam-pbmodes, .cam-effectsbtn { display: none; }
     .cam-shutter { width: 74px; height: 74px; padding: 4px; border: 4px solid #fff; background: transparent; }
     .cam-shutter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; transition: transform 0.15s, border-radius 0.15s, background 0.15s; }
+    .cam-shutter span .icon { display: none; }
     .cam[data-mode="video"] .cam-shutter span { background: #ff3b30; }
     .cam[data-recording] .cam-shutter span { border-radius: 7px; background: #ff3b30; transform: scale(0.5); }
     .cam-shutter:active span { transform: scale(0.9); }
@@ -266,15 +283,18 @@ const filters = [
   /* Stupid Photo Booth: live camera → canvas with a 2000s look → JPEG/PNG photos and MP4/WebM clips.
      Phones get a camera-app layout, computers a Photo Booth layout; the DOM is the same. Nothing leaves the browser. */
 
-  type PixelFn = (d: Uint8ClampedArray, w: number, h: number, t: number) => void;
+  type PixelFn = (d: Uint8ClampedArray, w: number, h: number, t: number, key: HTMLCanvasElement) => void;
   type OverlayFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
+  type ComposeFn = (ctx: CanvasRenderingContext2D, work: HTMLCanvasElement, w: number, h: number, t: number) => void;
   interface Look {
     scale: number; // downscale factor of the working frame (1 = full)
+    size?: [number, number]; // fixed working frame instead of a scale (a real display resolution)
     pixelated?: boolean; // upscale without smoothing
     quality?: number; // JPEG quality of the saved photo (low = authentic artifacts)
     png?: boolean; // save as PNG (crisp 1-bit looks)
     pixel?: PixelFn;
     overlay?: OverlayFn;
+    compose?: ComposeFn; // draws the output frame itself (instead of scaling the working frame + overlay)
   }
   type Mode = 'photo' | 'burst' | 'video';
   type View = 'live' | 'effects' | 'review';
@@ -347,6 +367,50 @@ const filters = [
   }
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const bubbles = [0.12, 0.3, 0.52, 0.68, 0.86, 0.4].map((x, i) => ({ x, r: 10 + (i % 3) * 9, speed: 12 + i * 5, phase: i * 137 }));
+
+  /* Nokia 3310: a real 84×48 one-bit LCD with slow pixels (ghosting), drawn inside the phone's face.
+     Per working canvas we keep the LCD's slow-response buffer and the current bit pattern. */
+  const NOKIA_W = 84;
+  const NOKIA_H = 48;
+  interface NokiaState { ghost: Float32Array; bits: Uint8Array; zone: Uint8Array; mask: Uint8Array }
+  const nokiaStates = new WeakMap<HTMLCanvasElement, NokiaState>();
+  function nokiaState(key: HTMLCanvasElement): NokiaState {
+    const found = nokiaStates.get(key);
+    if (found) return found;
+    // Static LCD content: signal bars (left), battery bars (right), the "Menu" softkey label (bottom)
+    const c = document.createElement('canvas');
+    c.width = NOKIA_W;
+    c.height = NOKIA_H;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#000';
+    for (let i = 0; i < 4; i++) x.fillRect(0, 34 - i * 5, 2 + i, 4);
+    for (let i = 0; i < 3; i++) x.fillRect(NOKIA_W - 2 - i, 34 - i * 5, 2 + i, 4);
+    // "Menu" in a 5-row pixel font (vector text does not survive 1-bit thresholding)
+    const glyphs = ['X...X XX.XX X.X.X X...X X...X', '.XX. X..X XXXX X... .XXX', '.... XXX. X..X X..X X..X', '.... X..X X..X X..X .XXX'];
+    let gx = 32;
+    for (const g of glyphs) {
+      const rows = g.split(' ');
+      rows.forEach((row, ry) => [...row].forEach((ch, rx) => ch === 'X' && x.fillRect(gx + rx, 42 + ry, 1, 1)));
+      gx += rows[0].length + 1;
+    }
+    const px = x.getImageData(0, 0, NOKIA_W, NOKIA_H).data;
+    const mask = new Uint8Array(NOKIA_W * NOKIA_H);
+    const zone = new Uint8Array(NOKIA_W * NOKIA_H); // reserved for indicators: the picture stays out of it
+    for (let p = 0; p < mask.length; p++) {
+      const cx = p % NOKIA_W;
+      const cy = (p - cx) / NOKIA_W;
+      mask[p] = px[p * 4 + 3] > 100 ? 1 : 0;
+      zone[p] = cx < 7 || cx >= NOKIA_W - 7 || cy >= 40 ? 1 : 0;
+    }
+    const st = { ghost: new Float32Array(NOKIA_W * NOKIA_H).fill(255), bits: new Uint8Array(NOKIA_W * NOKIA_H), zone, mask };
+    nokiaStates.set(key, st);
+    return st;
+  }
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+  }
 
   const looks: Record<string, Look> = {
     normal: { scale: 1, quality: 0.92 },
@@ -497,26 +561,104 @@ const filters = [
       },
     },
     nokia: {
-      scale: 6,
-      pixelated: true,
+      scale: 1,
+      size: [NOKIA_W, NOKIA_H],
       png: true,
-      pixel: (d, w, h) => {
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const i = (y * w + x) * 4;
-            const l = (lum(d, i) - 128) * 1.4 + 128;
-            const on = l > ((BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16) * 255;
-            d[i] = on ? 199 : 44;
-            d[i + 1] = on ? 215 : 60;
-            d[i + 2] = on ? 166 : 40;
-          }
+      pixel: (d, w, h, _t, key) => {
+        const { ghost, bits, zone, mask } = nokiaState(key);
+        for (let p = 0, i = 0; p < w * h; p++, i += 4) {
+          const l = (lum(d, i) - 128) * 1.6 + 128;
+          ghost[p] += (l - ghost[p]) * 0.4; // slow LCD response: anything that moves leaves a trail
+          const x = p % w;
+          const y = (p - x) / w;
+          const th = ((BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16) * 255;
+          bits[p] = zone[p] ? mask[p] : ghost[p] < th ? 1 : 0;
         }
       },
-      overlay: (ctx, w, h) => {
-        ctx.fillStyle = 'rgba(0,0,0,0.12)';
-        const step = w / Math.round(w / 6); // one LCD cell = one 6× pixel of the working frame
-        for (let x = 0; x < w; x += step) ctx.fillRect(Math.round(x), 0, 1, h);
-        for (let y = 0; y < h; y += step) ctx.fillRect(0, Math.round(y), w, 1);
+      compose: (ctx, work, W, H) => {
+        const { bits } = nokiaState(work);
+        const k = Math.max(1, Math.floor((W * 0.62) / NOKIA_W)); // one LCD pixel, in canvas pixels
+        const lcdW = NOKIA_W * k;
+        const lcdH = NOKIA_H * k;
+        const lcdX = Math.round((W - lcdW) / 2);
+        const lcdY = 16 * k;
+        // The phone's face, close up: display, Navi key, and as much keypad as fits
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+        const body = ctx.createLinearGradient(0, 0, W, 0);
+        body.addColorStop(0, '#272b33');
+        body.addColorStop(0.5, '#4d5563');
+        body.addColorStop(1, '#272b33');
+        ctx.fillStyle = body;
+        roundRect(ctx, -k * 4, k * 2, W + k * 8, H + k * 12, k * 24);
+        ctx.fill();
+        ctx.fillStyle = '#e9edf3';
+        ctx.font = `bold ${Math.round(k * 6.5)}px Helvetica, Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const spaced = 'letterSpacing' in ctx;
+        if (spaced) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${k * 0.8}px`;
+        ctx.fillText('NOKIA', W / 2, lcdY - k * 7.5);
+        if (spaced) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px';
+        // screen recess, then the backlit LCD
+        ctx.fillStyle = '#101317';
+        roundRect(ctx, lcdX - k * 3, lcdY - k * 3, lcdW + k * 6, lcdH + k * 6, k * 2.5);
+        ctx.fill();
+        ctx.fillStyle = '#1e2329';
+        roundRect(ctx, lcdX - k * 2, lcdY - k * 2, lcdW + k * 4, lcdH + k * 4, k * 2);
+        ctx.fill();
+        const bl = ctx.createRadialGradient(lcdX + lcdW / 2, lcdY + lcdH / 2, lcdH * 0.15, lcdX + lcdW / 2, lcdY + lcdH / 2, lcdW * 0.75);
+        bl.addColorStop(0, '#d2e6a8');
+        bl.addColorStop(1, '#a3bb76');
+        ctx.fillStyle = bl;
+        ctx.fillRect(lcdX, lcdY, lcdW, lcdH);
+        // LCD cells: faint when off, dark when on, a hairline gap between them
+        const cell = k >= 4 ? k - 1 : k;
+        ctx.fillStyle = 'rgba(25,35,20,0.08)';
+        for (let p = 0; p < bits.length; p++) if (!bits[p]) ctx.fillRect(lcdX + (p % NOKIA_W) * k, lcdY + ((p - (p % NOKIA_W)) / NOKIA_W) * k, cell, cell);
+        ctx.fillStyle = '#1b2318';
+        for (let p = 0; p < bits.length; p++) if (bits[p]) ctx.fillRect(lcdX + (p % NOKIA_W) * k, lcdY + ((p - (p % NOKIA_W)) / NOKIA_W) * k, cell, cell);
+        const gl = ctx.createLinearGradient(lcdX, lcdY, lcdX + lcdW * 0.6, lcdY + lcdH);
+        gl.addColorStop(0, 'rgba(255,255,255,0.16)');
+        gl.addColorStop(0.5, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gl;
+        ctx.fillRect(lcdX, lcdY, lcdW, lcdH);
+        // keys
+        const key = (x: number, y: number, w: number, h: number, r: number, label = '', sub = '') => {
+          const g = ctx.createLinearGradient(0, y, 0, y + h);
+          g.addColorStop(0, '#f3f5f8');
+          g.addColorStop(1, '#a9b0bc');
+          ctx.fillStyle = g;
+          roundRect(ctx, x, y, w, h, r);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+          ctx.lineWidth = Math.max(1, k * 0.3);
+          ctx.stroke();
+          if (!label) return;
+          ctx.fillStyle = '#1a1e24';
+          ctx.textBaseline = 'middle';
+          ctx.font = `bold ${Math.round(k * 4)}px Helvetica, Arial, sans-serif`;
+          ctx.textAlign = sub ? 'right' : 'center';
+          ctx.fillText(label, sub ? x + w / 2 - k * 0.5 : x + w / 2, y + h / 2);
+          if (sub) {
+            ctx.font = `${Math.round(k * 2)}px Helvetica, Arial, sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.fillText(sub, x + w / 2 + k * 0.5, y + h / 2 + k * 0.5);
+          }
+        };
+        const naviY = lcdY + lcdH + k * 5;
+        key(lcdX + lcdW * 0.2, naviY, lcdW * 0.6, k * 5, k * 2.5);
+        ctx.fillStyle = '#4d5563';
+        ctx.fillRect(lcdX + lcdW * 0.5 - k * 3, naviY + k * 2.2, k * 6, Math.max(1, k * 0.6));
+        key(lcdX - k, naviY - k * 1.5, k * 4, k * 8, k * 2);
+        key(lcdX + lcdW - k * 3, naviY, k * 4, k * 5, k * 2.5, 'C');
+        const keys = [['1', ''], ['2', 'abc'], ['3', 'def'], ['4', 'ghi'], ['5', 'jkl'], ['6', 'mno'], ['7', 'pqrs'], ['8', 'tuv'], ['9', 'wxyz'], ['*', ''], ['0', ''], ['#', '']];
+        const kw = (lcdW - k * 2) / 3;
+        const kh = k * 8.5;
+        keys.forEach(([n, letters], i) => {
+          const y = naviY + k * 12 + Math.floor(i / 3) * (kh + k * 2);
+          if (y < H) key(lcdX + (i % 3) * (kw + k), y, kw, kh, k * 3, n, letters);
+        });
       },
     },
     nightshot: {
@@ -727,7 +869,8 @@ const filters = [
     };
     const pickResolution = () => {
       if (isPhone()) return window.matchMedia('(orientation: portrait)').matches ? [480, 640] : [640, 480];
-      return stage.clientWidth >= 900 ? [960, 720] : [640, 480]; // maximised window: sharper, still cheap enough for the per-pixel looks
+      // bigger window, sharper frame; the per-pixel looks stay affordable up to 1280×960 on a full screen
+      return stage.clientWidth >= 1500 ? [1280, 960] : stage.clientWidth >= 900 ? [960, 720] : [640, 480];
     };
     const applyResolution = () => {
       if (recorder) return; // never change the frame size mid-clip
@@ -771,8 +914,8 @@ const filters = [
       target.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
     };
     const renderLook = (target: CanvasRenderingContext2D, W: number, H: number, look: Look, t: number, wc: HTMLCanvasElement, wcx: CanvasRenderingContext2D) => {
-      const w = Math.max(8, Math.round(W / look.scale));
-      const h = Math.max(6, Math.round(H / look.scale));
+      const w = look.size ? look.size[0] : Math.max(8, Math.round(W / look.scale));
+      const h = look.size ? look.size[1] : Math.max(6, Math.round(H / look.scale));
       if (wc.width !== w || wc.height !== h) {
         wc.width = w;
         wc.height = h;
@@ -786,9 +929,10 @@ const filters = [
       wcx.restore();
       if (look.pixel) {
         const img = wcx.getImageData(0, 0, w, h);
-        look.pixel(img.data, w, h, t);
+        look.pixel(img.data, w, h, t, wc);
         wcx.putImageData(img, 0, 0);
       }
+      if (look.compose) return look.compose(target, wc, W, H, t);
       target.imageSmoothingEnabled = !look.pixelated;
       target.drawImage(wc, 0, 0, W, H);
       look.overlay?.(target, W, H, t);
@@ -1107,7 +1251,7 @@ const filters = [
       const mime = pickMime();
       let r: MediaRecorder;
       try {
-        r = new MediaRecorder(recStream, mime ? { mimeType: mime } : undefined);
+        r = new MediaRecorder(recStream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 2_500_000 }); // ~19 MB per minute
       } catch {
         return showNote('อัดวิดีโอไม่ได้ในเบราว์เซอร์นี้');
       }
@@ -1138,7 +1282,7 @@ const filters = [
       recTimer = window.setInterval(() => {
         const s = Math.floor((Date.now() - recStart) / 1000);
         recTime.textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
-        if (s >= 60) stopRecording(); // one minute is plenty of stupidity
+        if (s >= 600) stopRecording(); // ten minutes: a forgotten recording must not eat the phone's memory
       }, 250);
     };
     function stopRecording() {
@@ -1241,6 +1385,10 @@ const filters = [
         case 'fakemode':
           showNote('โหมดนี้ยังโง่ไม่พอ ใช้ PHOTO หรือ VIDEO');
           break;
+        case 'fullscreen':
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else root.requestFullscreen?.().catch(() => showNote('เบราว์เซอร์นี้ไม่ยอมให้เต็มจอ'));
+          break;
         case 'effects':
           if (state === 'live') setView(view === 'effects' ? 'live' : 'effects');
           break;
@@ -1290,6 +1438,14 @@ const filters = [
       centerMode();
     });
     window.addEventListener('resize', () => centerMode());
+    // Full screen: only where the browser supports it for elements (not iPhone Safari); keep the buttons' state in sync
+    const fsButtons = root.querySelectorAll<HTMLElement>('.cam-fs');
+    if (!root.requestFullscreen) for (const b of fsButtons) b.hidden = true;
+    document.addEventListener('fullscreenchange', () => {
+      const on = document.fullscreenElement === root;
+      for (const b of fsButtons) b.setAttribute('aria-pressed', String(on));
+      fitAll();
+    });
     syncOpen();
     setMode('photo');
     selectLook('normal');
