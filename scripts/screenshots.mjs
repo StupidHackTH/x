@@ -2,7 +2,7 @@
 // usage: npx astro build && npx astro preview --port 4323 --host 127.0.0.1 && node scripts/screenshots.mjs screenshots http://127.0.0.1:4323
 // Capture from the preview build, not the dev server (dev toolbar, possibly stale component CSS). macOS Chrome path below.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -106,6 +106,8 @@ await shot('13-camera-effects', 'Photo Booth Effects chooser: nine live previews
 await shot('14-camera-countdown', 'Shutter: 3-2-1 countdown before the flash', { device: XP, steps: [{ click: '.cam-effect[data-filter="lomo"]', wait: 300 }, { click: '.cam-shutter', wait: 1300 }] });
 await shot('15-camera-strip', 'After a still, a 4-up and a clip: the film strip', { device: XP, steps: [{ click: '.cam-pbmodes [data-cam-mode="burst"]', wait: 3200 }, { click: '.cam-shutter', wait: 7000 }, { click: '.cam-pbmodes [data-cam-mode="video"]', wait: 200 }, { click: '.cam-shutter', wait: 2500 }, { click: '.cam-shutter', wait: 1500 }] });
 await shot('16-camera-review', 'Review of the clip with player, previous/next, Delete, Share, Save', { device: XP, steps: [{ click: '#cam-strip button', wait: 900 }] });
+await shot('17-camera-maximized', 'Maximized: the preview keeps 4:3 (black pillars, no stretching) and renders at 960×720; zoom pill top right', { device: XP, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '#win-camera [data-action="maximize"]', wait: 1000 }] });
+await shot('18-camera-maximized-effects', 'Maximized Effects grid: tiles follow the cell shape (cropped, not stretched)', { device: XP, steps: [{ click: '.cam-effectsbtn', wait: 900 }] });
 
 // ---- Mac OS X Leopard (Mac user agent, no URL parameter) ----
 await shot('20-mac-boot', 'Leopard boot: gray screen, big X, spinning gear, funding readout', { device: MAC, url: '/', wait: 1500 });
@@ -128,6 +130,7 @@ await shot('35-ios-alert', 'Error dialog as an iOS alert', { device: IPHONE, url
 await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero look, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
 await shot('37-ios-recording', 'VIDEO mode while recording: timer and red stop square', { device: IPHONE, steps: [{ click: '.cam-modes [data-cam-mode="video"]', wait: 300 }, { click: '.cam-shutter', wait: 2500 }] });
 await shot('38-ios-review', 'Review of the clip from the thumbnail: Share and Save (share sheet on iPhone)', { device: IPHONE, steps: [{ click: '.cam-shutter', wait: 1500 }, { click: '.cam-thumb', wait: 900 }] });
+await shot('39-ios-zoom-grid', 'PHOTO mode with 2× zoom, grid on, Camcorder look in the live filter carousel', { device: IPHONE, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '.cam-modes [data-cam-mode="photo"]', wait: 300 }, { click: '[data-filter="camcorder"]', wait: 200 }, { click: '#cam-zoom [data-zoom="2"]', wait: 200 }, { click: '[data-cam="grid"]', wait: 300 }] });
 
 // ---- Android (chosen from the user agent, no URL parameter) ----
 await shot('40-android-boot', 'Boot: glowing "android" wordmark, funding readout stays', { device: ANDROID, url: '/', wait: 1500 });
@@ -161,10 +164,13 @@ const html = `<!doctype html><meta charset="utf-8"><title>shtX screens</title>
   figcaption b { color: #245edb; }
 </style>
 <h1>Stupid Hackathon X · screen capture</h1>
-<div class="meta">${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })} · production build · headless Chrome with a fake camera device (the moving colour pattern is Chrome's test source, not a real camera) · shell chosen from the user agent: Windows → XP, Macintosh → Leopard, Android → Gingerbread, other phones → iPhone</div>
+<div class="meta">${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })} · captured from ${BASE} · headless Chrome with a fake camera device (the moving colour pattern is Chrome's test source, not a real camera) · shell chosen from the user agent: Windows → XP, Macintosh → Leopard, Android → Gingerbread, other phones → iPhone</div>
 ${Object.entries(groups).map(([device, items]) => `<section><h2>${esc(device)}</h2><div class="grid ${device.includes('desktop') ? 'cols1' : 'cols3'}">${items.map((m) => `<figure><img src="${m.name}.png"><figcaption><b>${m.name}</b> · ${esc(m.caption)}</figcaption></figure>`).join('')}</div></section>`).join('')}`;
 writeFileSync(join(OUT, 'gallery.html'), html);
-const pdf = join(OUT, 'shtX-screens.pdf');
-const r = spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=8000', `--user-data-dir=${join(OUT, '.profile-pdf')}`, `--print-to-pdf=${pdf}`, `file://${join(OUT, 'gallery.html')}`], { encoding: 'utf8' });
-console.log('pdf', r.status === 0 ? pdf : r.stderr);
+// Unique file name per run (a lingering Chrome from an earlier run can otherwise overwrite it), and a hard
+// timeout: headless Chrome sometimes keeps running after it has written the PDF.
+const stampName = new Date().toISOString().slice(0, 16).replace(/[-T:]/g, '').replace(/(\d{8})(\d{4})/, '$1-$2');
+const pdf = join(OUT, `shtX-screens-${stampName}.pdf`);
+const r = spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=8000', `--user-data-dir=${join(OUT, '.profile-pdf')}`, `--print-to-pdf=${pdf}`, `file://${join(OUT, 'gallery.html')}`], { encoding: 'utf8', timeout: 90_000, killSignal: 'SIGKILL' });
+console.log('pdf', existsSync(pdf) ? pdf : `failed: ${r.stderr || r.error}`);
 process.exit(0);
