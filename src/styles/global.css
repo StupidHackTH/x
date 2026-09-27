@@ -2202,7 +2202,18 @@
     html.mac .xp-contextmenu hr { margin: 4px 0; border: 0; border-top: 1px solid #dedede; }
   }
 
+  /* Reduced motion: effectively turn off animations and transitions everywhere. A near-zero duration
+     (rather than animation: none) keeps animationend firing and lets "forwards" fades land on their
+     end state. The JS already skips the window close/minimize animations and the welcome screen. */
   @media (prefers-reduced-motion: reduce) {
-    .xp-window, .xp-startmenu, .xp-contextmenu, .xp-balloon, .xp-welcome { animation: none; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    /* The marquee text starts off-screen (padding-left: 100%); show it in place instead */
+    .xp-marquee { white-space: normal; }
+    .xp-marquee > span { display: inline; padding-left: 0; }
   }
 }
