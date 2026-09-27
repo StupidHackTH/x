@@ -404,6 +404,17 @@ function openWindow(id: string) {
   focusWindow(id);
 }
 
+/* Run done() when el's own close/minimize animation ends. Ignores animations bubbling up from
+   children, and skips done() if the window was reopened mid-animation (openWindow clears attr). */
+function afterOwnAnimation(el: HTMLElement, attr: string, done: () => void) {
+  const onEnd = (e: AnimationEvent) => {
+    if (e.target !== el) return;
+    el.removeEventListener('animationend', onEnd);
+    if (el.hasAttribute(attr)) done();
+  };
+  el.addEventListener('animationend', onEnd);
+}
+
 function closeWindow(id: string) {
   const el = winEl(id);
   if (!el || el.hidden) return;
@@ -423,7 +434,7 @@ function closeWindow(id: string) {
   };
   if (reducedMotion()) return done();
   el.setAttribute('data-closing', '');
-  el.addEventListener('animationend', done, { once: true });
+  afterOwnAnimation(el, 'data-closing', done);
 }
 
 function minimizeWindow(id: string) {
@@ -437,7 +448,7 @@ function minimizeWindow(id: string) {
   };
   if (reducedMotion()) return done();
   el.setAttribute('data-minimizing', '');
-  el.addEventListener('animationend', done, { once: true });
+  afterOwnAnimation(el, 'data-minimizing', done);
 }
 
 function toggleMaximize(id: string) {
