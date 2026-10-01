@@ -1,6 +1,6 @@
 ---
 import Window from '../Window.astro';
-import { venue } from '../../data/event';
+import { venue, showers } from '../../data/event';
 ---
 
 <Window id="venue" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={venue.area} beige>
@@ -28,6 +28,25 @@ import { venue } from '../../data/event';
             <li class="flex gap-2">
               <span class="text-lg leading-none w-6 text-center" aria-hidden="true">{t.icon}</span>
               <span><b>{t.label}:</b> {t.text}</span>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+
+      <fieldset class="xp-groupbox">
+        <legend>ที่อาบน้ำ (venue ไม่มีห้องอาบน้ำ)</legend>
+        <p class="text-[11px] text-neutral-600 mb-2">ค้างคืนแล้วอยากอาบน้ำ มีที่อาบน้ำสาธารณะใกล้รถไฟฟ้า ไปกลับก่อนงานวันที่ 2 ได้</p>
+        <ul class="flex flex-col gap-2">
+          {showers.map((s) => (
+            <li class="xp-sunken p-2 flex flex-col gap-0.5">
+              <div class="flex flex-wrap items-baseline gap-x-2"><b>{s.name}</b><span class="text-neutral-600">{s.where}</span></div>
+              <div><span class="text-neutral-500">เปิด</span> {s.hours} · <span class="text-neutral-500">ราคา</span> {s.price}</div>
+              <div><span class="text-neutral-500">โทร</span> {s.phone}{s.note && <> · {s.note}</>}</div>
+              <div class="flex flex-wrap gap-x-3">
+                <a href={s.mapsUrl} target="_blank" rel="noopener">แผนที่</a>
+                <a href={s.infoUrl} target="_blank" rel="noopener">{s.infoLabel}</a>
+                {s.bookUrl && <a href={s.bookUrl} target="_blank" rel="noopener">จองผ่าน LINE</a>}
+              </div>
             </li>
           ))}
         </ul>

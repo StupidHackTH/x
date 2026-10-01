@@ -3,7 +3,9 @@ import Window from '../Window.astro';
 import { funding, fundingPercent, formatTHB, tiers } from '../../data/funding';
 import { event } from '../../data/event';
 const remaining = Math.max(0, funding.goal - funding.raised);
-const daysLeft = Math.max(0, Math.ceil((new Date(funding.deadline).getTime() - new Date(funding.updatedAt).getTime()) / 86_400_000));
+// Build-time fallback only; desktop.ts recomputes this from the visitor's clock every minute (data-days-until)
+const eventStart = `${funding.deadline}T00:00:00+07:00`;
+const daysLeft = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 ---
 
 <Window id="funding" status={`Last updated ${new Date(funding.updatedAt).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })}${funding.mock ? ' (ประมาณการ)' : ''}`} beige>
@@ -22,7 +24,7 @@ const daysLeft = Math.max(0, Math.ceil((new Date(funding.deadline).getTime() - n
       </div>
       <div class="flex justify-between mt-1 text-[11px] tabular-nums">
         <span><b>{formatTHB(funding.raised)}</b> of {formatTHB(funding.goal)}</span>
-        <span><b>{fundingPercent}%</b> · อีก {daysLeft} วันถึงวันงาน</span>
+        <span><b>{fundingPercent}%</b> · <span data-days-until={eventStart} data-lang="th">อีก {daysLeft} วันถึงวันงาน</span></span>
       </div>
     </div>
 

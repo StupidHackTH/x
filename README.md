@@ -16,7 +16,7 @@ npm run preview
 ## How it works
 
 - `src/data/funding.ts` — sponsor tiers, sponsor list and the goal/raised/backers figures. Set `mock: true` while numbers are provisional to show an "estimate" notice in the Funding window. The boot screen, funding window, tray icon and balloon tip all read from it.
-- `src/data/event.ts` — event basics, registration info, links, about text, venue + directions, draft agenda, what to bring, code of conduct, FAQ, staff, past editions. Anything unconfirmed is marked TBD.
+- `src/data/event.ts` — event basics, registration info, links, about text, venue + directions, nearby public showers for the overnight stay, draft agenda, what to bring, the full code of conduct (shown in its own Code of Conduct window and summarized in FAQ; reports go to the Creatorsgarten Facebook page), FAQ, staff, past editions. Anything unconfirmed is marked TBD.
 - `src/data/windows.ts` — registry of desktop windows (title, icon, default position/size).
 - `src/components/Icons.astro` — one SVG sprite of glossy 2000s-style icons used by every shell (`<Icon name="…" />` from `Icon.astro`); the window id doubles as the icon name. The sprite is hidden with zero size, not `display: none`, because browsers otherwise drop its gradients.
 - `src/components/BootScreen.astro` — boot screen that animates the funding progress bar before the desktop appears (XP loading bar, Leopard spinner or the glowing “android” wordmark, always with the Stupid Hackathon logo). Click or press a key to skip.
@@ -98,4 +98,4 @@ The camera screens use Chrome's test pattern. To shoot them with a real picture,
 Full screen for the whole site: right-click the XP desktop → Full Screen, the shtX/Window menus on Mac (Enter/Exit Full Screen), or Menu → Full screen on Android. Esc leaves it.
 - `?android` / `?ios` — force the Android or iPhone shell on small screens regardless of the user agent.
 - `?mac` / `?xp` — force the Mac or Windows XP shell on large screens regardless of the user agent.
-- `?open=funding` — open a window after boot (`about`, `register`, `schedule`, `venue`, `funding`, `sponsors`, `staff`, `faq`, `camera`, `recycle`).
+- `?open=funding` — open a window after boot (`about`, `register`, `schedule`, `venue`, `funding`, `sponsors`, `staff`, `faq`, `conduct`, `camera`, `recycle`).
