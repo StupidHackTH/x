@@ -1,0 +1,73 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+import { codeOfConduct as coc, event } from '../../data/event';
+const h = 'font-bold text-[12px] text-[#0046d5] mt-3';
+const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
+---
+
+<Window id="conduct" menu={['File', 'Edit', 'View', 'Help']} status={`Code of Conduct · อัปเดต ${coc.updated}`} beige>
+  <div class="h-full flex flex-col">
+    <div class="bg-gradient-to-r from-[#1c5fd5] to-[#6fa4f2] text-white px-4 py-2 font-xp-title font-bold text-base flex items-center gap-2">
+      <Icon name="conduct" class="text-2xl" />
+      <div>
+        Code of Conduct
+        <div class="text-[10px] font-normal opacity-90">{event.name} · ใช้กับทุกคน ทุกที่ ทุกช่วงเวลาของงาน</div>
+      </div>
+    </div>
+    <div class="p-3 overflow-auto flex flex-col gap-1 bg-white flex-1">
+      <p class="text-[12px] leading-relaxed">{coc.principle}</p>
+
+      <h3 class={h}>1. ใช้กับใคร ที่ไหน เมื่อไหร่</h3>
+      <ul class={ul}>{coc.scope.map((x) => <li>{x}</li>)}</ul>
+
+      <h3 class={h}>2. สิ่งที่เราคาดหวังจากทุกคน</h3>
+      <ul class={ul}>{coc.expected.map((x) => <li>{x}</li>)}</ul>
+
+      <h3 class={h}>3. ค้างคืนที่ Cleverse</h3>
+      <ul class={ul}>{coc.overnight.map((x) => <li>{x}</li>)}</ul>
+
+      <h3 class={h}>4. ห้ามเด็ดขาด (zero tolerance)</h3>
+      {coc.zeroTolerance.map((g) => (
+        <fieldset class="xp-groupbox mt-1">
+          <legend>⛔ {g.title}</legend>
+          <ul class={ul}>{g.items.map((x) => <li>{x}</li>)}</ul>
+        </fieldset>
+      ))}
+
+      <h3 class={h}>5. ภาพ วิดีโอ และ livestream</h3>
+      <ul class={ul}>{coc.media.map((x) => <li>{x}</li>)}</ul>
+
+      <h3 class={h}>6. เนื้อหาโปรเจกต์</h3>
+      <p class="text-[12px] leading-relaxed">{coc.projects}</p>
+
+      <h3 class={h}>7. เจออะไรไม่โอเค บอกเราได้เลย</h3>
+      <ul class={ul}>{coc.reporting.how.map((x) => <li>{x}</li>)}</ul>
+      <div class="bg-[#fff8dc] border border-[#e0c060] p-2 text-[12px] my-1">
+        {coc.reporting.notes.map((x) => <div>· {x}</div>)}
+      </div>
+
+      <h3 class={h}>8. ถ้ามีการละเมิด</h3>
+      <table class="text-[12px] w-full">
+        <tbody>
+          {coc.enforcement.map((e) => (
+            <tr>
+              <td class="pr-3 text-neutral-500 align-top whitespace-nowrap">ขั้น {e.level}</td>
+              <td class="align-top"><b>{e.title}</b><br />{e.items.join(' · ')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul class={ul}>{coc.enforcementNotes.map((x) => <li>{x}</li>)}</ul>
+
+      <h3 class={h}>9. การยอมรับ</h3>
+      <ul class={ul}>{coc.acceptance.map((x) => <li>{x}</li>)}</ul>
+
+      <div class="flex flex-wrap justify-end gap-2 mt-3">
+        <a class="xp-btn default" href={coc.reporting.url} target="_blank" rel="noopener">💬 ทักเพจ Creatorsgarten</a>
+        <button type="button" class="xp-btn" data-open="faq">FAQ</button>
+        <button type="button" class="xp-btn" data-action="close">Close</button>
+      </div>
+    </div>
+  </div>
+</Window>

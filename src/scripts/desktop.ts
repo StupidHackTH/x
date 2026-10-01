@@ -615,7 +615,21 @@ function syncTabbar() {
   }
 }
 
+/* "อีก N วันถึงวันงาน" / "N days to go" texts, recomputed from the visitor's clock (the build-time value is only a fallback) */
+function updateDaysUntil() {
+  for (const el of $$<HTMLElement>('[data-days-until]')) {
+    const days = Math.ceil((new Date(el.dataset.daysUntil!).getTime() - Date.now()) / 86_400_000);
+    const th = el.dataset.lang === 'th';
+    if (days > 1) el.textContent = th ? `อีก ${days} วันถึงวันงาน` : `${days} days to go`;
+    else if (days === 1) el.textContent = th ? 'พรุ่งนี้วันงานแล้ว' : '1 day to go';
+    else if (days === 0) el.textContent = th ? 'วันนี้วันงาน!' : 'today!';
+    else if (days > -2) el.textContent = th ? 'กำลังจัดงานอยู่' : 'hacking now';
+    else el.textContent = th ? 'งานจบแล้ว แล้วพบกันใหม่' : 'see you next year';
+  }
+}
+
 function updateCountdown() {
+  updateDaysUntil();
   for (const el of $$<HTMLElement>('[data-countdown]')) {
     const target = new Date(el.dataset.countdown!).getTime();
     const days = Math.ceil((target - Date.now()) / 86_400_000);

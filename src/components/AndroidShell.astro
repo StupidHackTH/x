@@ -9,8 +9,8 @@ import Icon from './Icon.astro';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const homeIds = ['about', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
-const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'recycle'];
+const homeIds = ['about', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
 const links = [
   { label: 'Browser', icon: 'website', href: event.links.website },
   { label: 'Facebook', icon: 'facebook', href: event.links.facebook },
@@ -67,7 +67,7 @@ const icons = {
     </button>
     <button type="button" class="item" data-open="schedule">
       <Icon name="schedule" class="glyph" />
-      <span class="text"><b>{event.name}</b><small>{event.datesEn} · {daysToGo} days to go</small></span>
+      <span class="text"><b>{event.name}</b><small>{event.datesEn} · <span data-days-until={eventStart} data-lang="en">{daysToGo} days to go</span></small></span>
     </button>
     <div class="handle" data-action="android-shade" aria-hidden="true"><i></i></div>
     <div class="fill" data-action="android-shade"></div>

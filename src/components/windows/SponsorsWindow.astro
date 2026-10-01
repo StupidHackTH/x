@@ -33,6 +33,7 @@ const tierColor: Record<string, string> = {
           <tr class:list={['hover:bg-[#316ac5] hover:text-white', { 'text-neutral-400': s.pending }]}>
             <td class="px-2 py-1">
               🏢 {s.url ? <a href={s.url} target="_blank" rel="noopener" class="text-inherit">{s.name}</a> : s.name}
+              {s.message && <div class="text-[10px] italic opacity-80 pl-5">“{s.message}”</div>}
             </td>
             <td class="px-2 py-1"><span class:list={['px-1.5 rounded-sm text-[10px] text-black', tierColor[s.tier]]}>{s.tier}</span></td>
             <td class="px-2 py-1 text-[11px]">{s.tier === 'Venue' ? 'สถานที่' : s.tier === 'Individual' ? 'บุคคล' : 'องค์กร'}</td>
