@@ -27,7 +27,7 @@ const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
       <h3 class={h}>3. ค้างคืนที่ Cleverse</h3>
       <ul class={ul}>{coc.overnight.map((x) => <li>{x}</li>)}</ul>
 
-      <h3 class={h}>4. ห้ามเด็ดขาด (zero tolerance)</h3>
+      <h3 class={h}>4. สิ่งที่ห้าม</h3>
       {coc.zeroTolerance.map((g) => (
         <fieldset class="xp-groupbox mt-1">
           <legend>⛔ {g.title}</legend>
@@ -43,6 +43,14 @@ const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
 
       <h3 class={h}>7. เจออะไรไม่โอเค บอกเราได้เลย</h3>
       <ul class={ul}>{coc.reporting.how.map((x) => <li>{x}</li>)}</ul>
+      {coc.reporting.contacts.length > 0 && (
+        <fieldset class="xp-groupbox mt-1">
+          <legend>ผู้รับเรื่อง</legend>
+          <ul class="text-[12px] flex flex-wrap gap-x-4 gap-y-1">
+            {coc.reporting.contacts.map((c) => <li><b>{c.name}</b> <span class="text-neutral-600">@{c.handle}</span></li>)}
+          </ul>
+        </fieldset>
+      )}
       <div class="bg-[#fff8dc] border border-[#e0c060] p-2 text-[12px] my-1">
         {coc.reporting.notes.map((x) => <div>· {x}</div>)}
       </div>
@@ -62,6 +70,10 @@ const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
 
       <h3 class={h}>9. การยอมรับ</h3>
       <ul class={ul}>{coc.acceptance.map((x) => <li>{x}</li>)}</ul>
+
+      <p class="text-[11px] text-neutral-500 mt-3">
+        เขียนโดย {coc.authors.map((a) => `${a.name} (@${a.handle})`).join(' และ ')} · อัปเดต {coc.updated}
+      </p>
 
       <div class="flex flex-wrap justify-end gap-2 mt-3">
         <a class="xp-btn default" href={coc.reporting.url} target="_blank" rel="noopener">💬 ทักเพจ Creatorsgarten</a>
