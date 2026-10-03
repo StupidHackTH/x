@@ -28,8 +28,9 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # Served at https://<owner>.github.io/<repo>/ → base path is /<repo>. A custom domain would use BASE_PATH=/.
-          SITE_URL: https://${{ github.repository_owner }}.github.io
+          # The StupidHackTH org site has the custom domain stupid.hackathon.in.th, so this project page is served at
+          # https://stupid.hackathon.in.th/x/ (stupidhackth.github.io/x/ redirects there). Base path = /<repo>.
+          SITE_URL: https://stupid.hackathon.in.th
           BASE_PATH: /${{ github.event.repository.name }}
       - uses: actions/upload-pages-artifact@v3
         with:

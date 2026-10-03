@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 
-// Deploy target. GitHub Pages serves the site from https://stupidhackth.github.io/x/, so the workflow
+// Deploy target. GitHub Pages serves the site from https://stupid.hackathon.in.th/x/, so the workflow
 // (.github/workflows/deploy.yml) builds with BASE_PATH=/x. Local dev and a custom domain serve from the root.
 // Everything that links into public/ goes through src/lib/asset.ts so both work.
 const base = process.env.BASE_PATH || '/';

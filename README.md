@@ -6,7 +6,7 @@ Registration is **not** handled by this site — it links out to Eventpop (`regi
 
 ## Deploy
 
-Every push to `main` of [StupidHackTH/x](https://github.com/StupidHackTH/x) builds and publishes to GitHub Pages at **https://stupidhackth.github.io/x/** (`.github/workflows/deploy.yml`, Pages source = GitHub Actions). The site lives under `/x/` there, so `astro.config.mjs` reads `BASE_PATH` (the workflow sets `/x`) and every link into `public/` goes through `asset()` from `src/lib/asset.ts`. Locally and on a custom domain the base is `/`. To preview the Pages layout locally: `BASE_PATH=/x npx astro build && npx astro preview` then open `/x/`.
+Every push to `main` of [StupidHackTH/x](https://github.com/StupidHackTH/x) builds and publishes to GitHub Pages at **https://stupid.hackathon.in.th/x/** (the StupidHackTH org site carries that custom domain; `stupidhackth.github.io/x/` redirects there). See `.github/workflows/deploy.yml`; Pages source = GitHub Actions. The site lives under `/x/`, so `astro.config.mjs` reads `BASE_PATH` (the workflow sets `/x`) and every link into `public/` goes through `asset()` from `src/lib/asset.ts`. Locally and on a custom domain the base is `/`. To preview the Pages layout locally: `BASE_PATH=/x npx astro build && npx astro preview` then open `/x/`.
 
 ## Develop
 
