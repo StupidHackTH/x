@@ -2,6 +2,7 @@
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import Icon from './Icon.astro';
+import { asset } from '../lib/asset';
 const items = windows.filter((w) => w.id !== 'error');
 const left = items.slice(0, 5);
 const right = items.slice(5);
@@ -9,7 +10,7 @@ const right = items.slice(5);
 
 <div class="xp-startmenu" id="startmenu" hidden role="menu" aria-label="Start menu">
   <div class="xp-startmenu-header">
-    <img src="/logo.png" alt="" />
+    <img src={asset('logo.png')} alt="" />
     <span>Stupid Hacker</span>
   </div>
   <div class="grid grid-cols-2">

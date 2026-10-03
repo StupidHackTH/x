@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { event } from '../data/event';
+import { asset } from '../lib/asset';
 
 interface Props {
   title?: string;
@@ -18,8 +19,8 @@ const { title = `${event.name} (${event.codename}) · ${event.datesEn}`, descrip
     <meta name="description" content={description} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/logo.png" />
-    <link rel="icon" type="image/png" href="/favicon-64.png" />
+    <meta property="og:image" content={new URL(asset('logo.png'), Astro.site)} />
+    <link rel="icon" type="image/png" href={asset('favicon-64.png')} />
     <script is:inline>
       // Pick the shell from the user agent before first paint so the right one renders immediately.
       // Phones (<768px): Android gets the Gingerbread look, everything else the iPhone look (?android / ?ios force one).

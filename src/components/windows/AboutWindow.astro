@@ -1,12 +1,13 @@
 ---
 import Window from '../Window.astro';
 import { event, venue } from '../../data/event';
+import { asset } from '../../lib/asset';
 ---
 
 <Window id="about" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status="Done" beige>
   <div class="flex flex-col md:flex-row h-full">
     <div class="md:w-44 shrink-0 bg-gradient-to-b from-[#7ba2e7] to-[#6375d6] text-white p-3 flex flex-col items-center gap-3">
-      <img src="/logo-transparent.png" alt="" class="w-32 object-contain drop-shadow-md" />
+      <img src={asset('logo-transparent.png')} alt="" class="w-32 object-contain drop-shadow-md" />
       <div class="text-center">
         <div class="font-xp-title font-bold text-lg leading-tight">Stupid Hackathon X</div>
         <div class="text-[11px] opacity-90">{event.nameTh} · {event.codename}</div>

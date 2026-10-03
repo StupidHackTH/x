@@ -6,6 +6,7 @@ import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { fundingPercent } from '../data/funding';
 import Icon from './Icon.astro';
+import { asset } from '../lib/asset';
 
 const apps = windows.filter((w) => w.id !== 'error' && w.id !== 'recycle');
 const links = [
@@ -17,7 +18,7 @@ const links = [
 
 <div class="mac-only" id="mac-shell">
   <div class="mac-menubar" id="mac-menubar" role="menubar">
-    <button type="button" class="apple" data-menu="apple" aria-haspopup="true" aria-expanded="false" aria-label="shtX menu"><img src="/favicon-64.png" alt="" /></button>
+    <button type="button" class="apple" data-menu="apple" aria-haspopup="true" aria-expanded="false" aria-label="shtX menu"><img src={asset('favicon-64.png')} alt="" /></button>
     <button type="button" class="appname" data-menu="app" aria-haspopup="true" aria-expanded="false" id="mac-appname">Finder</button>
     <button type="button" data-menu="file" aria-haspopup="true" aria-expanded="false">File</button>
     <button type="button" data-menu="edit" aria-haspopup="true" aria-expanded="false">Edit</button>
@@ -104,7 +105,7 @@ const links = [
 
   <nav class="mac-dock" id="mac-dock" aria-label="Dock">
     <button type="button" class="finder" data-dock="finder" data-open="about" data-running>
-      <img src="/logo-transparent.png" alt="" />
+      <img src={asset('logo-transparent.png')} alt="" />
       <span class="tip">Finder</span>
     </button>
     {apps.map((w) => (

@@ -4,6 +4,7 @@ import { windows } from '../data/windows';
 import { event } from '../data/event';
 import { funding, fundingPercent, formatTHB } from '../data/funding';
 import Icon from './Icon.astro';
+import { asset } from '../lib/asset';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 
@@ -42,7 +43,7 @@ const eventDay = 10;
       <div class="date" id="ios-lock-date">Saturday, October 10</div>
     </div>
     <div class="ios-lock-middle">
-      <img src="/logo-transparent.png" alt={`${event.name} logo`} />
+      <img src={asset('logo-transparent.png')} alt={`${event.name} logo`} />
       <div class="note">
         <b>{event.name}</b> · {event.datesEn}<br />
         💰 Funding goal {fundingPercent}% reached

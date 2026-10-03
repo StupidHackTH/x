@@ -4,6 +4,10 @@ Windows XP–themed website for the 10th Stupid Hackathon in Thailand (10–11 O
 
 Registration is **not** handled by this site — it links out to Eventpop (`registration.url` in `src/data/event.ts`).
 
+## Deploy
+
+Every push to `main` of [StupidHackTH/x](https://github.com/StupidHackTH/x) builds and publishes to GitHub Pages at **https://stupidhackth.github.io/x/** (`.github/workflows/deploy.yml`, Pages source = GitHub Actions). The site lives under `/x/` there, so `astro.config.mjs` reads `BASE_PATH` (the workflow sets `/x`) and every link into `public/` goes through `asset()` from `src/lib/asset.ts`. Locally and on a custom domain the base is `/`. To preview the Pages layout locally: `BASE_PATH=/x npx astro build && npx astro preview` then open `/x/`.
+
 ## Develop
 
 ```sh

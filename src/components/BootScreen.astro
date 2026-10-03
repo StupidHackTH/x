@@ -1,6 +1,7 @@
 ---
 import { funding, fundingPercent, formatTHB } from '../data/funding';
 import { event } from '../data/event';
+import { asset } from '../lib/asset';
 ---
 
 <div
@@ -14,19 +15,19 @@ import { event } from '../data/event';
   <!-- 640x480 stage, scaled to fit the viewport (1 unit = 1 reference pixel) -->
   <div class="boot-stage">
     <div class="boot-group">
-      <img src="/logo-transparent.png" alt={`${event.name} logo`} class="boot-logo" />
+      <img src={asset('logo-transparent.png')} alt={`${event.name} logo`} class="boot-logo" />
       <div class="boot-brand">{event.organizer}<sup>®</sup></div>
       <div class="boot-title">Stupid Hackathon<sup>®</sup><span class="boot-x">X</span></div>
       <div class="boot-edition">X Edition</div>
     </div>
     <!-- Android phones: the glowing "android" wordmark instead of the XP logo and progress bar -->
     <div class="boot-android" aria-hidden="true">
-      <img src="/logo-transparent.png" alt="" class="logo" />
+      <img src={asset('logo-transparent.png')} alt="" class="logo" />
       <span>android</span>
     </div>
     <!-- Macs: Leopard gray boot with a big X (it is OS X and shtX) and the spinning gear -->
     <div class="boot-mac" aria-hidden="true">
-      <img src="/logo-transparent.png" alt="" class="logo" />
+      <img src={asset('logo-transparent.png')} alt="" class="logo" />
       <span class="spinner">{Array.from({ length: 12 }).map(() => <i></i>)}</span>
     </div>
 
@@ -47,7 +48,7 @@ import { event } from '../data/event';
   </div>
 
   <div class="boot-copyright">Copyright © {event.organizer}</div>
-  <img src="/creatorsgarten.png" alt="Creatorsgarten" class="boot-cg" />
+  <img src={asset('creatorsgarten.png')} alt="Creatorsgarten" class="boot-cg" />
   <div class="boot-skip">press any key to skip</div>
 </div>
 
