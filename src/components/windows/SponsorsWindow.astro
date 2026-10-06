@@ -1,72 +1,259 @@
 ---
 import Window from '../Window.astro';
-import { funding, tierOrder } from '../../data/funding';
+import { funding, tiers, formatTHB } from '../../data/funding';
 import { event } from '../../data/event';
 import { asset } from '../../lib/asset';
-const sorted = [...funding.sponsors].sort((a, b) => Number(!!a.pending) - Number(!!b.pending) || tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier));
-// Main sponsor block: white panel with generous padding, because the lime Drawdy wordmark needs a light ground and clear space (brand pack).
-const main = funding.sponsors.find((s) => s.main && s.logo);
-const tierColor: Record<string, string> = {
-  Venue: 'bg-[#b5e3ff]',
-  System32: 'bg-[#1e3a8a] text-white',
-  'Full Screen': 'bg-[#e5e4e2]',
-  'Normal Mode': 'bg-[#ffd700]',
-  'Safe Mode': 'bg-[#c0c0c0]',
-  Corporate: 'bg-[#cde7c1]',
-  Partner: 'bg-[#ffe4b5]',
-  Individual: 'bg-[#f5e0ff]',
-};
+
+// Org chart that follows the call-for-sponsor poster: Tier 4 (System32) on top down to Tier 1 (Safe Mode), then
+// Individual. The venue and partners give in kind, so they hang off the main sponsor as their own row. An empty tier
+// shows a placeholder that links to the sponsor form.
+const all = funding.sponsors.filter((s) => !s.pending);
+const main = all.find((s) => s.main);
+const inKind = all.filter((s) => s.tier === 'Venue' || s.tier === 'Partner');
+const paidTiers = tiers.filter((t) => t.level > 0);
+const rows = paidTiers.map((t) => ({ ...t, items: all.filter((s) => s.tier === t.name && !s.main) }));
+const people = all.filter((s) => s.tier === 'Individual');
+const individual = tiers.find((t) => t.level === 0)!;
+const initial = (name: string) => name.replace(/^(บริษัท |ครอบครัว)/, '').slice(0, 1);
 ---
 
-<Window id="sponsors" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={`${funding.sponsors.length} objects`}>
-  <div class="p-2">
-    {main && (
-      <div class="bg-white border border-[#d8d2bd] px-6 py-5 mb-2 text-center">
-        <div class="text-[10px] text-neutral-500 uppercase tracking-widest mb-3">Main sponsor</div>
-        {main.url ? (
-          <a href={main.url} target="_blank" rel="noopener"><img src={asset(`sponsors/${main.logo}`)} alt={main.name} class="mx-auto h-12 w-auto" /></a>
-        ) : (
-          <img src={asset(`sponsors/${main.logo}`)} alt={main.name} class="mx-auto h-12 w-auto" />
-        )}
-      </div>
-    )}
-    <div class="bg-[#eef3fb] border border-[#bcd0ec] p-2 mb-2 text-[11px]">
-      ขอบคุณสปอนเซอร์ทุกท่านที่ทำให้งานฟรีสำหรับผู้เข้าร่วม 🙏 อยากมีชื่ออยู่ตรงนี้ → ดู tier ในหน้าต่าง Funding Goal
+<Window id="sponsors" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={`${funding.sponsors.length} objects · org chart`}>
+  <div class="p-3">
+    <div class="bg-[#eef3fb] border border-[#bcd0ec] p-2 mb-3 text-[11px]">
+      ขอบคุณสปอนเซอร์ทุกท่านที่ทำให้งานฟรีสำหรับผู้เข้าร่วม 🙏 อยากมีชื่ออยู่ตรงนี้ → <a href={event.links.sponsor} target="_blank" rel="noopener">กรอกฟอร์มสปอนเซอร์</a>
     </div>
-    <table class="w-full text-[12px]">
-      <thead>
-        <tr class="text-left bg-xp-beige border-b border-[#919b9c]">
-          <th class="font-normal px-2 py-1 border-r border-[#d8d2bd]">Name</th>
-          <th class="font-normal px-2 py-1 border-r border-[#d8d2bd]">Tier</th>
-          <th class="font-normal px-2 py-1">Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((s) => (
-          <tr class:list={['hover:bg-[#316ac5] hover:text-white', { 'text-neutral-400': s.pending }]}>
-            <td class="px-2 py-1">
-              <div class="flex items-center gap-2">
-                {s.logo ? (
-                  <img src={asset(`sponsors/${s.logo}`)} alt="" class="w-7 h-7 shrink-0 object-contain rounded-sm bg-white border border-[#d8d2bd]" />
-                ) : (
-                  <svg class="icon w-7 h-7 shrink-0" aria-hidden="true"><use href={s.tier === 'Individual' ? '#i-staff' : '#i-about'} /></svg>
-                )}
-                <div>
-                  {s.url ? <a href={s.url} target="_blank" rel="noopener" class="text-inherit">{s.name}</a> : s.name}
-                  {s.main && <span class="ml-1 px-1 rounded-sm text-[9px] bg-[#b3e000] text-black">MAIN</span>}
-                  {s.message && <div class="text-[10px] italic opacity-80">“{s.message}”</div>}
-                </div>
+
+    <div class="chart">
+      {rows.map((t, i) => (
+        <section class:list={['level', { first: i === 0 }]}>
+          <header class="tier-head" data-tier={t.name}>
+            <span class="tier-btn">TIER {t.level}</span>
+            <span class="tier-name">{t.name}</span>
+            <span class="tier-price">{formatTHB(t.amount)}</span>
+          </header>
+          <div class="nodes">
+            {i === 0 && main && (
+              <div class="node node-xl">
+                <div class="node-label">Main sponsor</div>
+                <a href={main.url} target="_blank" rel="noopener" class="node-link">
+                  {main.logo ? <img src={asset(`sponsors/${main.logo}`)} alt={main.name} class="node-logo" /> : <span class="node-name">{main.name}</span>}
+                </a>
               </div>
-            </td>
-            <td class="px-2 py-1"><span class:list={['px-1.5 rounded-sm text-[10px] text-black', tierColor[s.tier]]}>{s.tier}</span></td>
-            <td class="px-2 py-1 text-[11px]">{s.tier === 'Venue' ? 'สถานที่' : s.tier === 'Individual' ? 'บุคคล' : 'องค์กร'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            )}
+            {t.items.map((s) => (
+              <div class="node node-md">
+                {s.url ? (
+                  <a href={s.url} target="_blank" rel="noopener" class="node-link">
+                    {s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt={s.name} class="node-logo" /> : <span class="node-name">{s.name}</span>}
+                  </a>
+                ) : (
+                  <div class="node-link">{s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt={s.name} class="node-logo" /> : <span class="node-name">{s.name}</span>}</div>
+                )}
+                {s.logo && <div class="node-caption">{s.name}</div>}
+                {s.message && <div class="node-msg">“{s.message}”</div>}
+              </div>
+            ))}
+            {t.items.length === 0 && !(i === 0 && main) && (
+              <a href={event.links.sponsor} target="_blank" rel="noopener" class="node node-md node-empty">
+                <span class="plus" aria-hidden="true">+</span>
+                <span class="node-name">ที่นี่ยังว่าง</span>
+                <span class="node-msg">เป็น {t.name} sponsor คนแรก</span>
+              </a>
+            )}
+          </div>
+          {i === 0 && inKind.length > 0 && (
+            <div class="inkind">
+              <div class="inkind-title">Venue &amp; partners · สนับสนุนสถานที่และอื่น ๆ</div>
+              <div class="nodes">
+                {inKind.map((s) => (
+                  <div class="node node-lg">
+                    <div class="node-label">{s.tier}</div>
+                    {s.url ? (
+                      <a href={s.url} target="_blank" rel="noopener" class="node-link">
+                        {s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt={s.name} class="node-logo" /> : <span class="node-name">{s.name}</span>}
+                      </a>
+                    ) : (
+                      <div class="node-link">{s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt={s.name} class="node-logo" /> : <span class="node-name">{s.name}</span>}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      ))}
+
+      <section class="level">
+        <header class="tier-head" data-tier="Individual">
+          <span class="tier-btn">INDIVIDUAL</span>
+          <span class="tier-name">{individual.name} Sponsorship</span>
+          <span class="tier-price">{formatTHB(individual.amount)} ขึ้นไป</span>
+        </header>
+        <div class="nodes people">
+          {people.map((s) => (
+            <div class="node node-sm">
+              {s.url ? (
+                <a href={s.url} target="_blank" rel="noopener" class="node-link">
+                  {s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt="" class="avatar" /> : <span class="avatar avatar-text">{initial(s.name)}</span>}
+                  <span class="node-name">{s.name}</span>
+                </a>
+              ) : (
+                <div class="node-link">
+                  {s.logo ? <img src={asset(`sponsors/${s.logo}`)} alt="" class="avatar" /> : <span class="avatar avatar-text">{initial(s.name)}</span>}
+                  <span class="node-name">{s.name}</span>
+                </div>
+              )}
+              {s.message && <div class="node-msg">“{s.message}”</div>}
+            </div>
+          ))}
+          <a href={event.links.sponsor} target="_blank" rel="noopener" class="node node-sm node-empty">
+            <span class="plus small" aria-hidden="true">+</span>
+            <span class="node-name">ชื่อของคุณ</span>
+          </a>
+        </div>
+      </section>
+    </div>
+
     <div class="mt-3 flex justify-end gap-2">
       <button type="button" class="xp-btn" data-open="funding">Sponsor tiers</button>
       <a class="xp-btn default" href={event.links.sponsor} target="_blank" rel="noopener">Add your name here</a>
     </div>
   </div>
 </Window>
+
+<style>
+  /* Org chart in the poster's spirit: aero sky, glossy cards, bevelled TIER buttons, blue connectors. Top tier first. */
+  .chart {
+    --line: #5b93dc;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 10px 10px;
+    border: 1px solid #b7cfe9;
+    border-radius: 8px;
+    background:
+      radial-gradient(ellipse 70% 30% at 50% 0%, rgba(255, 255, 255, 0.95), transparent 70%),
+      radial-gradient(circle at 12% 30%, rgba(255, 255, 255, 0.5) 0 10px, transparent 11px),
+      radial-gradient(circle at 88% 55%, rgba(255, 255, 255, 0.5) 0 14px, transparent 15px),
+      radial-gradient(circle at 20% 85%, rgba(255, 255, 255, 0.45) 0 8px, transparent 9px),
+      linear-gradient(180deg, #cfe7ff 0%, #e9f4ff 35%, #f9fcff 100%);
+    box-shadow: inset 0 1px 0 #fff;
+  }
+  .level { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
+  .level.first { padding-top: 0; }
+  .level:not(.first)::before { content: ""; position: absolute; top: 0; left: 50%; width: 2px; height: 30px; background: var(--line); }
+
+  .tier-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 4px 14px 4px 4px;
+    border: 1px solid #8fb0dc;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fff 0%, #eaf2fc 55%, #dce8f7 100%);
+    box-shadow: 0 1px 3px rgba(20, 50, 100, 0.15), inset 0 1px 0 #fff;
+  }
+  .tier-btn {
+    padding: 3px 16px;
+    border: 1px solid #7a7a7a;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fafafa 0%, #d4d4d4 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(0, 0, 0, 0.15);
+    font-family: var(--font-xp-start);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: #222;
+  }
+  .tier-head[data-tier="System32"] .tier-btn { background: linear-gradient(180deg, #5b7fe0, #1e3a8a); border-color: #142b6e; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
+  .tier-head[data-tier="Full Screen"] .tier-btn { background: linear-gradient(180deg, #fff, #cfd4da); border-color: #8d96a3; }
+  .tier-head[data-tier="Normal Mode"] .tier-btn { background: linear-gradient(180deg, #ffe88a, #e2b100); border-color: #a98300; }
+  .tier-head[data-tier="Safe Mode"] .tier-btn { background: linear-gradient(180deg, #ececec, #b3b3b3); border-color: #7a7a7a; }
+  .tier-head[data-tier="Individual"] .tier-btn { background: linear-gradient(180deg, #f6dcff, #c98be6); border-color: #8f55ad; }
+  .tier-name { font-weight: 700; font-size: 13px; color: #10305f; }
+  .tier-price { font-size: 12px; color: #3d5a80; font-variant-numeric: tabular-nums; }
+
+  .nodes { position: relative; display: flex; justify-content: center; align-items: stretch; gap: 16px; padding-top: 16px; }
+  .nodes::before { content: ""; position: absolute; top: 0; left: 50%; width: 2px; height: 16px; background: var(--line); }
+  .nodes > * { position: relative; }
+  .nodes > *::before { content: ""; position: absolute; top: -16px; left: 50%; width: 2px; height: 16px; background: var(--line); }
+  .nodes > *::after { content: ""; position: absolute; top: -16px; left: -9px; right: -9px; height: 2px; background: var(--line); }
+  .nodes > *:first-child::after { left: 50%; border-radius: 2px 0 0 0; }
+  .nodes > *:last-child::after { right: 50%; }
+  .nodes > *:only-child::after { display: none; }
+  .people { flex-wrap: wrap; padding-top: 0; }
+  .people::before, .people > *::before, .people > *::after { display: none; }
+
+  .inkind {
+    position: relative;
+    margin-top: 20px;
+    padding: 10px 16px 14px;
+    border: 1px solid rgba(91, 147, 220, 0.5);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 1px 0 #fff;
+  }
+  .inkind::before { content: ""; position: absolute; top: -20px; left: 50%; width: 2px; height: 20px; background: var(--line); }
+  .inkind-title { margin-bottom: 4px; font-size: 10px; font-weight: 700; color: #3d5a80; text-align: center; letter-spacing: 0.02em; }
+  .inkind .nodes { padding-top: 0; }
+  .inkind .nodes::before, .inkind .nodes > *::before, .inkind .nodes > *::after { display: none; }
+
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid #a9c2e3;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #fff 0%, #fff 55%, #f1f6fd 100%);
+    box-shadow: 0 3px 8px rgba(20, 50, 110, 0.14), inset 0 1px 0 #fff;
+    text-align: center;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  a.node:hover, .node:has(> a:hover) { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(20, 50, 110, 0.2), inset 0 1px 0 #fff; }
+  .node-xl { padding: 16px 40px 16px; min-width: 340px; border: 2px solid #b3e000; box-shadow: 0 4px 16px rgba(120, 170, 0, 0.3), inset 0 1px 0 #fff; }
+  .node-lg { padding: 10px 26px 12px; min-width: 210px; }
+  .node-md { padding: 12px 14px 10px; width: 176px; min-height: 120px; }
+  .node-empty { border: 2px dashed #9db8dc; background: rgba(255, 255, 255, 0.6); color: #4b6a96; box-shadow: none; }
+  .node-empty:hover { border-color: #316ac5; color: #316ac5; background: #fff; }
+  .plus { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #e8f1ff, #c7dbf7); border: 1px solid #9db8dc; font-size: 22px; line-height: 1; font-weight: 700; color: #316ac5; }
+  .plus.small { width: 28px; height: 28px; font-size: 18px; }
+  .node-label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7a90; }
+  .node-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: inherit; text-decoration: none; }
+  .node-xl .node-logo { height: 64px; max-width: 300px; object-fit: contain; }
+  .node-lg .node-logo { height: 36px; max-width: 210px; object-fit: contain; }
+  .node-md .node-logo { height: 60px; width: 100%; max-width: 140px; object-fit: contain; }
+  .node-name { font-weight: 700; font-size: 13px; line-height: 1.25; color: #10305f; }
+  .node-md .node-name { font-size: 14px; padding: 16px 0; }
+  .node-empty .node-name { padding: 2px 0 0; font-size: 12px; color: inherit; }
+  .node-caption { font-size: 11px; font-weight: 700; color: #10305f; }
+  .node-msg { font-size: 10px; font-style: italic; color: #5b6b80; line-height: 1.3; }
+  .node-empty .node-msg { color: inherit; font-style: normal; }
+
+  .node-sm { padding: 8px 10px; width: 150px; min-height: 58px; }
+  .node-sm .node-link { flex-direction: row; gap: 8px; text-align: left; }
+  .node-sm .node-name { font-size: 11px; }
+  .node-sm.node-empty { flex-direction: row; gap: 8px; }
+  .avatar { width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 0 0 1px #a9c2e3; background: #fff; }
+  .avatar-text { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #a4c8f0, #5a8fd8); color: #fff; font-weight: 700; font-size: 15px; }
+
+  /* Phones: one column, no connectors */
+  @media (max-width: 767px) {
+    .chart { padding: 10px 8px; }
+    .level { padding-top: 18px; }
+    .level::before, .nodes::before, .nodes > *::before, .nodes > *::after, .inkind::before { display: none !important; }
+    .nodes { flex-direction: column; align-items: stretch; padding-top: 0; gap: 10px; }
+    .people { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    .tier-head { align-self: stretch; justify-content: center; flex-wrap: wrap; border-radius: 12px; }
+    .node-xl, .node-lg, .node-md { min-width: 0; width: auto; }
+    .node-md { min-height: 0; }
+    .node-md .node-name { padding: 8px 0; }
+    .node-sm { width: calc(50% - 5px); }
+    .inkind { margin-top: 12px; }
+  }
+</style>

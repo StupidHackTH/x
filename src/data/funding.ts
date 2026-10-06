@@ -38,14 +38,13 @@ export const funding: Funding = {
   updatedAt: '2026-10-06T16:30:00+07:00',
   mock: false,
   sponsors: [
-    { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com' },
+    { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com', logo: 'cleverse.svg' },
     { name: 'Drawdy', tier: 'System32', amount: 55_000.1, url: 'https://drawdy.io', logo: 'drawdy.png', main: true },
     { name: 'ShakeSphere', tier: 'Normal Mode', amount: 15_000 },
-    { name: 'DEV Forward Co., Ltd.', tier: 'Corporate', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
+    { name: 'DEV Forward Co., Ltd.', tier: 'Safe Mode', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
     { name: 'PaxaLabs', tier: 'Partner' },
     { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67, url: 'https://plengrai.gamepleng.com/', logo: 'gamepleng.jpg', message: 'เกมเพลงไร เปิดวันเดียวกับวันงานเลย' },
-    // Bier's submitted image is a Sony Music album cover, not his own artwork, so no logo
-    { name: 'Bier', tier: 'Individual', amount: 1_669, url: 'https://yuttakhanb.dev', message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
+    { name: 'Bier', tier: 'Individual', amount: 1_669, url: 'https://yuttakhanb.dev', logo: 'bier.jpg', message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
     { name: 'SarunInt', tier: 'Individual', amount: 1_013.25 },
     { name: 'Minori414', tier: 'Individual', amount: 862.07, message: 'ปีนี้ไม่สะดวกไป ขอส่งใจไปแทนละกัน' },
     { name: 'Sasi Chanplakorn', tier: 'Individual', amount: 500.11, url: 'https://mindsch.github.io', logo: 'sasi.jpg', message: 'กดบัตรไม่ทันอีกแล้ว ฮือ สปอนทีมนะ ขอบคุณที่จัดอีเว้นสุดจะเริ่ด <3' },
@@ -53,13 +52,14 @@ export const funding: Funding = {
   ],
 };
 
-// Sponsorship packages for this year (in THB). Every tier ends in .10 because X.
-export const tiers: { name: SponsorTier; amount: number; blurb: string }[] = [
-  { name: 'System32', amount: 50_000.1, blurb: 'ลบไม่ได้ ขาดไม่ได้' },
-  { name: 'Full Screen', amount: 30_000.1, blurb: 'เต็มจอ เต็มใจ' },
-  { name: 'Normal Mode', amount: 10_000.1, blurb: 'บูตปกติ ทำงานปกติ' },
-  { name: 'Safe Mode', amount: 5_000.1, blurb: 'บูตแบบปลอดภัย ไดรเวอร์น้อยแต่ใจใหญ่' },
-  { name: 'Individual', amount: 500.1, blurb: 'ผู้ใช้ทั่วไป ใจบุญ' },
+// Sponsorship packages for this year (in THB), numbered as on the call-for-sponsor poster (Tier 1 = Safe Mode … Tier 4 = System32).
+// Every tier ends in .10 because X.
+export const tiers: { name: SponsorTier; level: number; amount: number; blurb: string }[] = [
+  { name: 'System32', level: 4, amount: 50_000.1, blurb: 'ลบไม่ได้ ขาดไม่ได้' },
+  { name: 'Full Screen', level: 3, amount: 30_000.1, blurb: 'เต็มจอ เต็มใจ' },
+  { name: 'Normal Mode', level: 2, amount: 10_000.1, blurb: 'บูตปกติ ทำงานปกติ' },
+  { name: 'Safe Mode', level: 1, amount: 5_000.1, blurb: 'บูตแบบปลอดภัย ไดรเวอร์น้อยแต่ใจใหญ่' },
+  { name: 'Individual', level: 0, amount: 500.1, blurb: 'ผู้ใช้ทั่วไป ใจบุญ' },
 ];
 
 export const tierOrder: SponsorTier[] = ['Venue', 'System32', 'Full Screen', 'Normal Mode', 'Corporate', 'Partner', 'Safe Mode', 'Individual'];
