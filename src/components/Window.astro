@@ -20,7 +20,6 @@ if (!def) throw new Error(`Unknown window id: ${id}`);
   id={`win-${id}`}
   data-window={id}
   data-title={def.title}
-  data-glyph={def.glyph}
   data-label={def.label}
   data-inactive
   hidden={!def.open}
@@ -57,7 +56,7 @@ if (!def) throw new Error(`Unknown window id: ${id}`);
   {status && (
     <footer class="xp-statusbar">
       <div>{status}</div>
-      <div>🖥️ My Computer</div>
+      <div class="flex items-center gap-1"><Icon name="desktop" class="mono" /> My Computer</div>
     </footer>
   )}
   {!dialog && ['n', 's', 'e', 'w', 'ne', 'nw', 'sw', 'se'].map((d) => <div class="xp-resize" data-resize={d} aria-hidden="true"></div>)}

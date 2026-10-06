@@ -1,18 +1,19 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 
 // 2000s-era looks. The chips (phones) and the Effects grid (computers) are built from this list; rendering
 // lives in the <script> below under the same ids. The order is the 3×3 Effects grid, Normal in the centre.
 const filters = [
-  { id: 'webcam', glyph: '🖥️', name: "Webcam '03", hint: 'MSN Messenger quality' },
-  { id: 'camphone', glyph: '📱', name: 'Cam Phone', hint: '0.3 megapixel + date stamp' },
-  { id: 'camcorder', glyph: '📼', name: 'Camcorder', hint: 'Hi8 · REC ●' },
-  { id: 'lomo', glyph: '🎞️', name: 'Lomo', hint: 'vignette จัดเต็ม' },
-  { id: 'normal', glyph: '🙂', name: 'Normal', hint: 'ธรรมดา ไม่โง่' },
-  { id: 'sepia', glyph: '🟤', name: 'Old Photo', hint: 'ซีเปีย + เกรน' },
-  { id: 'aero', glyph: '🫧', name: 'Frutiger Aero', hint: 'glossy · bubbles · sky' },
-  { id: 'nokia', glyph: '📟', name: 'Nokia 3310', hint: '84×48 · 1-bit' },
-  { id: 'nightshot', glyph: '🌙', name: 'NightShot', hint: 'เขียว ๆ แบบ Handycam' },
+  { id: 'webcam', name: "Webcam '03", hint: 'MSN Messenger quality' },
+  { id: 'camphone', name: 'Cam Phone', hint: '0.3 megapixel + date stamp' },
+  { id: 'camcorder', name: 'Camcorder', hint: 'Hi8 · REC ●' },
+  { id: 'lomo', name: 'Lomo', hint: 'vignette จัดเต็ม' },
+  { id: 'normal', name: 'Normal', hint: 'ธรรมดา ไม่โง่' },
+  { id: 'sepia', name: 'Old Photo', hint: 'ซีเปีย + เกรน' },
+  { id: 'aero', name: 'Frutiger Aero', hint: 'glossy · bubbles · sky' },
+  { id: 'nokia', name: 'Nokia 3310', hint: '84×48 · 1-bit' },
+  { id: 'nightshot', name: 'NightShot', hint: 'เขียว ๆ แบบ Handycam' },
 ];
 ---
 
@@ -55,7 +56,7 @@ const filters = [
           <button type="button" data-cam="next" aria-label="Next">›</button>
         </div>
         <div class="cam-off" id="cam-off">
-          <div class="text-5xl" aria-hidden="true">📷</div>
+          <Icon name="camera" class="text-5xl" />
           <p class="font-bold text-sm">Stupid Photo Booth</p>
           <p class="cam-msg" id="cam-message">ถ่ายรูปและอัดวิดีโอด้วยกล้องจริง พร้อม filter ยุค 2000s · ไฟล์อยู่ในเครื่องคุณเท่านั้น ไม่ถูกส่งไปไหน</p>
           <button type="button" class="xp-btn default" data-cam="start">▶ เปิดกล้อง</button>
@@ -108,9 +109,9 @@ const filters = [
     <!-- Review controls -->
     <div class="cam-reviewbar" id="cam-reviewbar" hidden>
       <button type="button" class="xp-btn" data-cam="back">‹ กลับ</button>
-      <button type="button" class="xp-btn" data-cam="delete">🗑️ ลบ</button>
-      <button type="button" class="xp-btn" data-cam="share" id="cam-share" hidden>📤 Share</button>
-      <a class="xp-btn default" id="cam-save" download="shtX-photo.jpg" href="#">💾 Save</a>
+      <button type="button" class="xp-btn" data-cam="delete"><Icon name="recycle" /> ลบ</button>
+      <button type="button" class="xp-btn" data-cam="share" id="cam-share" hidden><Icon name="share" class="mono" /> Share</button>
+      <a class="xp-btn default" id="cam-save" download="shtX-photo.jpg" href="#"><Icon name="save" /> Save</a>
       <p class="cam-hint" id="cam-hint" hidden>iPhone/iPad: Save จะเปิด share sheet ให้เลือก “Save Image / Save Video” เพื่อเก็บลง Photos</p>
     </div>
 
@@ -154,7 +155,7 @@ const filters = [
       linear-gradient(180deg, transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)); }
   .cam-focus { position: absolute; width: 72px; height: 72px; margin: -36px 0 0 -36px; border: 1.5px solid #ffd60a; pointer-events: none; animation: cam-focus 1.4s ease-out forwards; }
   .cam-focus[hidden] { display: none; }
-  .cam-focus::after { content: "☀"; position: absolute; right: -22px; top: 50%; color: #ffd60a; font-size: 14px; line-height: 0; }
+  .cam-focus::after { content: ""; position: absolute; right: -24px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='4' fill='%23ffd60a'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1' stroke='%23ffd60a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
   @keyframes cam-focus { from { transform: scale(1.4); opacity: 0; } 15% { opacity: 1; } 60% { transform: scale(1); opacity: 1; } to { transform: scale(1); opacity: 0; } }
   .cam-effects[hidden] { display: none; }
   .cam-effect { position: relative; overflow: hidden; background: #111; }

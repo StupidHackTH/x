@@ -1,5 +1,6 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { event, venue } from '../../data/event';
 import { funding } from '../../data/funding';
 // The sidebar is blue, so the main sponsor gets the white wordmark (the brand pack's choice for blue backgrounds)
@@ -39,10 +40,10 @@ import { asset } from '../../lib/asset';
         </tbody>
       </table>
       <div class="flex flex-wrap gap-2">
-        <button type="button" class="xp-btn default" data-open="register">🎟️ ลงทะเบียน</button>
-        <button type="button" class="xp-btn" data-open="venue">🗺️ Venue</button>
-        <button type="button" class="xp-btn" data-open="schedule">📅 Agenda</button>
-        <button type="button" class="xp-btn" data-open="funding">💰 Funding</button>
+        <button type="button" class="xp-btn default" data-open="register"><Icon name="register" /> ลงทะเบียน</button>
+        <button type="button" class="xp-btn" data-open="venue"><Icon name="venue" /> Venue</button>
+        <button type="button" class="xp-btn" data-open="schedule"><Icon name="schedule" /> Agenda</button>
+        <button type="button" class="xp-btn" data-open="funding"><Icon name="funding" /> Funding</button>
       </div>
       <p class="text-[10px] text-neutral-500 mt-4">
         ดูงานครั้งที่แล้วได้ที่ <a href={event.links.previous} target="_blank" rel="noopener">stupid.hackathon.in.th/9</a>

@@ -1,5 +1,6 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { staff, staffGroups } from '../../data/event';
 import { asset } from '../../lib/asset';
 const wiki = (u: string) => `https://creatorsgarten.org/wiki/People/${u}`;
@@ -9,7 +10,7 @@ const members = staff.filter((s) => s.wiki).length;
 <Window id="staff" menu={['File', 'Edit', 'View', 'Help']} status={`${staff.length} users · ${members} Creatorsgarten members`}>
   <div class="p-3 staff-wrap">
     <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-      <h2 class="font-xp-title font-bold text-base text-[#0046d5]">EVENT STAFF · ทีมงานแห่งความเพี้ยน 🎭</h2>
+      <h2 class="font-xp-title font-bold text-base text-[#0046d5]"><span class="flex items-center gap-2"><Icon name="staff" class="text-xl" /> EVENT STAFF · ทีมงานแห่งความเพี้ยน</span></h2>
       <p class="text-[11px] text-neutral-600">User Accounts — pick an account to blame · การ์ดที่กดได้คือสมาชิก Creatorsgarten</p>
     </div>
     {staffGroups.map((g) => {

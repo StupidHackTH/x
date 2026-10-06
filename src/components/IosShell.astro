@@ -8,11 +8,11 @@ import { asset } from '../lib/asset';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 
-const tiles: Record<string, { bg: string; glyph?: string }> = {
+const tiles: Record<string, { bg: string }> = {
   about: { bg: 'linear-gradient(180deg,#6fb6ff,#1d5fd6)' },
   register: { bg: 'linear-gradient(180deg,#7ee07a,#1e8f2a)' },
   schedule: { bg: '#fff' },
-  venue: { bg: 'linear-gradient(180deg,#9fd8ff 0%,#5aa9e6 55%,#7cc46b 56%,#4a9a3c 100%)', glyph: '📍' },
+  venue: { bg: 'linear-gradient(180deg,#9fd8ff 0%,#5aa9e6 55%,#7cc46b 56%,#4a9a3c 100%)' },
   funding: { bg: 'linear-gradient(180deg,#ffe27a,#d99a00)' },
   sponsors: { bg: 'linear-gradient(180deg,#ffb37a,#d9581a)' },
   staff: { bg: 'linear-gradient(180deg,#c9b39a,#7d5b3c)' },
@@ -46,7 +46,7 @@ const eventDay = 10;
       <img src={asset('logo-transparent.png')} alt={`${event.name} logo`} />
       <div class="note">
         <b>{event.name}</b> · {event.datesEn}<br />
-        💰 Funding goal {fundingPercent}% reached
+        <Icon name="funding" /> Funding goal {fundingPercent}% reached
       </div>
     </div>
     <div class="ios-lock-bottom">

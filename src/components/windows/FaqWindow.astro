@@ -1,12 +1,13 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { faq, codeOfConduct } from '../../data/event';
 ---
 
 <Window id="faq" menu={['File', 'Edit', 'View', 'Help']} status="Help and Support Center" beige>
   <div class="h-full flex flex-col">
     <div class="bg-gradient-to-r from-[#1c5fd5] to-[#6fa4f2] text-white px-4 py-2 font-xp-title font-bold text-base">
-      ❓ Help and Support Center
+      <span class="flex items-center gap-2"><Icon name="faq" class="text-xl" /> Help and Support Center</span>
       <div class="text-[10px] font-normal opacity-90">Search results for: "stupid"</div>
     </div>
     <div class="p-3 overflow-auto flex flex-col gap-2 bg-white flex-1">
@@ -21,16 +22,16 @@ import { faq, codeOfConduct } from '../../data/event';
       <h3 class="font-bold text-[12px] text-[#0046d5] mt-3">CODE OF CONDUCT</h3>
       <div class="grid sm:grid-cols-2 gap-2 text-[12px]">
         <fieldset class="xp-groupbox mt-0">
-          <legend>✅ สนับสนุน</legend>
+          <legend class="flex items-center gap-1"><Icon name="check" /> สนับสนุน</legend>
           <ul class="list-disc pl-4">{codeOfConduct.encouraged.map((x) => <li>{x}</li>)}</ul>
         </fieldset>
         <fieldset class="xp-groupbox mt-0">
-          <legend>⛔ ห้าม</legend>
+          <legend class="flex items-center gap-1"><Icon name="no" /> ห้าม</legend>
           <ul class="list-disc pl-4">{codeOfConduct.prohibited.map((x) => <li>{x}</li>)}</ul>
         </fieldset>
       </div>
       <p class="text-[11px] text-neutral-600">{codeOfConduct.note}</p>
-      <div><button type="button" class="xp-btn default" data-open="conduct">🛡️ อ่าน Code of Conduct ฉบับเต็ม</button></div>
+      <div><button type="button" class="xp-btn default" data-open="conduct"><Icon name="conduct" /> อ่าน Code of Conduct ฉบับเต็ม</button></div>
       <p class="text-[10px] text-neutral-500 mt-2">Was this information helpful? <a href="#">Yes</a> · <a href="#">Yes</a></p>
     </div>
   </div>

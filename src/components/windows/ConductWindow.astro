@@ -30,7 +30,7 @@ const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
       <h3 class={h}>4. สิ่งที่ห้าม</h3>
       {coc.zeroTolerance.map((g) => (
         <fieldset class="xp-groupbox mt-1">
-          <legend>⛔ {g.title}</legend>
+          <legend class="flex items-center gap-1"><Icon name="no" /> {g.title}</legend>
           <ul class={ul}>{g.items.map((x) => <li>{x}</li>)}</ul>
         </fieldset>
       ))}
@@ -76,7 +76,7 @@ const ul = 'list-disc pl-5 text-[12px] leading-relaxed flex flex-col gap-0.5';
       </p>
 
       <div class="flex flex-wrap justify-end gap-2 mt-3">
-        <a class="xp-btn default" href={coc.reporting.url} target="_blank" rel="noopener">💬 ทักเพจ Creatorsgarten</a>
+        <a class="xp-btn default" href={coc.reporting.url} target="_blank" rel="noopener"><Icon name="facebook" /> ทักเพจ Creatorsgarten</a>
         <button type="button" class="xp-btn" data-open="faq">FAQ</button>
         <button type="button" class="xp-btn" data-action="close">Close</button>
       </div>

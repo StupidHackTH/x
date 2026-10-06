@@ -88,6 +88,11 @@
   .xp-title-icon .icon { width: 16px; height: 16px; }
   .xp-quicklaunch .icon, .xp-tray-icon .icon { width: 16px; height: 16px; }
   .xp-balloon .icon { width: 16px; height: 16px; }
+  .xp-btn .icon { width: 14px; height: 14px; }
+  .xp-groupbox > legend .icon { width: 13px; height: 13px; }
+  .xp-statusbar .icon { width: 12px; height: 12px; }
+  .xp-startmenu-footer .icon { width: 13px; height: 13px; }
+  .xp-sunken .icon { width: 13px; height: 13px; }
   .ios-app-icon .tile > .icon { position: relative; z-index: 1; width: 40px; height: 40px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
   .ios-app-icon .tile > .icon.fill { width: 57px; height: 57px; }
   .ios-tabbar .tab-icon { width: 22px; height: 22px; color: #8e8e93; filter: grayscale(1) brightness(1.4); }

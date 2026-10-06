@@ -1,5 +1,6 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { pastEditions } from '../../data/event';
 ---
 
@@ -16,13 +17,13 @@ import { pastEditions } from '../../data/event';
             rel="noopener"
             title={p.note}
           >
-            <span class="text-3xl" aria-hidden="true">📁</span>
+            <Icon name="folder" class="text-3xl shrink-0" />
             <span>SHT{p.edition}<br /><span class="opacity-70">{p.year}</span></span>
           </a>
         </li>
       ))}
     </ul>
-    <p class="text-[11px] mt-3">⭐ SHT9 (2025) ได้ rating สูงสุด 9.4/10 — <a href="https://stupid.hackathon.in.th/9/" target="_blank" rel="noopener">ดูผลงาน</a></p>
+    <p class="text-[11px] mt-3 flex items-center gap-1"><Icon name="star" /> SHT9 (2025) ได้ rating สูงสุด 9.4/10 — <a href="https://stupid.hackathon.in.th/9/" target="_blank" rel="noopener">ดูผลงาน</a></p>
     <div class="mt-3 flex justify-end">
       <button type="button" class="xp-btn" data-action="close">Empty Recycle Bin</button>
     </div>

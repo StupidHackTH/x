@@ -1,5 +1,6 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { funding, fundingPercent, formatTHB, tiers } from '../../data/funding';
 import { event } from '../../data/event';
 const remaining = Math.max(0, funding.goal - funding.raised);
@@ -11,7 +12,7 @@ const daysLeft = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.no
 <Window id="funding" status={`Last updated ${new Date(funding.updatedAt).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' })}${funding.mock ? ' (ประมาณการ)' : ''}`} beige>
   <div class="p-3 flex flex-col gap-3 h-full overflow-auto">
     <div class="flex items-start gap-3">
-      <span class="text-4xl leading-none" aria-hidden="true">💰</span>
+      <Icon name="funding" class="text-4xl shrink-0" />
       <div>
         <div class="font-bold text-sm">Copying money to {event.codename}…</div>
         <div class="text-[11px] text-neutral-600">From: Sponsors &nbsp;·&nbsp; To: Venue, อาหาร, ของรางวัล, สติกเกอร์</div>
@@ -70,7 +71,7 @@ const daysLeft = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.no
     </fieldset>
 
     <div class="flex justify-end gap-2 mt-auto">
-      <a class="xp-btn default" href={event.links.sponsor} target="_blank" rel="noopener">💸 Sponsor us</a>
+      <a class="xp-btn default" href={event.links.sponsor} target="_blank" rel="noopener"><Icon name="funding" /> Sponsor us</a>
       <button type="button" class="xp-btn" data-open="sponsors">View sponsors</button>
       <button type="button" class="xp-btn" data-action="close">Cancel</button>
     </div>

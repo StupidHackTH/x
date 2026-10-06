@@ -1,5 +1,6 @@
 ---
 import Window from '../Window.astro';
+import Icon from '../Icon.astro';
 import { event } from '../../data/event';
 const reg = event.registration;
 ---
@@ -8,7 +9,7 @@ const reg = event.registration;
   <div class="h-full flex flex-col">
     <div class="flex items-center gap-1 px-1 py-1 border-b border-[#fff] bg-xp-beige text-[11px]">
       <span class="px-1">Address</span>
-      <div class="xp-sunken flex-1 px-1 py-0.5 truncate">🌐 {reg.url || 'https://www.eventpop.me/e/…  (TBD)'}</div>
+      <div class="xp-sunken flex-1 px-1 py-0.5 truncate"><Icon name="website" /> {reg.url || 'https://www.eventpop.me/e/…  (TBD)'}</div>
       {reg.url ? (
         <a class="xp-btn min-w-0 px-2" href={reg.url} target="_blank" rel="noopener">Go</a>
       ) : (
@@ -21,7 +22,7 @@ const reg = event.registration;
     <div class="p-4 bg-white flex-1 overflow-auto flex flex-col gap-3">
       <h2 class="font-xp-title font-bold text-lg text-[#0046d5]">REGISTRATION</h2>
       <div class="flex items-start gap-3 bg-[#fff8dc] border border-[#e0c060] p-2 text-[12px]">
-        <span class="text-2xl leading-none" aria-hidden="true">⚠️</span>
+        <Icon name="warning" class="text-2xl shrink-0" />
         <div><b>{reg.note}</b><br />เว็บนี้เป็นแค่หน้าประกาศ ปุ่มลงทะเบียนด้านล่างจะพาไป Eventpop เมื่อลิงก์พร้อม</div>
       </div>
       <table class="text-[12px]">
@@ -37,12 +38,12 @@ const reg = event.registration;
       <p class="text-[11px]">การลงทะเบียนถือว่ายอมรับ <button type="button" class="underline text-xp-link" data-open="conduct">Code of Conduct</button> ของงาน</p>
       <div class="flex flex-wrap justify-end gap-2 mt-auto">
         {reg.url ? (
-          <a class="xp-btn default" href={reg.url} target="_blank" rel="noopener">🎟️ ไป Eventpop</a>
+          <a class="xp-btn default" href={reg.url} target="_blank" rel="noopener"><Icon name="register" /> ไป Eventpop</a>
         ) : (
-          <button type="button" class="xp-btn default" data-action="fake-register">🎟️ ไป Eventpop</button>
+          <button type="button" class="xp-btn default" data-action="fake-register"><Icon name="register" /> ไป Eventpop</button>
         )}
-        <a class="xp-btn" href={event.links.facebook} target="_blank" rel="noopener">📘 Facebook</a>
-        <a class="xp-btn" href={event.links.discord} target="_blank" rel="noopener">💬 Discord</a>
+        <a class="xp-btn" href={event.links.facebook} target="_blank" rel="noopener"><Icon name="facebook" /> Facebook</a>
+        <a class="xp-btn" href={event.links.discord} target="_blank" rel="noopener"><Icon name="discord" /> Discord</a>
         <button type="button" class="xp-btn" data-action="close">Cancel</button>
       </div>
     </div>
