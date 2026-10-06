@@ -244,11 +244,12 @@ export const faq = [
 // Roles come from the staff form (Oct 2026). `handle` is optional. `wiki` is the person's username on
 // creatorsgarten.org/wiki/People (the Staff window links there); `fullName` and `photo` (public/staff/<wiki>.jpg,
 // 160px copies) were fetched from that profile.
-export type StaffGroup = 'advisor' | 'lead' | 'staff';
+export type StaffGroup = 'advisor' | 'organizer' | 'lead' | 'staff';
 export interface StaffMember { name: string; handle?: string; role: string; group: StaffGroup; wiki?: string; fullName?: string; photo?: string }
 export const staffGroups: { id: StaffGroup; title: string; blurb: string }[] = [
   { id: 'advisor', title: 'Advisors', blurb: 'ที่ปรึกษา · คนที่คอยบอกว่าโง่ยังไม่พอ' },
-  { id: 'lead', title: 'Leads', blurb: 'หัวหน้าฝ่าย · คนที่โดนตามตอนตีสาม' },
+  { id: 'organizer', title: 'Organizer', blurb: 'หัวหน้างาน · คนที่ตามคนอื่นตอนตีสาม' },
+  { id: 'lead', title: 'Leads', blurb: 'หัวหน้าฝ่าย · คนที่โดนตามตอนตีสาม และทำให้งานเกิดขึ้นจริง' },
   { id: 'staff', title: 'Staff', blurb: 'ทีมงาน · คนที่ทำให้งานเกิดขึ้นจริง' },
 ];
 export const staff: StaffMember[] = [
@@ -256,8 +257,9 @@ export const staff: StaffMember[] = [
   { name: 'ไท', handle: 'dtinth', role: 'Advisor', group: 'advisor', wiki: 'dtinth', fullName: 'Thai Pangsakulyanont', photo: 'dtinth.jpg' },
   { name: 'Riffy', handle: 'rayriffy', role: 'Advisor', group: 'advisor', wiki: 'rayriffy', fullName: 'Phumrapee Limpianchop', photo: 'rayriffy.jpg' },
   { name: 'Poom', handle: 'poom', role: 'Advisor', group: 'advisor', wiki: 'poom', fullName: 'Phoomparin Mano', photo: 'poom.jpg' },
+  // organizer
+  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', group: 'organizer', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
   // leads
-  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', group: 'lead', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
   { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', group: 'lead', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
   { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets', group: 'lead' },
   { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', group: 'lead', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
