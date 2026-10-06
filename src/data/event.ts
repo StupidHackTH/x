@@ -267,7 +267,7 @@ export const staff: StaffMember[] = [
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
   { name: 'นีโม่', role: 'Finance', group: 'staff' },
   { name: 'Opec', handle: 'opecgame', role: 'Runner', group: 'staff', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
-  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic', group: 'staff' },
+  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic lead', group: 'lead' },
   { name: 'นีน่า', role: 'Swag', group: 'staff' },
   { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', group: 'staff', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
   { name: 'Nac', role: 'Challenge', group: 'staff', wiki: 'nacnano', fullName: 'Chotpisit Adunsehawat', photo: 'nacnano.jpg' },
