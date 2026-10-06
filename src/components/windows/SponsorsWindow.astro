@@ -2,7 +2,10 @@
 import Window from '../Window.astro';
 import { funding, tierOrder } from '../../data/funding';
 import { event } from '../../data/event';
+import { asset } from '../../lib/asset';
 const sorted = [...funding.sponsors].sort((a, b) => Number(!!a.pending) - Number(!!b.pending) || tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier));
+// Main sponsor block: white panel with generous padding, because the lime Drawdy wordmark needs a light ground and clear space (brand pack).
+const main = funding.sponsors.find((s) => s.main && s.logo);
 const tierColor: Record<string, string> = {
   Venue: 'bg-[#b5e3ff]',
   System32: 'bg-[#1e3a8a] text-white',
@@ -17,6 +20,16 @@ const tierColor: Record<string, string> = {
 
 <Window id="sponsors" menu={['File', 'Edit', 'View', 'Favorites', 'Tools', 'Help']} status={`${funding.sponsors.length} objects`}>
   <div class="p-2">
+    {main && (
+      <div class="bg-white border border-[#d8d2bd] px-6 py-5 mb-2 text-center">
+        <div class="text-[10px] text-neutral-500 uppercase tracking-widest mb-3">Main sponsor</div>
+        {main.url ? (
+          <a href={main.url} target="_blank" rel="noopener"><img src={asset(`sponsors/${main.logo}`)} alt={main.name} class="mx-auto h-12 w-auto" /></a>
+        ) : (
+          <img src={asset(`sponsors/${main.logo}`)} alt={main.name} class="mx-auto h-12 w-auto" />
+        )}
+      </div>
+    )}
     <div class="bg-[#eef3fb] border border-[#bcd0ec] p-2 mb-2 text-[11px]">
       ขอบคุณสปอนเซอร์ทุกท่านที่ทำให้งานฟรีสำหรับผู้เข้าร่วม 🙏 อยากมีชื่ออยู่ตรงนี้ → ดู tier ในหน้าต่าง Funding Goal
     </div>
@@ -32,8 +45,18 @@ const tierColor: Record<string, string> = {
         {sorted.map((s) => (
           <tr class:list={['hover:bg-[#316ac5] hover:text-white', { 'text-neutral-400': s.pending }]}>
             <td class="px-2 py-1">
-              🏢 {s.url ? <a href={s.url} target="_blank" rel="noopener" class="text-inherit">{s.name}</a> : s.name}
-              {s.message && <div class="text-[10px] italic opacity-80 pl-5">“{s.message}”</div>}
+              <div class="flex items-center gap-2">
+                {s.logo ? (
+                  <img src={asset(`sponsors/${s.logo}`)} alt="" class="w-7 h-7 shrink-0 object-contain rounded-sm bg-white border border-[#d8d2bd]" />
+                ) : (
+                  <svg class="icon w-7 h-7 shrink-0" aria-hidden="true"><use href={s.tier === 'Individual' ? '#i-staff' : '#i-about'} /></svg>
+                )}
+                <div>
+                  {s.url ? <a href={s.url} target="_blank" rel="noopener" class="text-inherit">{s.name}</a> : s.name}
+                  {s.main && <span class="ml-1 px-1 rounded-sm text-[9px] bg-[#b3e000] text-black">MAIN</span>}
+                  {s.message && <div class="text-[10px] italic opacity-80">“{s.message}”</div>}
+                </div>
+              </div>
             </td>
             <td class="px-2 py-1"><span class:list={['px-1.5 rounded-sm text-[10px] text-black', tierColor[s.tier]]}>{s.tier}</span></td>
             <td class="px-2 py-1 text-[11px]">{s.tier === 'Venue' ? 'สถานที่' : s.tier === 'Individual' ? 'บุคคล' : 'องค์กร'}</td>

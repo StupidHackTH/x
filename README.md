@@ -19,7 +19,7 @@ npm run preview
 
 ## How it works
 
-- `src/data/funding.ts` — sponsor tiers, sponsor list and the goal/raised/backers figures. Set `mock: true` while numbers are provisional to show an "estimate" notice in the Funding window. The boot screen, funding window, tray icon and balloon tip all read from it.
+- `src/data/funding.ts` — sponsor tiers and the sponsor ledger; `raised` and `backers` are computed from it. A sponsor's `logo` names a file in `public/sponsors/` (web-sized copies of what they sent through the sponsor form; never upload bank slips), `main: true` puts the logo on top of the Sponsors window and in the About sidebar. Set `mock: true` while numbers are provisional to show an "estimate" notice in the Funding window. The boot screen, funding window, tray icon and balloon tip all read from it.
 - `src/data/event.ts` — event basics, registration info, links, about text, venue + directions, nearby public showers for the overnight stay, draft agenda, what to bring, the full code of conduct (shown in its own Code of Conduct window and summarized in FAQ; reports go to the Creatorsgarten Facebook page), FAQ, staff, past editions. Anything unconfirmed is marked TBD.
 - `src/data/windows.ts` — registry of desktop windows (title, icon, default position/size).
 - `src/components/Icons.astro` — one SVG sprite of glossy 2000s-style icons used by every shell (`<Icon name="…" />` from `Icon.astro`); the window id doubles as the icon name. The sprite is hidden with zero size, not `display: none`, because browsers otherwise drop its gradients.

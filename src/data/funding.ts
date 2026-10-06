@@ -8,6 +8,8 @@ export interface Sponsor {
   tier: SponsorTier;
   amount?: number; // THB received; omitted for in-kind support
   url?: string;
+  logo?: string; // file in public/sponsors/ (from the sponsor form; bank slips are NOT logos, leave those out)
+  main?: boolean; // the main sponsor: big logo on top of the Sponsors window and in the About sidebar
   message?: string; // a line the sponsor asked us to print
   pending?: boolean;
 }
@@ -33,18 +35,20 @@ export const funding: Funding = {
     return this.sponsors.length;
   },
   deadline: '2026-10-10',
-  updatedAt: '2026-10-01T19:30:00+07:00',
+  updatedAt: '2026-10-06T16:30:00+07:00',
   mock: false,
   sponsors: [
     { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com' },
-    { name: 'Drawdy', tier: 'System32', amount: 55_000.1 },
+    { name: 'Drawdy', tier: 'System32', amount: 55_000.1, url: 'https://drawdy.io', logo: 'drawdy.png', main: true },
     { name: 'ShakeSphere', tier: 'Normal Mode', amount: 15_000 },
-    { name: 'DEV Forward Co., Ltd.', tier: 'Corporate', amount: 5_000.1 },
+    { name: 'DEV Forward Co., Ltd.', tier: 'Corporate', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
     { name: 'PaxaLabs', tier: 'Partner' },
-    { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67 },
-    { name: 'Bier', tier: 'Individual', amount: 1_669, message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
-    { name: 'Minori414', tier: 'Individual', amount: 862.07 },
-    { name: 'Sasi Chanplakorn', tier: 'Individual', amount: 500.11 },
+    { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67, url: 'https://plengrai.gamepleng.com/', logo: 'gamepleng.jpg', message: 'เกมเพลงไร เปิดวันเดียวกับวันงานเลย' },
+    // Bier's submitted image is a Sony Music album cover, not his own artwork, so no logo
+    { name: 'Bier', tier: 'Individual', amount: 1_669, url: 'https://yuttakhanb.dev', message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
+    { name: 'SarunInt', tier: 'Individual', amount: 1_013.25 },
+    { name: 'Minori414', tier: 'Individual', amount: 862.07, message: 'ปีนี้ไม่สะดวกไป ขอส่งใจไปแทนละกัน' },
+    { name: 'Sasi Chanplakorn', tier: 'Individual', amount: 500.11, url: 'https://mindsch.github.io', logo: 'sasi.jpg', message: 'กดบัตรไม่ทันอีกแล้ว ฮือ สปอนทีมนะ ขอบคุณที่จัดอีเว้นสุดจะเริ่ด <3' },
     { name: 'ครอบครัวนิมมานนรวงศ์', tier: 'Individual', amount: 500.01 },
   ],
 };

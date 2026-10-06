@@ -1,6 +1,9 @@
 ---
 import Window from '../Window.astro';
 import { event, venue } from '../../data/event';
+import { funding } from '../../data/funding';
+// The sidebar is blue, so the main sponsor gets the white wordmark (the brand pack's choice for blue backgrounds)
+const main = funding.sponsors.find((s) => s.main && s.logo);
 import { asset } from '../../lib/asset';
 ---
 
@@ -15,6 +18,12 @@ import { asset } from '../../lib/asset';
       <div class="text-[10px] opacity-90 text-center mt-auto leading-relaxed">
         จัดโดย {event.organizer}<br />ตั้งแต่ปี {event.since}
       </div>
+      {main && (
+        <div class="text-center text-[10px] opacity-90">
+          <div class="mb-1">Main sponsor</div>
+          <img src={asset('sponsors/drawdy-white.png')} alt={main.name} class="w-28 mx-auto" />
+        </div>
+      )}
     </div>
     <div class="flex-1 p-4 bg-white overflow-auto">
       <h1 class="font-xp-title font-bold text-xl text-[#0046d5] mb-1">WHAT IS STUPID HACK</h1>
