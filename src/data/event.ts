@@ -276,7 +276,7 @@ export const staff: StaffMember[] = [
   { name: 'บีบี', role: 'OB', group: 'staff', wiki: 'siravijbb', fullName: 'Siravij Praevisavakij', photo: 'siravijbb.jpg' },
   { name: 'Neo', handle: 'ne0negi', role: 'Staff', group: 'staff' },
   { name: 'Uddy', handle: 'wasinuddy', role: 'Staff', group: 'staff' },
-  { name: 'โฟล์ค', role: 'Staff', group: 'staff' },
+  { name: 'โฟล์ค', role: 'Staff', group: 'staff', photo: 'folk.jpg' },
   { name: 'นรภัทร', role: 'Staff', group: 'staff' },
 ];
 
