@@ -277,7 +277,7 @@ export const staff: StaffMember[] = [
   { name: 'Neo', handle: 'ne0negi', role: 'Staff', group: 'staff' },
   { name: 'Uddy', handle: 'wasinuddy', role: 'Staff', group: 'staff' },
   { name: 'Folkiesss', role: 'Staff', group: 'staff', photo: 'folk.jpg' },
-  { name: 'นรภัทร', role: 'Staff', group: 'staff' },
+  { name: 'นรภัทร', role: 'Staff', group: 'staff', photo: 'norraphat.jpg' },
 ];
 
 export const pastEditions = [

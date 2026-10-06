@@ -127,6 +127,18 @@ Endpoints: `GET /api/state`, `GET|POST /api/nodes`, `GET /api/nodes/:mac/links`,
 `WS /api/live`, `POST /api/reset?token=…` (admin). Point the site at it with the build variable `PUBLIC_SHTX_NET_API`
 (GitHub Pages reads the repository variable `SHTX_NET_API`) or at runtime with `?api=https://host` (saved in `localStorage`).
 
+Production HTTPS without touching ports 80/443 (they belong to another container on the box): a Tailscale sidecar that
+shares the API container's network and publishes it with Funnel. Needs an auth key from the tailnet admin and the
+`funnel` node attribute approved once:
+
+```
+docker run -d --name ts-shtx-net --restart unless-stopped --network container:shtx-net \
+  -e TS_AUTHKEY=tskey-auth-… -e TS_HOSTNAME=shtx-net -e TS_STATE_DIR=/var/lib/tailscale \
+  -e TS_SERVE_CONFIG=/config/serve.json -v ts-shtx-net:/var/lib/tailscale \
+  -v $PWD/tailscale-serve.json:/config/serve.json:ro tailscale/tailscale:latest
+# → https://shtx-net.<tailnet>.ts.net  (set it as SHTX_NET_API)
+```
+
 ### How 60 people play
 
 Everyone runs the wizard in parallel (2–3 min, no audio). Then free roam: find someone you don't know, both tap *Start
