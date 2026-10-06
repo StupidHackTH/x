@@ -40,7 +40,7 @@ export const funding: Funding = {
   sponsors: [
     { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com', logo: 'cleverse.svg' },
     { name: 'Drawdy', tier: 'System32', amount: 55_000.1, url: 'https://drawdy.io', logo: 'drawdy.png', main: true },
-    { name: 'ShakeSphere', tier: 'Normal Mode', amount: 15_000 },
+    { name: 'ShakeSphere', tier: 'Normal Mode', amount: 15_000, logo: 'shakesphere.png' },
     { name: 'DEV Forward Co., Ltd.', tier: 'Safe Mode', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
     { name: 'PaxaLabs', tier: 'Partner' },
     { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67, url: 'https://plengrai.gamepleng.com/', logo: 'gamepleng.jpg', message: 'เกมเพลงไร เปิดวันเดียวกับวันงานเลย' },
