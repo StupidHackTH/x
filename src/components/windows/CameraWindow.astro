@@ -1210,15 +1210,18 @@ const filters = [
       const blob = await toBlob(c, look.png ? 'image/png' : 'image/jpeg', look.quality ?? 0.9);
       if (blob) addItem('image', blob, look.png ? 'png' : 'jpg');
     };
+    // Four pictures, Photo Booth style: a 3-2-1 countdown before every frame so people can change pose
     const takeBurst = async () => {
-      await countdown(3);
       const shots: HTMLCanvasElement[] = [];
       for (let i = 0; i < 4; i++) {
+        showNote(`ภาพที่ ${i + 1} / 4`);
+        await countdown(3);
         shots.push(snapshot());
         flashBang();
         shutterSound();
-        if (i < 3) await sleep(700);
+        if (i < 3) await sleep(900);
       }
+      note.hidden = true;
       const W = canvas.width;
       const H = canvas.height;
       const comp = document.createElement('canvas');
