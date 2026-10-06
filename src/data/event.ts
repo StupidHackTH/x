@@ -240,17 +240,26 @@ export const faq = [
   { q: 'อยากสปอนเซอร์', a: 'เปิดหน้าต่าง Funding Goal หรือ Sponsors เพื่อดู tier แล้วติดต่อทีมงานได้เลย' },
 ];
 
-export const staff = [
+// Staff. Roles come from the staff form (Oct 2026); `handle` is optional (not everyone gave one).
+export const staff: { name: string; handle?: string; role: string }[] = [
   { name: 'พีม', handle: 'peamz4', role: 'Lead organizer' },
   { name: 'ไท', handle: 'dtinth', role: 'Advisor' },
   { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue' },
-  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge' },
-  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead' },
+  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets' },
+  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food' },
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance' },
+  { name: 'นีโม่', role: 'Finance' },
   { name: 'Opec', handle: 'opecgame', role: 'Runner' },
   { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic' },
+  { name: 'นีน่า', role: 'Swag' },
+  { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ' },
+  { name: 'Nac', role: 'Challenge' },
+  { name: 'Juk', role: 'OB' },
+  { name: 'บีบี', role: 'OB' },
   { name: 'Neo', handle: 'ne0negi', role: 'Staff' },
   { name: 'Uddy', handle: 'wasinuddy', role: 'Staff' },
+  { name: 'โฟล์ค', role: 'Staff' },
+  { name: 'นรภัทร', role: 'Staff' },
 ];
 
 export const pastEditions = [

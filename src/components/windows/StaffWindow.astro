@@ -12,7 +12,7 @@ import { staff } from '../../data/event';
         <li class="flex items-center gap-2 p-1.5 border border-transparent hover:bg-[#316ac5] hover:text-white rounded-sm">
           <span class="w-9 h-9 flex items-center justify-center bg-gradient-to-b from-[#a4c8f0] to-[#5a8fd8] border border-white rounded text-lg" aria-hidden="true">👤</span>
           <span class="text-[12px] leading-tight">
-            <b>{s.name}</b> <span class="opacity-70">@{s.handle}</span><br />
+            <b>{s.name}</b> {s.handle && <span class="opacity-70">@{s.handle}</span>}<br />
             <span class="text-[11px]">{s.role}</span>
           </span>
         </li>
