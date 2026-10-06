@@ -127,7 +127,12 @@ Endpoints: `GET /api/state`, `GET|POST /api/nodes`, `GET /api/nodes/:mac/links`,
 `WS /api/live`, `POST /api/reset?token=…` (admin). Point the site at it with the build variable `PUBLIC_SHTX_NET_API`
 (GitHub Pages reads the repository variable `SHTX_NET_API`) or at runtime with `?api=https://host` (saved in `localStorage`).
 
-Production HTTPS without touching ports 80/443 (they belong to another container on the box): a Tailscale sidecar that
+Production (2026): the API runs on the venue box as container `shtx-net`, HTTPS on `https://82-26-104-114.sslip.io:8443` with a
+Let's Encrypt certificate (volume `shtx-certs`, issued by borrowing port 80 for a few seconds; renew before 2027-01 the same way:
+`docker stop oryx; docker run --rm -p 80:80 -v shtx-certs:/etc/letsencrypt certbot/certbot renew; docker start oryx`). The
+container reads `TLS_CERT`/`TLS_KEY` and serves the same app on `TLS_PORT` (default 8443) next to plain HTTP on 8787.
+
+Alternative without touching ports 80/443 at all: a Tailscale sidecar that
 shares the API container's network and publishes it with Funnel. Needs an auth key from the tailnet admin and the
 `funnel` node attribute approved once:
 

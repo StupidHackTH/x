@@ -6,6 +6,9 @@ import { cors } from '@elysiajs/cors';
 import { Database } from 'bun:sqlite';
 
 const PORT = Number(process.env.PORT ?? 8787);
+const TLS_PORT = Number(process.env.TLS_PORT ?? 8443);
+const TLS_CERT = process.env.TLS_CERT ?? ''; // with TLS_KEY: also serve HTTPS on TLS_PORT (e.g. a Let's Encrypt fullchain.pem)
+const TLS_KEY = process.env.TLS_KEY ?? '';
 const ADMIN = process.env.NET_ADMIN_TOKEN ?? '';
 const db = new Database(process.env.NET_DB ?? 'shtx-net.sqlite', { create: true });
 db.exec(`
@@ -176,3 +179,11 @@ const app = new Elysia()
   .listen(PORT);
 
 console.log(`SHTX-NET NOC server on http://localhost:${app.server?.port} (admin token ${ADMIN ? 'set' : 'NOT set: /api/reset and bsod disabled'})`);
+
+/* Same app on a second, TLS port when certificate files are given (the box has no free 80/443 for a reverse proxy) */
+if (TLS_CERT && TLS_KEY) {
+  if ((await Bun.file(TLS_CERT).exists()) && (await Bun.file(TLS_KEY).exists())) {
+    const tls = new Elysia().use(app).listen({ port: TLS_PORT, tls: { cert: Bun.file(TLS_CERT), key: Bun.file(TLS_KEY) } });
+    console.log(`…and https on port ${tls.server?.port}`);
+  } else console.log(`TLS files not found yet (${TLS_CERT}); serving plain http only. Restart after the certificate is issued.`);
+}
