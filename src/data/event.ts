@@ -240,22 +240,25 @@ export const faq = [
   { q: 'อยากสปอนเซอร์', a: 'เปิดหน้าต่าง Funding Goal หรือ Sponsors เพื่อดู tier แล้วติดต่อทีมงานได้เลย' },
 ];
 
-// Staff. Roles come from the staff form (Oct 2026); `handle` is optional (not everyone gave one).
-export const staff: { name: string; handle?: string; role: string }[] = [
-  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer' },
-  { name: 'ไท', handle: 'dtinth', role: 'Advisor' },
-  { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue' },
+// Staff. Roles come from the staff form (Oct 2026). `handle` is optional. `wiki` is the person's username on
+// creatorsgarten.org/wiki/People (the Staff window links there); `fullName` and `photo` (public/staff/<wiki>.jpg,
+// 160px copies) were fetched from that profile. Run scripts/… or redo by hand when the wiki changes.
+export interface StaffMember { name: string; handle?: string; role: string; wiki?: string; fullName?: string; photo?: string }
+export const staff: StaffMember[] = [
+  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
+  { name: 'ไท', handle: 'dtinth', role: 'Advisor', wiki: 'dtinth', fullName: 'Thai Pangsakulyanont', photo: 'dtinth.jpg' },
+  { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
   { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets' },
-  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food' },
+  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance' },
   { name: 'นีโม่', role: 'Finance' },
-  { name: 'Opec', handle: 'opecgame', role: 'Runner' },
+  { name: 'Opec', handle: 'opecgame', role: 'Runner', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
   { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic' },
   { name: 'นีน่า', role: 'Swag' },
-  { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ' },
-  { name: 'Nac', role: 'Challenge' },
-  { name: 'Juk', role: 'OB' },
-  { name: 'บีบี', role: 'OB' },
+  { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
+  { name: 'Nac', role: 'Challenge', wiki: 'nacnano', fullName: 'Chotpisit Adunsehawat', photo: 'nacnano.jpg' },
+  { name: 'Juk', role: 'OB', wiki: 'juk', fullName: 'Chukkrit Visitsaktavorn', photo: 'juk.jpg' },
+  { name: 'บีบี', role: 'OB', wiki: 'siravijbb', fullName: 'Siravij Praevisavakij', photo: 'siravijbb.jpg' },
   { name: 'Neo', handle: 'ne0negi', role: 'Staff' },
   { name: 'Uddy', handle: 'wasinuddy', role: 'Staff' },
   { name: 'โฟล์ค', role: 'Staff' },
