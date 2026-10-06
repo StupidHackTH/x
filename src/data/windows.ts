@@ -18,7 +18,7 @@ export const windows: WindowDef[] = [
   { id: 'venue', title: 'Venue - Cleverse', glyph: '🗺️', label: 'Venue', x: 240, y: 50, w: 600, h: 640 },
   { id: 'funding', title: 'Funding Goal Status', glyph: '💰', label: 'Funding Goal', x: 380, y: 100, w: 520, h: 500 },
   { id: 'sponsors', title: 'Sponsors', glyph: '🤝', label: 'Sponsors', x: 150, y: 30, w: 860, h: 700 },
-  { id: 'staff', title: 'Event Staff', glyph: '🎭', label: 'Staff', x: 320, y: 80, w: 480, h: 440 },
+  { id: 'staff', title: 'Event Staff', glyph: '🎭', label: 'Staff', x: 180, y: 40, w: 900, h: 680 },
   { id: 'faq', title: 'Help and Support Center', glyph: '❓', label: 'FAQ & Rules', x: 160, y: 60, w: 560, h: 480 },
   { id: 'conduct', title: 'Code of Conduct', glyph: '🛡️', label: 'Conduct', x: 230, y: 30, w: 600, h: 640 },
   { id: 'camera', title: 'Camera - Stupid Photo Booth', glyph: '📷', label: 'Camera', x: 280, y: 40, w: 560, h: 600 },

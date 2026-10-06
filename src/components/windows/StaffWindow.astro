@@ -3,34 +3,39 @@ import Window from '../Window.astro';
 import { staff } from '../../data/event';
 import { asset } from '../../lib/asset';
 const wiki = (u: string) => `https://creatorsgarten.org/wiki/People/${u}`;
+const members = staff.filter((s) => s.wiki).length;
 ---
 
-<Window id="staff" menu={['File', 'Edit', 'View', 'Help']} status={`${staff.length} users`}>
-  <div class="p-2">
-    <h2 class="font-xp-title font-bold text-base text-[#0046d5] mb-1">EVENT STAFF · ทีมงานแห่งความเพี้ยน 🎭</h2>
-    <p class="text-[11px] text-neutral-600 mb-2">User Accounts — pick an account to blame. คนที่มีลิงก์คือสมาชิก Creatorsgarten กดไปดูโปรไฟล์ได้</p>
-    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-1">
+<Window id="staff" menu={['File', 'Edit', 'View', 'Help']} status={`${staff.length} users · ${members} Creatorsgarten members`}>
+  <div class="p-3 staff-wrap">
+    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+      <h2 class="font-xp-title font-bold text-base text-[#0046d5]">EVENT STAFF · ทีมงานแห่งความเพี้ยน 🎭</h2>
+      <p class="text-[11px] text-neutral-600">User Accounts — pick an account to blame · การ์ดที่กดได้คือสมาชิก Creatorsgarten</p>
+    </div>
+    <ul class="staff-grid">
       {staff.map((s) => {
         const inner = (
           <>
             {s.photo ? (
-              <img src={asset(`staff/${s.photo}`)} alt="" class="w-9 h-9 shrink-0 rounded object-cover border border-white shadow-sm" loading="lazy" />
+              <img src={asset(`staff/${s.photo}`)} alt="" class="staff-photo" loading="lazy" />
             ) : (
-              <span class="w-9 h-9 shrink-0 flex items-center justify-center bg-gradient-to-b from-[#a4c8f0] to-[#5a8fd8] border border-white rounded text-lg" aria-hidden="true">👤</span>
+              <span class="staff-photo staff-photo-empty" aria-hidden="true">{s.name.slice(0, 1)}</span>
             )}
-            <span class="text-[12px] leading-tight min-w-0">
-              <b>{s.name}</b> {s.handle && <span class="opacity-70">@{s.handle}</span>}
-              {s.fullName && <span class="opacity-70"> · {s.fullName}</span>}<br />
-              <span class="text-[11px]">{s.role}</span>
+            <span class="staff-text">
+              <b class="staff-name">{s.name}</b>
+              {s.fullName && <span class="staff-full">{s.fullName}</span>}
+              {s.handle && <span class="staff-handle">@{s.handle}</span>}
+              <span class="staff-role">{s.role}</span>
+              {s.wiki && <span class="staff-link">creatorsgarten.org/wiki/People/{s.wiki}</span>}
             </span>
           </>
         );
         return (
           <li>
             {s.wiki ? (
-              <a href={wiki(s.wiki)} target="_blank" rel="noopener" class="flex items-center gap-2 p-1.5 border border-transparent hover:bg-[#316ac5] hover:text-white rounded-sm text-inherit no-underline" title={`Creatorsgarten: ${s.wiki}`}>{inner}</a>
+              <a href={wiki(s.wiki)} target="_blank" rel="noopener" class="staff-card staff-card-link" title={`เปิดโปรไฟล์ ${s.wiki} บน Creatorsgarten`}>{inner}</a>
             ) : (
-              <div class="flex items-center gap-2 p-1.5 border border-transparent hover:bg-[#316ac5] hover:text-white rounded-sm">{inner}</div>
+              <div class="staff-card">{inner}</div>
             )}
           </li>
         );
@@ -38,3 +43,33 @@ const wiki = (u: string) => `https://creatorsgarten.org/wiki/People/${u}`;
     </ul>
   </div>
 </Window>
+
+<style>
+  /* Big user-account cards, three across. Members link to their Creatorsgarten profile. */
+  .staff-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+  .staff-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 96px;
+    padding: 10px 12px;
+    border: 1px solid #a9c2e3;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #fff 0%, #eef4fc 100%);
+    box-shadow: inset 0 1px 0 #fff, 1px 1px 3px rgba(20, 50, 110, 0.12);
+    color: inherit;
+    text-decoration: none;
+  }
+  .staff-card-link:hover { background: linear-gradient(180deg, #4d8de8, #2f61c2); border-color: #1d4aa3; color: #fff; }
+  .staff-card-link:hover .staff-full, .staff-card-link:hover .staff-handle, .staff-card-link:hover .staff-role, .staff-card-link:hover .staff-link { color: rgba(255, 255, 255, 0.85); }
+  .staff-photo { width: 72px; height: 72px; flex-shrink: 0; border-radius: 8px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 0 0 1px #a9c2e3, 0 2px 4px rgba(0, 0, 0, 0.2); background: #fff; }
+  .staff-photo-empty { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #a4c8f0, #5a8fd8); color: #fff; font-size: 30px; font-weight: 700; font-family: var(--font-xp-title); }
+  .staff-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.25; }
+  .staff-name { font-family: var(--font-xp-title); font-size: 16px; }
+  .staff-full { font-size: 11px; color: #4b5d78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .staff-handle { font-size: 11px; color: #6b7a90; }
+  .staff-role { font-size: 11px; font-weight: 700; color: #10305f; margin-top: 3px; }
+  .staff-link { font-size: 9px; color: #7a8aa3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  @media (max-width: 1100px) { .staff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 767px) { .staff-grid { grid-template-columns: 1fr; } .staff-card { min-height: 0; } }
+</style>
