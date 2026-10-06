@@ -20,6 +20,7 @@ const chrome = spawn(CHROME, [
   ...(process.env.FAKE_VIDEO ? [`--use-file-for-fake-video-capture=${process.env.FAKE_VIDEO}`] : []),
   '--window-size=1280,800', `--user-data-dir=${join(OUT, '.profile')}`, 'about:blank',
 ], { stdio: 'ignore' });
+process.on('exit', () => { try { chrome.kill('SIGKILL'); } catch {} }); // a crash must not leave Chrome holding the profile
 
 for (let i = 0; ; i++) {
   try { if ((await fetch(`http://localhost:${PORT}/json/version`)).ok) break; } catch {}
@@ -58,6 +59,13 @@ async function hover(sel) {
   const [x, y] = r.result.value;
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
 }
+
+/* SHTX-NET: a seeded identity + 5 contacts so the main view, the peer card and the certificate can be captured */
+const SEED_NET = `localStorage.setItem('shtx-net-v1', JSON.stringify({me:{mac:'02:29:CA:6C:55:FD',nick:'โขง',skill:'Frontend',idea:'เว็บที่โหลดช้าลงทุกครั้งที่กด',answers:[0,0,0,1,4],created:Date.now()},links:[{mac:'02:29:CA:2A:7B:A2',nick:'ไท',skill:'Advisor',idea:'โง่ยังไม่พอ',via:'air',at:Date.now()-60000},{mac:'02:4F:10:7B:C2:19',nick:'Riffy',skill:'Design',idea:'แอปเตือนให้หายใจ ทุก 3 วินาที',via:'qr',at:Date.now()-240000},{mac:'02:0A:61:7D:94:22',nick:'Poom',skill:'Hardware',idea:'เมาส์ที่ต้องเดินไปคลิกเอง',via:'air',at:Date.now()-600000},{mac:'02:66:21:0C:AB:90',nick:'พีม',skill:'Pitch',idea:'นาฬิกาปลุกที่ปลุกคนข้างบ้าน',via:'air',at:Date.now()-900000},{mac:'02:9C:03:55:E1:07',nick:'มีมี่',skill:'หาข้าว',idea:'ตู้เย็นที่ส่ง LINE มาต่อว่า',via:'manual',at:Date.now()-1200000}]})); location.reload();`;
+const CLEAR_NET = `localStorage.removeItem('shtx-net-v1'); location.reload();`;
+const seedNet = { eval: SEED_NET, wait: 1800 };
+const clearNet = { eval: CLEAR_NET, wait: 1800 };
+const PEER_URL = '/?skip&open=shtxnet&peer=0229CA2A7BA2&n=%E0%B9%84%E0%B8%97&s=Advisor&i=%E0%B9%82%E0%B8%87%E0%B9%88%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%9E%E0%B8%AD';
 const manifest = [];
 async function shot(name, caption, { device, url, wait = 700, steps = [] }) {
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: device.width, height: device.height, deviceScaleFactor: device.deviceScaleFactor, mobile: device.mobile });
@@ -70,6 +78,7 @@ async function shot(name, caption, { device, url, wait = 700, steps = [] }) {
       const r = await click(step.click);
       if (r.exceptionDetails) throw new Error(`${name}: ${r.exceptionDetails.exception?.description ?? 'click failed'}`);
     } else if (step.hover) await hover(step.hover);
+    else if (step.eval) { const r = await evaluate(step.eval); if (r.exceptionDetails) throw new Error(`${name}: ${r.exceptionDetails.exception?.description ?? 'eval failed'}`); }
     await sleep(step.wait ?? 450);
   }
   const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
@@ -90,6 +99,13 @@ await shot('03-xp-home', 'Desktop: About window opens by default, funding balloo
 await shot('04-xp-startmenu', 'Start menu lists every window from the registry (Camera included)', { device: XP, steps: [{ click: '#start-btn' }] });
 await shot('05-xp-windows', 'Several windows open: Venue, Agenda, Funding Goal, Sponsors', { device: XP, url: '/?skip&open=venue', wait: 1200, steps: [startMenu('schedule'), startMenu('funding'), startMenu('sponsors')] });
 await shot('06-xp-error', 'Turn Off Computer: XP error dialog (it is not safe to turn off your computer)', { device: XP, url: '/?skip&open=register', wait: 1200, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
+await shot('08-xp-net-wizard', 'SHTX-NET: New Connection Wizard (identity, 5 questions, MAC address)', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [clearNet] });
+await shot('08b-xp-net-wizard-q', 'Wizard question 3 of 5: the answers become bits of the MAC address', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [{ eval: `document.getElementById('net-nick').value='โขง';document.getElementById('net-skill').value='Frontend';document.getElementById('net-idea').value='เว็บที่โหลดช้าลงทุกครั้งที่กด';document.getElementById('net-next').click();document.querySelector('input[name="q0"][value="0"]').click();document.getElementById('net-next').click();document.querySelector('input[name="q1"][value="0"]').click();document.getElementById('net-next').click();`, wait: 500 }] });
+await shot('08c-xp-net-main', 'Network Connections: my business card, modem status, terminal log, contacts', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [seedNet] });
+await shot('08d-xp-net-peer', 'CONNECTION ESTABLISHED: the peer card after a handshake (here via the QR fallback)', { device: XP, url: PEER_URL, wait: 1800 });
+await shot('08e-xp-net-cert', 'Proof of Friendship certificate after 5 handshakes', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [{ click: '#net-cert-btn', wait: 500 }] });
+await shot('08f-xp-net-qr', 'QR fallback for loud rooms: the other phone scans with its normal camera', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [{ click: '#net-qr', wait: 800 }] });
+await shot('09-noc', 'NOC stage screen (/noc): live mesh of 60 hosts, core switches, dumb idea of the moment, event ticker (demo data)', { device: XP, url: '/noc/?demo', wait: 17000 });
 await shot('07-xp-recycle', 'Recycle Bin', { device: XP, url: '/?skip&open=recycle', wait: 1200 });
 
 // ---- Camera (on XP) ----
@@ -122,6 +138,7 @@ await shot('25-mac-dock', 'Dock magnification with label on hover', { device: MA
 await shot('26-mac-minimized', 'Window menu → Minimize: the front window shrinks into the Dock (dimmed icon)', { device: MAC, url: '/?skip&open=about', wait: 1200, steps: [{ click: '#mac-menubar [data-menu="window"]', wait: 200 }, { click: '#mac-menu-window [data-action="mac-hide"]', wait: 700 }] });
 await shot('27-mac-alert', 'Shut Down: Leopard alert', { device: MAC, url: '/?skip&open=register', wait: 1200, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('28-mac-camera', 'Photo Booth in a Leopard window, Lomo look', { device: MAC, url: '/?skip&open=camera', wait: 1200, steps: [start, filter('lomo')] });
+await shot('28b-mac-net', 'SHTX-NET in a Leopard window', { device: MAC, url: '/?skip&open=shtxnet', wait: 1200, steps: [seedNet] });
 
 // ---- iPhone (chosen because the user agent is not Android) ----
 await shot('30-ios-boot', 'Boot screen on a phone', { device: IPHONE, url: '/', wait: 1500 });
@@ -131,9 +148,11 @@ await shot('33-ios-about', 'App view with iOS navigation bar and tab bar', { dev
 await shot('34-ios-faq', 'FAQ as grouped lists', { device: IPHONE, url: '/?skip&open=faq', wait: 900 });
 await shot('35-ios-alert', 'Error dialog as an iOS alert (Turn Off Computer gag)', { device: IPHONE, url: '/?skip&open=register', wait: 900, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero look, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
+await shot('36b-ios-net', 'SHTX-NET on iPhone: card, Start listening / Connect, contacts', { device: IPHONE, url: '/?skip&open=shtxnet', wait: 900, steps: [seedNet] });
+await shot('36c-ios-net-peer', 'Peer card overlay on iPhone', { device: IPHONE, url: PEER_URL, wait: 1500 });
 await shot('37-ios-recording', 'VIDEO mode while recording: timer and red stop square', { device: IPHONE, steps: [{ click: '.cam-modes [data-cam-mode="video"]', wait: 300 }, { click: '.cam-shutter', wait: 2500 }] });
 await shot('38-ios-review', 'Review of the clip from the thumbnail: Share and Save (share sheet on iPhone)', { device: IPHONE, steps: [{ click: '.cam-shutter', wait: 1500 }, { click: '.cam-thumb', wait: 900 }] });
-await shot('39-ios-zoom-grid', 'PHOTO mode with 2× zoom, grid on, Camcorder look in the live filter carousel', { device: IPHONE, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '.cam-modes [data-cam-mode="photo"]', wait: 300 }, { click: '[data-filter="camcorder"]', wait: 200 }, { click: '#cam-zoom [data-zoom="2"]', wait: 200 }, { click: '[data-cam="grid"]', wait: 300 }] });
+await shot('39-ios-zoom-grid', 'PHOTO mode with 2× zoom, grid on, Camcorder look in the live filter carousel', { device: IPHONE, steps: [{ click: '[data-cam="back"]', wait: 300 }, { click: '.cam-modes [data-cam-mode="photo"]', wait: 300 }, { click: '[data-filter="camcorder"]', wait: 200 }, { eval: `document.querySelector('#cam-zoom [data-zoom="2"]')?.click()`, wait: 200 }, { click: '[data-cam="grid"]', wait: 300 }] });
 
 // ---- Android (chosen from the user agent, no URL parameter) ----
 await shot('40-android-boot', 'Boot: glowing "android" wordmark, funding readout stays', { device: ANDROID, url: '/', wait: 1500 });
@@ -146,6 +165,8 @@ await shot('46-android-about', 'App view: dark title bar with icon, flat lists',
 await shot('47-android-funding', 'Funding Goal: orange progress bar, gray buttons', { device: ANDROID, url: '/?skip&open=funding', wait: 3400 });
 await shot('48-android-dialog', 'Error dialog as a Gingerbread AlertDialog (Turn Off Computer gag)', { device: ANDROID, url: '/?skip&open=register', wait: 3400, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('49-android-camera', 'Camera app on Android, Camcorder look', { device: ANDROID, url: '/?skip&open=camera', wait: 3400, steps: [start, filter('camcorder')] });
+await shot('49b-android-net-wizard', 'Wizard on Android', { device: ANDROID, url: '/?skip&open=shtxnet', wait: 3400, steps: [clearNet] });
+await shot('49c-android-net-main', 'SHTX-NET on Android', { device: ANDROID, url: '/?skip&open=shtxnet', wait: 3400, steps: [seedNet] });
 
 chrome.kill();
 

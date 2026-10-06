@@ -84,6 +84,57 @@ Both shells share the boot screen and the same window manager in `src/scripts/de
 - The camera needs HTTPS or localhost. It is released whenever the window is closed or minimized, the app is left on a phone, or the tab goes to the background; press the start button again to resume.
 - Phones get a portrait 3:4 frame (480×640), computers 4:3 (640×480, or 960×720 once the window is wider than 900px, for example maximized). The preview, review media and effect tiles are sized by script to the largest box of their true aspect ratio that fits, so nothing is ever stretched, whatever the window shape or browser.
 
+## SHTX-NET (icebreaker: acoustic modem + 3-way handshake)
+
+The `SHTX-NET` window (`src/components/windows/NetworkWindow.astro`) turns every phone into a 2000s network host. There is
+no Bluetooth or Wi-Fi involved: phones talk to each other **through the speaker and microphone** with a real FSK modem.
+
+- **Modem** (`src/scripts/fsk.ts`): 300 baud binary FSK, 2400 Hz = 0 / 3400 Hz = 1 (above most speech energy), phase-continuous
+  encoder, Goertzel soft-decision decoder with preamble lock, UART framing (start/stop bits) for clock tracking, CRC-16/CCITT.
+  Frame = 250 ms mark lead · 48-bit preamble · 0x7E sync · `[len][payload][crc]`. A 32-byte frame is on the air for ~1.6 s.
+  In simulation it decodes at -3 dB SNR against pink noise and ±0.3 % clock drift (`npm run net:sim`).
+- **Identity** (`src/data/network.ts`): the wizard asks 5 questions (NIC vendor, 2005 browser, uplink, hackathon role, what you
+  do when Wi-Fi dies). The answers are packed into bytes 1–2 of a locally-administered MAC (`02:xx:xx:…`, 3 bits each), bytes
+  3–5 are random so 60–200 people never collide. The MAC decodes back into a joke OUI vendor, an ICQ# and a hostname.
+  Only a nickname, a skill and a dumb idea are stored; nothing leaves the phone unless a NOC server is configured.
+- **Handshake** (`src/scripts/netproto.ts`): one side taps *Connect* and broadcasts `SYN(mac, seq, nick)`; every listening phone
+  that hears it *loud enough* (near-field rule, default RMS ≥ 0.05, adjustable "ระยะ") answers `SYN-ACK` after a random
+  slot; the initiator collects answers for 1.5 s and ACKs the **loudest** one (= the phone it is actually touching); the
+  others hear an ACK addressed to someone else and stand down. Carrier sense + random backoff before every transmission,
+  retransmits on timeout, lost-ACK recovery, simultaneous-open resolution (lower MAC yields). If either side is offline the
+  business cards are beamed over the air too (`CARD` frames); otherwise they are fetched from the server by MAC.
+- **Fallbacks**: *QR fallback* renders a link (`?open=shtxnet&peer=<mac>&n=…`) that the other phone scans with its normal
+  camera; *Enter MAC…* looks a host up on the server. Both count as links (tagged `qr` / `manual`).
+- **Contacts & certificate**: cards are kept in `localStorage` (`shtx-net-v1`); after 5 handshakes the *Proof of Friendship*
+  certificate unlocks (printable).
+- **Debug hook**: `window.__shtxnet` exposes the modem, the node and frame helpers (used by `node scripts/net-e2e.mjs`, an
+  end-to-end test in headless Chrome that injects a SYN and an ACK straight into the live decoder).
+
+### NOC (stage screen) and server
+
+`/noc` (`src/pages/noc.astro`, `src/scripts/noc.ts`) is the Frutiger Aero Network Operations Center for the projector: live
+force-directed mesh, core switches (highest degree), just-connected, dumb idea of the moment, event ticker, a BSOD every 10
+links, and an optional "chime" that is a real tiny FSK frame. With no server it shows demo traffic for 60 hosts (`/noc/?demo`).
+
+The server lives in `server/` (Elysia on Bun, SQLite, WebSocket feed):
+
+```
+cd server && bun install
+NET_ADMIN_TOKEN=secret bun index.ts          # http://localhost:8787 — or docker build . / fly / railway
+```
+
+Endpoints: `GET /api/state`, `GET|POST /api/nodes`, `GET /api/nodes/:mac/links`, `POST /api/links`, `POST /api/events`,
+`WS /api/live`, `POST /api/reset?token=…` (admin). Point the site at it with the build variable `PUBLIC_SHTX_NET_API`
+(GitHub Pages reads the repository variable `SHTX_NET_API`) or at runtime with `?api=https://host` (saved in `localStorage`).
+
+### How 60 people play
+
+Everyone runs the wizard in parallel (2–3 min, no audio). Then free roam: find someone you don't know, both tap *Start
+listening*, hold the phones a palm apart at 40–60 % volume, one taps *Connect* — the handshake takes ~6 s and both get each
+other's card. The acoustic channel is local (a phone 3 m away is ~25 dB quieter), the near-field rule drops faint SYNs, and the
+initiator picks the loudest answer, so 30 pairs can handshake at once in one hall. Loud room? QR fallback. Collect 5 cards
+for the certificate; the NOC shows the mesh, the core switches and the dumb ideas on stage.
+
 ## Screenshots
 
 `node scripts/screenshots.mjs <outDir> [baseUrl]` drives headless Chrome (with a fake camera device, so the camera runs without a permission prompt) through every screen of all four shells and prints a captioned gallery to `<outDir>/shtX-screens-<date>-<time>.pdf`. Capture from a preview of the production build, not the dev server (dev toolbar, possibly stale CSS):

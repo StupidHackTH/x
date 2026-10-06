@@ -32,6 +32,7 @@ jobs:
           # https://stupid.hackathon.in.th/x/ (stupidhackth.github.io/x/ redirects there). Base path = /<repo>.
           SITE_URL: https://stupid.hackathon.in.th
           BASE_PATH: /${{ github.event.repository.name }}
+          PUBLIC_SHTX_NET_API: ${{ vars.SHTX_NET_API }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

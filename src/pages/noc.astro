@@ -1,0 +1,96 @@
+---
+// SHTX-NET Network Operations Center: the stage screen. Frutiger Aero, live mesh graph from the NOC server
+// (PUBLIC_SHTX_NET_API or ?api=…), otherwise a 60-host demo so the screen is never empty. Noindex: it is for the venue.
+import { asset } from '../lib/asset';
+import Icons from '../components/Icons.astro';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>SHTX-NET NOC</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body { font: 14px/1.4 'Segoe UI', Tahoma, 'Noto Sans Thai', sans-serif; color: #eaf6ff; background: radial-gradient(ellipse at 20% 0%, #9fe3ff 0%, #2b8fe6 28%, #0a3f8f 65%, #031a3d 100%) fixed; overflow: hidden; }
+      .noc { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; gap: 10px; padding: 12px 14px; }
+      .glass { background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08) 45%, rgba(255, 255, 255, 0.04)); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 30px rgba(0, 20, 60, 0.35); backdrop-filter: blur(6px); }
+      .noc-top { display: flex; align-items: center; gap: 16px; padding: 10px 16px; }
+      .noc-top img { width: 46px; height: 46px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)); }
+      .noc-title b { display: block; font-size: 20px; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+      .noc-title small { color: #cfeeff; }
+      .noc-pills { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+      .pill { min-width: 96px; padding: 6px 12px; border-radius: 20px; text-align: center; background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.15)); border: 1px solid rgba(255, 255, 255, 0.6); color: #06264f; box-shadow: inset 0 1px 0 #fff; }
+      .pill b { display: block; font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .pill small { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; }
+      .pill.alert { background: linear-gradient(180deg, #ffd27a, #e0901a); }
+      .noc-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.6); background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1)); color: #fff; font: inherit; cursor: pointer; }
+      .noc-btn[aria-pressed='true'] { background: linear-gradient(180deg, #a6f5a6, #37b24d); color: #063; }
+      .noc-mid { display: grid; grid-template-columns: 1fr 340px; gap: 10px; min-height: 0; }
+      .noc-graph { position: relative; overflow: hidden; }
+      .noc-graph canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .noc-legend { position: absolute; left: 14px; bottom: 12px; font-size: 12px; color: #dff3ff; display: flex; gap: 14px; padding: 4px 10px; border-radius: 10px; background: rgba(3, 26, 61, 0.55); }
+      .noc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
+      .noc-demo { position: absolute; right: 14px; top: 12px; padding: 3px 10px; border-radius: 10px; background: rgba(255, 180, 0, 0.85); color: #3b2400; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+      .noc-demo[hidden] { display: none; }
+      .noc-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+      .panel { padding: 10px 14px; min-height: 0; }
+      .panel h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #d4f1ff; }
+      .panel ol, .panel ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+      .panel li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .panel li .n { width: 18px; color: #bfe6ff; text-align: right; font-variant-numeric: tabular-nums; }
+      .panel li b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .panel li .deg { padding: 0 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.3); font-variant-numeric: tabular-nums; }
+      .panel li .mac { font: 10px 'Lucida Console', monospace; color: #bfe6ff; }
+      .idea { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+      .idea blockquote { margin: 4px 0; font-size: 20px; line-height: 1.3; font-style: italic; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+      .idea cite { font-style: normal; color: #cfeeff; font-size: 12px; }
+      .noc-ticker { overflow: hidden; padding: 8px 0; white-space: nowrap; font: 13px 'Lucida Console', 'Courier New', monospace; color: #b9ffc9; }
+      .noc-ticker div { display: inline-block; padding-left: 100%; animation: ticker 40s linear infinite; }
+      @keyframes ticker { to { transform: translateX(-100%); } }
+      .noc-ticker span { margin-right: 48px; }
+      .noc-ticker span.err { color: #ffb3b3; }
+      .noc-bsod { position: fixed; inset: 0; background: #0000aa; color: #fff; font: 16px/1.5 'Lucida Console', 'Courier New', monospace; padding: 60px 80px; z-index: 50; white-space: pre-wrap; }
+      .noc-bsod[hidden] { display: none; }
+      @media (max-width: 900px) { .noc-mid { grid-template-columns: 1fr; } .noc-side { display: none; } .noc-pills .pill { min-width: 70px; } }
+    </style>
+  </head>
+  <body data-api={import.meta.env.PUBLIC_SHTX_NET_API ?? ''}>
+    <Icons />
+    <div class="noc">
+      <header class="noc-top glass">
+        <img src={asset('logo-transparent.png')} alt="" />
+        <div class="noc-title"><b>SHTX-NET Network Operations Center</b><small>Stupid Hackathon X · 300 baud acoustic mesh · <span id="noc-clock">--:--:--</span></small></div>
+        <div class="noc-pills">
+          <div class="pill"><b id="st-hosts">0</b><small>Hosts</small></div>
+          <div class="pill"><b id="st-links">0</b><small>Links</small></div>
+          <div class="pill"><b id="st-packets">0</b><small>Packets</small></div>
+          <div class="pill alert"><b id="st-crc">0</b><small>CRC errors</small></div>
+          <div class="pill"><b id="st-uptime">0:00</b><small>Uptime</small></div>
+        </div>
+        <button type="button" class="noc-btn" id="noc-sound" aria-pressed="false">Sound: off</button>
+        <button type="button" class="noc-btn" id="noc-full">Full screen</button>
+      </header>
+      <div class="noc-mid">
+        <section class="noc-graph glass">
+          <canvas id="noc-canvas"></canvas>
+          <div class="noc-legend"><span><i style="background:#8ef5a3"></i>host</span><span><i style="background:#ffd34d"></i>core switch (5+ links)</span><span><i style="background:#ff7b7b"></i>isolated</span></div>
+          <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
+        </section>
+        <aside class="noc-side">
+          <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
+          <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
+          <div class="panel glass idea"><h3>Dumb idea of the moment</h3><blockquote id="noc-idea">…</blockquote><cite id="noc-idea-by"></cite></div>
+        </aside>
+      </div>
+      <footer class="noc-ticker glass"><div id="noc-ticker"><span>SHTX-NET NOC online · waiting for hosts…</span></div></footer>
+    </div>
+    <div class="noc-bsod" id="noc-bsod" hidden></div>
+    <script src="../scripts/noc.ts"></script>
+  </body>
+</html>

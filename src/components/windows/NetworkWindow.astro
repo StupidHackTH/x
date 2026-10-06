@@ -1,0 +1,857 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+import { questions, skillSuggestions, LIMITS, CERT_LINKS } from '../../data/network';
+
+// SHTX-NET: the icebreaker. A real 300-baud FSK modem over the phone speaker + mic (src/scripts/fsk.ts), a 3-way
+// handshake (src/scripts/netproto.ts), and 2000s business cards. Works phone-to-phone with no server; with
+// PUBLIC_SHTX_NET_API set, links also flow to the NOC screen (/noc).
+const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC address'];
+---
+
+<Window id="shtxnet" menu={['File', 'Edit', 'View', 'Tools', 'Help']} status="SHTX-NET · 300 baud FSK over the air · half duplex · CSMA/CA" beige>
+  <div class="net" id="net" data-view="setup" data-link="idle" data-listen="off">
+    <section class="net-wizard" data-pane="setup">
+      <header class="net-banner">
+        <div>
+          <h2>New Connection Wizard</h2>
+          <p>ตั้งค่า Network Interface Card ของคุณ จะได้ไปจับมือ (3-way handshake) กับคนอื่นในงาน</p>
+        </div>
+        <Icon name="shtxnet" class="net-banner-icon" />
+      </header>
+      <form class="net-wizard-body" id="net-form" novalidate>
+        <ol class="net-steps" aria-hidden="true">
+          {steps.map((s, i) => <li data-step={i}>{s}</li>)}
+        </ol>
+        <div class="net-pages">
+          <fieldset data-step="0">
+            <legend>คุณคือใครในเครือข่ายนี้</legend>
+            <p class="net-privacy">เก็บแค่ชื่อเล่น สกิล และไอเดียโง่ ๆ ไม่ต้องใช้ชื่อจริง เบอร์ หรืออีเมล</p>
+            <label>ชื่อเล่น (hostname) <input id="net-nick" maxlength={LIMITS.nick} autocomplete="off" placeholder="เช่น โขง" required /></label>
+            <label>สกิล / หน้าที่ <input id="net-skill" maxlength={LIMITS.skill} autocomplete="off" list="net-skill-list" placeholder="เช่น Frontend, หาข้าว" required /></label>
+            <datalist id="net-skill-list">{skillSuggestions.map((s) => <option value={s} />)}</datalist>
+            <label>ไอเดียโง่ ๆ ที่อยากทำในงาน <input id="net-idea" maxlength={LIMITS.idea} autocomplete="off" placeholder="เช่น เว็บที่โหลดช้าลงทุกครั้งที่กด" required /></label>
+          </fieldset>
+          {questions.map((q, i) => (
+            <fieldset data-step={i + 1} hidden>
+              <legend>{q.q}</legend>
+              <div class="net-options">
+                {q.options.map((o, j) => (
+                  <label><input type="radio" name={`q${i}`} value={j} /> {o}</label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+          <fieldset data-step={questions.length + 1} hidden>
+            <legend>Network adapter ของคุณพร้อมแล้ว</legend>
+            <div class="net-macbox">
+              <div class="net-mac" id="net-new-mac">00:00:00:00:00:00</div>
+              <dl>
+                <dt>Vendor (OUI)</dt><dd id="net-new-vendor">—</dd>
+                <dt>Host name</dt><dd id="net-new-host">—</dd>
+                <dt>ICQ#</dt><dd id="net-new-icq">—</dd>
+              </dl>
+            </div>
+            <p class="net-note">MAC address นี้ถอดกลับมาเป็นคำตอบของคุณได้ (3 บิตต่อข้อ) ส่วน 3 ไบต์ท้ายสุ่มมา จะได้ไม่ชนกับคนอื่นอีก 60 คน</p>
+          </fieldset>
+        </div>
+        <footer class="net-wizard-nav">
+          <button type="button" class="xp-btn" id="net-back" disabled>&lt; Back</button>
+          <button type="button" class="xp-btn" id="net-next">Next &gt;</button>
+          <button type="button" class="xp-btn" id="net-finish" hidden>Finish</button>
+        </footer>
+      </form>
+    </section>
+
+    <section class="net-main" data-pane="main" hidden>
+      <div class="net-col">
+        <div class="net-card me" id="net-mycard">
+          <div class="net-card-stripe"></div>
+          <div class="net-card-body">
+            <div class="net-card-name" id="net-me-nick">—</div>
+            <div class="net-card-title" id="net-me-skill">—</div>
+            <div class="net-card-idea" id="net-me-idea">—</div>
+            <div class="net-card-foot">
+              <span>ICQ# <b id="net-me-icq">—</b></span>
+              <span>MAC <b id="net-me-mac">—</b></span>
+            </div>
+          </div>
+          <button type="button" class="net-card-edit" id="net-edit" title="แก้นามบัตร">Edit</button>
+        </div>
+
+        <div class="net-status">
+          <span class="net-status-icon" aria-hidden="true"><Icon name="shtxnet" /><i class="led"></i></span>
+          <div class="net-status-text">
+            <b id="net-status">Not connected</b>
+            <small id="net-substatus">กด Start เพื่อเปิดไมค์และฟังสัญญาณ</small>
+          </div>
+          <div class="net-meter" title="ระดับเสียงที่ไมค์ได้ยิน"><i id="net-level"></i></div>
+        </div>
+
+        <div class="net-actions">
+          <button type="button" class="xp-btn" id="net-listen">Start listening</button>
+          <button type="button" class="xp-btn primary" id="net-connect" disabled>Connect (SYN)</button>
+          <button type="button" class="xp-btn" id="net-qr">QR fallback</button>
+          <button type="button" class="xp-btn" id="net-manual-btn">Enter MAC…</button>
+          <button type="button" class="xp-btn" id="net-ping" disabled title="ส่งเสียงทดสอบ 1 เฟรม">Test tone</button>
+          <label class="net-range">ระยะ <select id="net-range">
+            <option value="0.08">ใกล้มาก (ชนกัน)</option>
+            <option value="0.05" selected>ปกติ (1 ฝ่ามือ)</option>
+            <option value="0.02">ไกล (เสียงดัง)</option>
+          </select></label>
+        </div>
+        <p class="net-howto">วิธีเล่น: ทั้งสองเครื่องกด <b>Start listening</b> · วางมือถือห่างกันประมาณ 1 ฝ่ามือ เปิดเสียง 40–60% · ฝ่ายหนึ่งกด <b>Connect</b> แล้วรอฟังเสียงโมเด็ม ประมาณ 6 วินาที</p>
+
+        <div class="net-term" id="net-term" role="log" aria-live="polite"></div>
+        <div class="net-stats" id="net-stats">TX 0 · RX 0 · CRC errors 0 · far hosts ignored 0 · NOC: offline</div>
+      </div>
+
+      <div class="net-col net-col-right">
+        <div class="net-contacts-head">
+          <h3>Contacts <span id="net-count">(0)</span></h3>
+          <button type="button" class="xp-btn" id="net-cert-btn" disabled title={`ครบ ${CERT_LINKS} คนรับใบรับรอง`}>Certificate</button>
+        </div>
+        <ul class="net-contacts" id="net-contacts"></ul>
+        <p class="net-empty" id="net-empty">ยังไม่มีใครในเครือข่าย ลองเดินไปหาคนที่ยังไม่รู้จัก แล้วเอามือถือมาชนกัน</p>
+      </div>
+    </section>
+
+    <div class="net-overlay" id="net-peer" hidden>
+      <div class="net-dialog">
+        <h3 class="ok">CONNECTION ESTABLISHED</h3>
+        <div class="net-card peer">
+          <div class="net-card-stripe"></div>
+          <div class="net-card-body">
+            <div class="net-card-name" id="net-peer-nick">—</div>
+            <div class="net-card-title" id="net-peer-skill">—</div>
+            <div class="net-card-idea" id="net-peer-idea">—</div>
+            <div class="net-card-foot">
+              <span>ICQ# <b id="net-peer-icq">—</b></span>
+              <span>MAC <b id="net-peer-mac">—</b></span>
+            </div>
+          </div>
+        </div>
+        <ul class="net-traits" id="net-peer-traits"></ul>
+        <p class="net-note" id="net-peer-note"></p>
+        <div class="net-dialog-btns"><button type="button" class="xp-btn primary" data-close-overlay>Done</button></div>
+      </div>
+    </div>
+
+    <div class="net-overlay" id="net-qr-overlay" hidden>
+      <div class="net-dialog">
+        <h3>QR fallback</h3>
+        <p>ถ้าเสียงโมเด็มฟังกันไม่รู้เรื่อง (ห้องดังมาก) ให้อีกฝ่ายสแกนด้วยกล้องมือถือปกติ จะเปิดเว็บนี้แล้วเพิ่มคุณเข้า Contacts ให้</p>
+        <canvas id="net-qr-canvas" width="240" height="240"></canvas>
+        <input id="net-qr-link" readonly />
+        <div class="net-dialog-btns"><button type="button" class="xp-btn" id="net-qr-copy">Copy link</button><button type="button" class="xp-btn primary" data-close-overlay>Close</button></div>
+      </div>
+    </div>
+
+    <div class="net-overlay" id="net-manual" hidden>
+      <div class="net-dialog">
+        <h3>Connect by MAC address</h3>
+        <p>พิมพ์ MAC ของอีกฝ่าย (ดูบนนามบัตรเขา) ต้อง online ถึง NOC ถึงจะดึงนามบัตรมาได้</p>
+        <input id="net-manual-mac" placeholder="02:1A:2B:3C:4D:5E" autocomplete="off" spellcheck="false" />
+        <p class="net-note err" id="net-manual-err" hidden></p>
+        <div class="net-dialog-btns"><button type="button" class="xp-btn" data-close-overlay>Cancel</button><button type="button" class="xp-btn primary" id="net-manual-go">Connect</button></div>
+      </div>
+    </div>
+
+    <div class="net-overlay" id="net-cert" hidden>
+      <div class="net-dialog wide">
+        <div class="net-certificate" id="net-certificate">
+          <div class="net-cert-inner">
+            <p class="net-cert-pre">Stupid Hackathon X · SHTX-NET Certification Authority</p>
+            <h2>Proof of Friendship</h2>
+            <p class="net-cert-pre">This is to certify that</p>
+            <p class="net-cert-name" id="net-cert-name">—</p>
+            <p class="net-cert-text">MAC <span id="net-cert-mac">—</span> has successfully completed <b id="net-cert-count">0</b> three-way handshakes with real humans over a 300-baud acoustic link, and is hereby recognised as a <b>Fully Routable Host</b> on SHTX-NET.</p>
+            <p class="net-cert-peers" id="net-cert-peers"></p>
+            <div class="net-cert-sig">
+              <span>Issued <time id="net-cert-date">—</time></span>
+              <span class="net-cert-seal">CSMA/CA<br />APPROVED</span>
+              <span>Signed: root@shtx-net</span>
+            </div>
+          </div>
+        </div>
+        <div class="net-dialog-btns"><button type="button" class="xp-btn" id="net-cert-print">Print…</button><button type="button" class="xp-btn primary" data-close-overlay>Close</button></div>
+      </div>
+    </div>
+  </div>
+</Window>
+
+<style is:global>
+  .net { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: hidden; }
+  .net [data-pane] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .net [data-pane][hidden] { display: none; }
+
+  /* ---- wizard ---- */
+  .net-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .net-banner h2 { font-size: 13px; font-weight: bold; margin: 0 0 2px; }
+  .net-banner p { margin: 0; color: #333; }
+  .net-banner-icon { width: 44px; height: 44px; flex: none; }
+  .net-wizard-body { display: grid; grid-template-columns: 150px 1fr; grid-template-rows: 1fr auto; flex: 1; min-height: 0; }
+  .net-steps { grid-row: 1 / span 2; margin: 0; padding: 14px 10px; list-style: none; background: linear-gradient(180deg, #3d6fd6, #1c45a8); color: #cfe0ff; font-size: 11px; display: flex; flex-direction: column; gap: 8px; }
+  .net-steps li { padding-left: 14px; position: relative; }
+  .net-steps li::before { content: ''; position: absolute; left: 0; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #8aa8e6; }
+  .net-steps li.current { color: #fff; font-weight: bold; }
+  .net-steps li.current::before { background: #ffd34d; box-shadow: 0 0 6px #ffd34d; }
+  .net-steps li.done::before { background: #5be36a; }
+  .net-pages { padding: 16px 20px; overflow: auto; min-height: 0; }
+  .net-pages fieldset { border: 0; padding: 0; margin: 0; }
+  .net-pages fieldset[hidden] { display: none; }
+  .net-pages legend { font-weight: bold; font-size: 13px; margin-bottom: 10px; }
+  .net-pages label { display: block; margin: 8px 0; }
+  .net-pages input[type='text'], .net-pages input:not([type]) { display: block; width: 100%; max-width: 360px; margin-top: 3px; padding: 3px 5px; border: 1px solid #7f9db9; background: #fff; font: inherit; }
+  .net-options label { display: flex; align-items: center; gap: 6px; margin: 6px 0; cursor: pointer; }
+  .net-privacy { margin: 0 0 8px; padding: 6px 8px; background: #fff8d6; border: 1px solid #e3cf6d; }
+  .net-wizard-nav { grid-column: 2; display: flex; justify-content: flex-end; gap: 6px; padding: 10px 16px; border-top: 1px solid #fff; box-shadow: 0 -1px 0 #a0a0a0; }
+  .net-wizard-nav button[hidden] { display: none; }
+  .net-macbox { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 14px; background: #fff; border: 1px solid #a0a0a0; }
+  .net-mac { font: bold 26px/1 'Lucida Console', 'Courier New', monospace; letter-spacing: 1px; color: #0a246a; }
+  .net-macbox dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+  .net-macbox dt { color: #555; }
+  .net-macbox dd { margin: 0; font-weight: bold; }
+  .net-note { color: #444; margin: 10px 0 0; font-size: 11px; }
+  .net-note.err { color: #b00; }
+  .net-note[hidden] { display: none; }
+
+  /* ---- main ---- */
+  .net-main { flex-direction: row !important; gap: 0; }
+  .net-col { display: flex; flex-direction: column; gap: 8px; padding: 10px; min-width: 0; min-height: 0; flex: 1 1 60%; overflow: auto; }
+  .net-col-right { flex: 1 1 40%; border-left: 1px solid #a0a0a0; background: #f4f3ee; }
+  .net-card { position: relative; background: #fff; border: 1px solid #b9b9b9; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.15); font-family: Arial, Tahoma, sans-serif; overflow: hidden; }
+  .net-card-stripe { height: 10px; background: linear-gradient(90deg, #0a3d91, #1e78d8 50%, #9ad1ff); }
+  .net-card.peer .net-card-stripe { background: linear-gradient(90deg, #8a2a00, #e86d16 50%, #ffd27a); }
+  .net-card-body { padding: 10px 14px 12px; }
+  .net-card-name { font-size: 20px; font-weight: bold; color: #0a246a; letter-spacing: 0.5px; }
+  .net-card.peer .net-card-name { color: #6b2600; }
+  .net-card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #555; margin-top: 2px; }
+  .net-card-idea { font-style: italic; color: #333; margin-top: 8px; }
+  .net-card-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 6px; border-top: 1px dotted #bbb; font-size: 10px; color: #666; }
+  .net-card-foot b { font-family: 'Lucida Console', 'Courier New', monospace; color: #222; }
+  .net-card-edit { position: absolute; right: 8px; top: 14px; font-size: 10px; padding: 1px 6px; background: #f3f3f3; border: 1px solid #bbb; cursor: pointer; }
+  .net-status { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid #a0a0a0; }
+  .net-status-icon { position: relative; width: 36px; height: 36px; flex: none; }
+  .net-status-icon .icon { width: 36px; height: 36px; }
+  .net-status-icon .led { position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 50%; background: #777; border: 1px solid #333; }
+  .net[data-listen='on'] .net-status-icon .led { background: #39d353; box-shadow: 0 0 6px #39d353; animation: net-blink 1.2s infinite; }
+  .net[data-link='syn_sent'] .net-status-icon .led, .net[data-link='synack_sent'] .net-status-icon .led, .net[data-link='ack_sent'] .net-status-icon .led { background: #ffb300; box-shadow: 0 0 6px #ffb300; animation: net-blink 0.25s infinite; }
+  @keyframes net-blink { 50% { opacity: 0.35; } }
+  .net-status-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .net-status-text small { color: #555; }
+  .net-meter { width: 90px; height: 10px; background: #ddd; border: 1px solid #888; overflow: hidden; flex: none; }
+  .net-meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #39d353, #ffd34d 70%, #ff4d4d); transition: width 80ms linear; }
+  .net-meter[data-busy] { outline: 2px solid #ffb300; }
+  .net-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .net-actions .xp-btn.primary { font-weight: bold; }
+  .net-range select { font: inherit; }
+  .net-howto { margin: 0; font-size: 11px; color: #333; }
+  .net-term { flex: 1 1 140px; min-height: 120px; overflow: auto; padding: 6px 8px; background: #000; color: #c0c0c0; font: 11px/1.45 'Lucida Console', 'Courier New', monospace; border: 2px inset #999; }
+  .net-term .l.tx { color: #7fc8ff; }
+  .net-term .l.rx { color: #ffd27a; }
+  .net-term .l.ok { color: #39d353; font-weight: bold; }
+  .net-term .l.err { color: #ff6b6b; }
+  .net-term .l.info { color: #9a9a9a; }
+  .net-stats { font-size: 10px; color: #555; }
+  .net-contacts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .net-contacts-head h3 { margin: 0; font-size: 13px; }
+  .net-contacts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .net-contact { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 8px; background: #fff; border: 1px solid #c8c8c8; }
+  .net-contact b { font-size: 13px; }
+  .net-contact .via { font-size: 9px; text-transform: uppercase; color: #fff; background: #6a6a6a; padding: 1px 5px; border-radius: 2px; align-self: start; }
+  .net-contact .via.air { background: #1e78d8; }
+  .net-contact .via.qr { background: #2e9e4f; }
+  .net-contact .skill { color: #444; }
+  .net-contact .idea { grid-column: 1 / -1; font-style: italic; color: #333; }
+  .net-contact .mac { grid-column: 1 / -1; font: 10px 'Lucida Console', monospace; color: #777; }
+  .net-empty { color: #555; margin: 4px 0; }
+  .net-empty[hidden] { display: none; }
+
+  /* ---- overlays ---- */
+  .net-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(0, 0, 0, 0.45); z-index: 5; }
+  .net-overlay[hidden] { display: none; }
+  .net-dialog { width: min(100%, 420px); max-height: 100%; overflow: auto; background: #ece9d8; border: 1px solid #0a246a; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .net-dialog.wide { width: min(100%, 640px); }
+  .net-dialog h3 { margin: 0; font-size: 14px; }
+  .net-dialog h3.ok { color: #0b7a2a; font-family: 'Lucida Console', monospace; letter-spacing: 1px; }
+  .net-dialog p { margin: 0; }
+  .net-dialog input { width: 100%; padding: 4px 6px; border: 1px solid #7f9db9; font: 12px 'Lucida Console', monospace; }
+  .net-dialog canvas { align-self: center; background: #fff; padding: 8px; border: 1px solid #bbb; }
+  .net-dialog-btns { display: flex; justify-content: flex-end; gap: 6px; }
+  .net-traits { margin: 0; padding: 0 0 0 16px; font-size: 11px; color: #333; columns: 2; }
+  .net-certificate { background: #fffdf3; padding: 14px; border: 10px double #8b6b2b; }
+  .net-cert-inner { border: 1px solid #c9b270; padding: 14px 18px; text-align: center; font-family: Georgia, 'Times New Roman', serif; color: #2b2b2b; }
+  .net-cert-inner h2 { font-size: 30px; margin: 4px 0 8px; color: #7a1f1f; font-family: 'Old English Text MT', 'Blackadder ITC', Georgia, serif; }
+  .net-cert-pre { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #6b5a30; margin: 0; }
+  .net-cert-name { font-size: 26px; margin: 6px 0; font-style: italic; }
+  .net-cert-text { margin: 6px 0; line-height: 1.5; }
+  .net-cert-text span { font-family: 'Lucida Console', monospace; font-size: 11px; }
+  .net-cert-peers { font-size: 11px; color: #555; margin: 4px 0 10px; }
+  .net-cert-sig { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; margin-top: 10px; }
+  .net-cert-seal { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, #d94c4c, #8a1b1b); color: #fff; font: bold 9px/1.2 Arial, sans-serif; letter-spacing: 1px; transform: rotate(-12deg); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+
+  @media (max-width: 767px) {
+    .net-wizard-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .net-steps { grid-row: auto; flex-direction: row; flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px; }
+    .net-wizard-nav { grid-column: 1; }
+    .net-main { flex-direction: column !important; overflow: auto; }
+    .net-col { overflow: visible; flex: none; }
+    .net-col-right { border-left: 0; border-top: 1px solid #a0a0a0; }
+    .net-term { flex: none; height: 150px; }
+  }
+</style>
+
+<script>
+  import { AudioModem, encodePcm, buildFrame } from '../../scripts/fsk';
+  import { NetNode, encodeFrame, decodeFrame, type Established, type PeerCard, type NodeState, type LogKind } from '../../scripts/netproto';
+  import { questions, packMac, formatMac, parseMac, icqFor, hostnameFor, vendorFor, traitsFor, LIMITS, CERT_LINKS, clampBytes, type Card, type Link } from '../../data/network';
+  import { api, hasApi } from '../../scripts/netapi';
+  import QRCode from 'qrcode';
+
+  interface Me extends Card {
+    answers: number[];
+    created: number;
+  }
+  interface Store {
+    me: Me | null;
+    links: Link[];
+  }
+
+  const KEY = 'shtx-net-v1';
+  const PENDING = 'shtx-net-pending';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function setupNetwork() {
+    const root = $('net');
+    const win = root.closest('.xp-window') as HTMLElement;
+    if (!root || !win) return;
+
+    const store: Store = load();
+    let step = 0;
+    const totalSteps = questions.length + 2;
+    let newMac: Uint8Array | null = null;
+
+    /* ---------- storage ---------- */
+    function load(): Store {
+      try {
+        const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [] };
+      } catch {
+        /* ignore */
+      }
+      return { me: null, links: [] };
+    }
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(store));
+      } catch {
+        /* ignore */
+      }
+    }
+
+    /* ---------- wizard ---------- */
+    const form = $('net-form');
+    const pages = Array.from(form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-step]'));
+    const stepItems = Array.from(form.querySelectorAll<HTMLLIElement>('.net-steps li'));
+    const back = $('net-back') as HTMLButtonElement;
+    const next = $('net-next') as HTMLButtonElement;
+    const finish = $('net-finish') as HTMLButtonElement;
+
+    function showStep(n: number) {
+      step = Math.max(0, Math.min(totalSteps - 1, n));
+      for (const p of pages) p.hidden = Number(p.dataset.step) !== step;
+      stepItems.forEach((li, i) => {
+        li.classList.toggle('current', i === step);
+        li.classList.toggle('done', i < step);
+      });
+      back.disabled = step === 0;
+      next.hidden = step === totalSteps - 1;
+      finish.hidden = step !== totalSteps - 1;
+      if (step === totalSteps - 1) preview();
+    }
+    function answers(): number[] {
+      return questions.map((_, i) => {
+        const v = form.querySelector<HTMLInputElement>(`input[name="q${i}"]:checked`)?.value;
+        return v === undefined ? -1 : Number(v);
+      });
+    }
+    function identity() {
+      return {
+        nick: clampBytes($<HTMLInputElement>('net-nick').value.trim(), LIMITS.nickBytes),
+        skill: clampBytes($<HTMLInputElement>('net-skill').value.trim(), LIMITS.skillBytes),
+        idea: clampBytes($<HTMLInputElement>('net-idea').value.trim(), LIMITS.ideaBytes),
+      };
+    }
+    function validate(): boolean {
+      if (step === 0) {
+        const id = identity();
+        const missing = !id.nick ? 'net-nick' : !id.skill ? 'net-skill' : !id.idea ? 'net-idea' : '';
+        if (missing) {
+          $<HTMLInputElement>(missing).focus();
+          return false;
+        }
+        return true;
+      }
+      if (step >= 1 && step <= questions.length) return answers()[step - 1] >= 0;
+      return true;
+    }
+    function preview() {
+      if (!newMac) newMac = store.me ? parseMac(store.me.mac) ?? packMac(answers()) : packMac(answers());
+      const mac = formatMac(newMac);
+      $('net-new-mac').textContent = mac;
+      $('net-new-vendor').textContent = vendorFor(mac);
+      $('net-new-host').textContent = hostnameFor(identity().nick);
+      $('net-new-icq').textContent = icqFor(mac);
+    }
+    back.addEventListener('click', () => showStep(step - 1));
+    next.addEventListener('click', () => {
+      if (!validate()) return;
+      if (step === questions.length) newMac = store.me && sameAnswers() ? parseMac(store.me.mac) : packMac(answers());
+      showStep(step + 1);
+    });
+    function sameAnswers() {
+      return !!store.me && store.me.answers.join() === answers().join();
+    }
+    finish.addEventListener('click', () => {
+      if (!newMac) return;
+      const id = identity();
+      store.me = { mac: formatMac(newMac), ...id, answers: answers(), created: store.me?.created ?? Date.now() };
+      save();
+      void api.register(store.me);
+      showMain();
+      const pending = sessionStorage.getItem(PENDING);
+      if (pending) {
+        sessionStorage.removeItem(PENDING);
+        try {
+          addFromParams(new URLSearchParams(pending));
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+    form.addEventListener('submit', (e) => e.preventDefault());
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && step < totalSteps - 1) {
+        e.preventDefault();
+        next.click();
+      }
+    });
+
+    function openWizard() {
+      root.dataset.view = 'setup';
+      (root.querySelector('[data-pane="setup"]') as HTMLElement).hidden = false;
+      (root.querySelector('[data-pane="main"]') as HTMLElement).hidden = true;
+      if (store.me) {
+        $<HTMLInputElement>('net-nick').value = store.me.nick;
+        $<HTMLInputElement>('net-skill').value = store.me.skill;
+        $<HTMLInputElement>('net-idea').value = store.me.idea;
+        store.me.answers.forEach((a, i) => {
+          const r = form.querySelector<HTMLInputElement>(`input[name="q${i}"][value="${a}"]`);
+          if (r) r.checked = true;
+        });
+      }
+      newMac = null;
+      showStep(0);
+    }
+
+    /* ---------- main view ---------- */
+    const term = $('net-term');
+    const statusEl = $('net-status');
+    const subEl = $('net-substatus');
+    const levelEl = $('net-level');
+    const meter = levelEl.parentElement as HTMLElement;
+    const listenBtn = $('net-listen') as HTMLButtonElement;
+    const connectBtn = $('net-connect') as HTMLButtonElement;
+    const pingBtn = $('net-ping') as HTMLButtonElement;
+    const stats = { crc: 0 };
+
+    function log(line: string, kind: LogKind = 'info') {
+      const d = new Date();
+      const t = [d.getHours(), d.getMinutes(), d.getSeconds()].map((v) => String(v).padStart(2, '0')).join(':');
+      const el = document.createElement('div');
+      el.className = `l ${kind}`;
+      el.textContent = `[${t}] ${line}`;
+      term.appendChild(el);
+      while (term.childElementCount > 200) term.firstElementChild?.remove();
+      term.scrollTop = term.scrollHeight;
+    }
+
+    const modem = new AudioModem();
+    let node: NetNode | null = null;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function online() {
+      return hasApi() && navigator.onLine;
+    }
+
+    function makeNode() {
+      const me = store.me!;
+      node = new NetNode(
+        { mac: parseMac(me.mac)!, nick: me.nick, skill: me.skill, idea: me.idea },
+        modem,
+        {
+          log,
+          onState: (s) => setLinkState(s),
+          onEstablished: onEstablished,
+          onCard: onCard,
+          online,
+        },
+      );
+      node.minSynLevel = Number($<HTMLSelectElement>('net-range').value);
+      modem.onFrame = (p, level) => node?.receive(p, level);
+    }
+
+    function setLinkState(s: NodeState) {
+      root.dataset.link = s;
+      const texts: Record<NodeState, [string, string]> = {
+        idle: [modem.listening ? 'Listening' : 'Not connected', modem.listening ? 'ไมค์เปิดอยู่ รอฟัง SYN จากคนข้าง ๆ' : 'กด Start เพื่อเปิดไมค์และฟังสัญญาณ'],
+        syn_sent: ['Dialing…', 'ส่ง SYN แล้ว รอ SYN-ACK (ถือมือถือให้ใกล้กัน)'],
+        ack_sent: ['Acknowledging…', 'เลือกเครื่องที่ใกล้สุดแล้ว กำลังส่ง ACK'],
+        synack_sent: ['Incoming connection…', 'ได้ยิน SYN แล้ว ตอบ SYN-ACK กลับไป รอ ACK'],
+        established: ['Connected', 'จับมือสำเร็จ กำลังแลกนามบัตร'],
+      };
+      const [a, b] = texts[s];
+      statusEl.textContent = a;
+      subEl.textContent = b;
+      connectBtn.textContent = s === 'syn_sent' || s === 'ack_sent' || s === 'synack_sent' ? 'Cancel' : 'Connect (SYN)';
+      connectBtn.disabled = !modem.listening && s === 'idle' && false;
+    }
+
+    async function startListening(): Promise<boolean> {
+      if (modem.listening) return true;
+      try {
+        await modem.listen();
+      } catch (e) {
+        log(`Microphone unavailable: ${(e as Error).message}`, 'err');
+        subEl.textContent = 'เปิดไมค์ไม่ได้ ตรวจสิทธิ์ของเบราว์เซอร์ หรือใช้ QR fallback';
+        return false;
+      }
+      root.dataset.listen = 'on';
+      listenBtn.textContent = 'Stop listening';
+      pingBtn.disabled = false;
+      connectBtn.disabled = false;
+      log(`Listening on microphone (${modem.ctx?.sampleRate} Hz, ${modem.o.baud} baud, ${modem.o.f0}/${modem.o.f1} Hz)`, 'info');
+      if (!node) makeNode();
+      setLinkState(node!.state);
+      return true;
+    }
+
+    function stopListening() {
+      modem.stop();
+      node?.cancel();
+      root.dataset.listen = 'off';
+      listenBtn.textContent = 'Start listening';
+      pingBtn.disabled = true;
+      levelEl.style.width = '0';
+      meter.removeAttribute('data-busy');
+      if (node) setLinkState(node.state);
+      log('Microphone released', 'info');
+    }
+
+    modem.onLevel = (level, busy) => {
+      levelEl.style.width = `${Math.round(Math.min(1, level * 1.5) * 100)}%`;
+      if (busy) meter.setAttribute('data-busy', '');
+      else meter.removeAttribute('data-busy');
+      const errs = modem.decoder?.errors ?? 0;
+      if (errs !== stats.crc) {
+        stats.crc = errs;
+        renderStats();
+        reportCrc();
+      }
+    };
+
+    /* NOC telemetry: CRC errors, batched every 30 s so 60 phones do not hammer the server */
+    let crcReported = 0;
+    let crcTimer: ReturnType<typeof setTimeout> | null = null;
+    function reportCrc() {
+      if (!online() || crcTimer || !store.me) return;
+      crcTimer = setTimeout(() => {
+        crcTimer = null;
+        const delta = stats.crc - crcReported;
+        if (delta > 0 && store.me) {
+          crcReported = stats.crc;
+          void api.event('crc', store.me.mac, String(delta));
+        }
+      }, 30_000);
+    }
+
+    listenBtn.addEventListener('click', () => (modem.listening ? stopListening() : void startListening()));
+    connectBtn.addEventListener('click', async () => {
+      if (!(await startListening())) return;
+      if (!node) return;
+      if (node.state === 'idle' || node.state === 'established') {
+        if (resetTimer) clearTimeout(resetTimer);
+        node.reset();
+        node.connect();
+      } else node.cancel();
+    });
+    pingBtn.addEventListener('click', () => void node?.ping());
+    $<HTMLSelectElement>('net-range').addEventListener('change', (e) => {
+      if (node) node.minSynLevel = Number((e.target as HTMLSelectElement).value);
+    });
+
+    function upsertLink(l: Link) {
+      const i = store.links.findIndex((x) => x.mac === l.mac);
+      if (i >= 0) store.links[i] = { ...store.links[i], ...l, skill: l.skill || store.links[i].skill, idea: l.idea || store.links[i].idea, at: store.links[i].at };
+      else store.links.unshift(l);
+      save();
+      renderContacts();
+    }
+
+    function scheduleReset(ms: number) {
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        node?.reset();
+        resetTimer = null;
+      }, ms);
+    }
+
+    function onEstablished(link: Established) {
+      const mac = formatMac(link.peer);
+      upsertLink({ mac, nick: link.nick, via: 'air', at: Date.now() });
+      showPeer(mac, link.needCards ? 'กำลังรับนามบัตรผ่านเสียง (ประมาณ 5 วินาที)…' : 'ดึงนามบัตรจาก NOC…');
+      if (online()) {
+        void api.link(store.me!.mac, mac, 'air', { seq: link.seq, ack: link.ack });
+        void api.node(mac).then((c) => {
+          if (c) {
+            upsertLink({ mac, nick: c.nick || link.nick, skill: c.skill, idea: c.idea, via: 'air', at: Date.now() });
+            showPeer(mac, '');
+          }
+        });
+      }
+      scheduleReset(link.needCards ? 25_000 : 8_000);
+      renderStats();
+    }
+
+    function onCard(card: PeerCard) {
+      const mac = formatMac(card.peer);
+      const existing = store.links.find((l) => l.mac === mac);
+      upsertLink({ mac, nick: existing?.nick ?? '', skill: card.skill, idea: card.idea, via: 'air', at: Date.now() });
+      showPeer(mac, '');
+      scheduleReset(4_000);
+    }
+
+    /* ---------- render ---------- */
+    function renderMe() {
+      const me = store.me!;
+      $('net-me-nick').textContent = me.nick;
+      $('net-me-skill').textContent = me.skill;
+      $('net-me-idea').textContent = `“${me.idea}”`;
+      $('net-me-icq').textContent = icqFor(me.mac);
+      $('net-me-mac').textContent = me.mac;
+    }
+    function renderContacts() {
+      const ul = $('net-contacts');
+      ul.innerHTML = '';
+      for (const l of store.links) {
+        const li = document.createElement('li');
+        li.className = 'net-contact';
+        const when = new Date(l.at);
+        const hhmm = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
+        li.innerHTML = `<b></b><span class="via ${l.via}">${l.via}</span><span class="skill"></span><span class="t"></span><span class="idea"></span><span class="mac"></span>`;
+        li.querySelector('b')!.textContent = l.nick || '(ไม่ทราบชื่อ)';
+        li.querySelector('.skill')!.textContent = l.skill || '—';
+        li.querySelector('.t')!.textContent = hhmm;
+        li.querySelector('.idea')!.textContent = l.idea ? `“${l.idea}”` : '';
+        li.querySelector('.mac')!.textContent = `${l.mac} · ICQ ${icqFor(l.mac)}`;
+        ul.appendChild(li);
+      }
+      $('net-count').textContent = `(${store.links.length})`;
+      $('net-empty').hidden = store.links.length > 0;
+      ($('net-cert-btn') as HTMLButtonElement).disabled = store.links.length < CERT_LINKS;
+    }
+    function renderStats() {
+      const s = node?.stats ?? { tx: 0, rx: 0, ignoredFar: 0, timeouts: 0 };
+      $('net-stats').textContent = `TX ${s.tx} · RX ${s.rx} · CRC errors ${stats.crc} · far hosts ignored ${s.ignoredFar} · timeouts ${s.timeouts} · NOC: ${online() ? 'online' : 'offline'}`;
+    }
+
+    function showMain() {
+      root.dataset.view = 'main';
+      (root.querySelector('[data-pane="setup"]') as HTMLElement).hidden = true;
+      (root.querySelector('[data-pane="main"]') as HTMLElement).hidden = false;
+      renderMe();
+      renderContacts();
+      renderStats();
+      if (node) {
+        const me = store.me!;
+        node.me = { mac: parseMac(me.mac)!, nick: me.nick, skill: me.skill, idea: me.idea };
+      }
+      void syncFromServer();
+    }
+
+    async function syncFromServer() {
+      if (!store.me || !online()) return;
+      const r = await api.linksOf(store.me.mac);
+      if (!r) return;
+      let changed = false;
+      for (const l of r.links) {
+        if (store.links.some((x) => x.mac === l.mac)) continue;
+        store.links.push({ mac: l.mac, nick: l.nick, skill: l.skill, idea: l.idea, via: (l.via as Link['via']) || 'qr', at: l.at || Date.now() });
+        changed = true;
+      }
+      if (changed) {
+        store.links.sort((a, b) => b.at - a.at);
+        save();
+        renderContacts();
+        log(`Synced ${r.links.length} link(s) from NOC`, 'info');
+      }
+    }
+
+    /* ---------- overlays ---------- */
+    root.querySelectorAll<HTMLButtonElement>('[data-close-overlay]').forEach((b) =>
+      b.addEventListener('click', () => {
+        (b.closest('.net-overlay') as HTMLElement).hidden = true;
+      }),
+    );
+
+    function showPeer(mac: string, note: string) {
+      const l = store.links.find((x) => x.mac === mac);
+      if (!l) return;
+      $('net-peer-nick').textContent = l.nick || '(ไม่ทราบชื่อ)';
+      $('net-peer-skill').textContent = l.skill || '…';
+      $('net-peer-idea').textContent = l.idea ? `“${l.idea}”` : '…';
+      $('net-peer-icq').textContent = icqFor(mac);
+      $('net-peer-mac').textContent = mac;
+      const traits = $('net-peer-traits');
+      traits.innerHTML = '';
+      traitsFor(mac).forEach((t, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${questions[i].q}: ${t}`;
+        traits.appendChild(li);
+      });
+      $('net-peer-note').textContent = note;
+      $('net-peer').hidden = false;
+    }
+
+    $('net-edit').addEventListener('click', openWizard);
+
+    $('net-qr').addEventListener('click', async () => {
+      const me = store.me!;
+      const u = new URL(location.href);
+      u.search = '';
+      u.hash = '';
+      const p = new URLSearchParams({ skip: '', open: 'shtxnet', peer: me.mac.replace(/:/g, ''), n: me.nick, s: me.skill, i: me.idea });
+      const link = `${u.toString()}?${p.toString().replace('skip=&', 'skip&')}`;
+      $<HTMLInputElement>('net-qr-link').value = link;
+      try {
+        await QRCode.toCanvas($('net-qr-canvas') as HTMLCanvasElement, link, { width: 240, margin: 1, errorCorrectionLevel: 'M' });
+      } catch (e) {
+        log(`QR failed: ${(e as Error).message}`, 'err');
+      }
+      $('net-qr-overlay').hidden = false;
+    });
+    $('net-qr-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText($<HTMLInputElement>('net-qr-link').value);
+        $('net-qr-copy').textContent = 'Copied';
+        setTimeout(() => ($('net-qr-copy').textContent = 'Copy link'), 1500);
+      } catch {
+        $<HTMLInputElement>('net-qr-link').select();
+      }
+    });
+
+    $('net-manual-btn').addEventListener('click', () => {
+      $('net-manual-err').hidden = true;
+      $('net-manual').hidden = false;
+      $<HTMLInputElement>('net-manual-mac').focus();
+    });
+    $('net-manual-go').addEventListener('click', async () => {
+      const err = $('net-manual-err');
+      const mac = parseMac($<HTMLInputElement>('net-manual-mac').value);
+      const fail = (m: string) => {
+        err.textContent = m;
+        err.hidden = false;
+      };
+      if (!mac) return fail('MAC ต้องเป็นเลขฐานสิบหก 12 หลัก เช่น 02:1A:2B:3C:4D:5E');
+      const s = formatMac(mac);
+      if (s === store.me!.mac) return fail('นั่นคุณเอง');
+      if (!online()) return fail('ตอนนี้ offline จาก NOC ใช้เสียงหรือ QR แทน');
+      const card = await api.node(s);
+      if (!card) return fail('ไม่พบ host นี้ใน NOC (เขายังไม่ได้ลงทะเบียน หรือพิมพ์ผิด)');
+      upsertLink({ mac: s, nick: card.nick, skill: card.skill, idea: card.idea, via: 'manual', at: Date.now() });
+      void api.link(store.me!.mac, s, 'manual');
+      $('net-manual').hidden = true;
+      log(`Manual link to ${card.nick} [${s}] via NOC`, 'ok');
+      showPeer(s, 'เชื่อมผ่าน NOC (ไม่มีเสียงโมเด็ม เสียดายนะ)');
+    });
+
+    $('net-cert-btn').addEventListener('click', () => {
+      const me = store.me!;
+      $('net-cert-name').textContent = me.nick;
+      $('net-cert-mac').textContent = me.mac;
+      $('net-cert-count').textContent = String(store.links.length);
+      $('net-cert-peers').textContent = `Peers: ${store.links.map((l) => l.nick || l.mac).join(' · ')}`;
+      $('net-cert-date').textContent = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+      $('net-cert').hidden = false;
+    });
+    $('net-cert-print').addEventListener('click', () => {
+      const w = window.open('', '_blank', 'width=820,height=620');
+      if (!w) return;
+      const css = Array.from(document.querySelectorAll('style')).map((s) => s.textContent).join('\n');
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Proof of Friendship</title><style>${css}</style><style>body{margin:24px;background:#fff}@page{size:landscape;margin:12mm}</style></head><body>${$('net-certificate').outerHTML}</body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(() => w.print(), 300);
+    });
+
+    /* ---------- QR arrival (?peer=…) ---------- */
+    function addFromParams(params: URLSearchParams) {
+      const raw = params.get('peer');
+      if (!raw) return;
+      const mac = parseMac(raw);
+      if (!mac || !store.me) return;
+      const s = formatMac(mac);
+      if (s === store.me.mac) return;
+      upsertLink({ mac: s, nick: params.get('n') ?? '', skill: params.get('s') ?? '', idea: params.get('i') ?? '', via: 'qr', at: Date.now() });
+      log(`QR link: ${params.get('n') ?? s}`, 'ok');
+      void api.link(store.me.mac, s, 'qr');
+      void api.register(store.me);
+      showPeer(s, 'เชื่อมผ่าน QR แทนเสียง ก็ยังนับว่าเพื่อนกัน');
+    }
+    {
+      const params = new URLSearchParams(location.search);
+      if (params.get('peer')) {
+        if (store.me) addFromParams(params);
+        else sessionStorage.setItem(PENDING, params.toString());
+        for (const k of ['peer', 'n', 's', 'i']) params.delete(k);
+        const q = params.toString().replace('skip=', 'skip');
+        history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
+      }
+    }
+
+    /* ---------- lifecycle ---------- */
+    const syncOpen = () => {
+      const open = !win.hidden && !win.hasAttribute('data-minimized');
+      if (!open && modem.listening) stopListening();
+    };
+    new MutationObserver(syncOpen).observe(win, { attributes: true, attributeFilter: ['hidden', 'data-minimized'] });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && modem.listening) stopListening();
+    });
+    window.addEventListener('online', renderStats);
+    window.addEventListener('offline', renderStats);
+    setInterval(() => void syncFromServer(), 60_000);
+
+    if (store.me) showMain();
+    else openWizard();
+    log('SHTX-NET ready. Nothing leaves this phone unless a NOC server is configured.', 'info');
+
+    /* Field-debug hook: window.__shtxnet.modem / .node / frame helpers (used by scripts/net-e2e.mjs too) */
+    (window as unknown as { __shtxnet: unknown }).__shtxnet = {
+      modem,
+      get node() {
+        return node;
+      },
+      store,
+      encodeFrame,
+      decodeFrame,
+      encodePcm,
+      buildFrame,
+      formatMac,
+      parseMac,
+    };
+  }
+
+  setupNetwork();
+</script>

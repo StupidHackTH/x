@@ -9,11 +9,14 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "net:sim": "esbuild scripts/net-sim.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/net-sim.mjs && node node_modules/.cache/net-sim.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/qrcode": "^1.5.6",
     "astro": "^7.3.3",
+    "qrcode": "^1.5.4",
     "tailwindcss": "^4.3.3"
   },
   "allowScripts": {

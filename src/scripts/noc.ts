@@ -1,0 +1,338 @@
+// NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
+// leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
+import { apiBase, api, type ServerState } from './netapi';
+import { icqFor, vendorFor } from '../data/network';
+import { encodePcm, buildFrame } from './fsk';
+
+interface Host { mac: string; nick: string; skill: string; idea: string; at: number; x: number; y: number; vx: number; vy: number; deg: number; born: number }
+interface Edge { a: string; b: string; via: string; at: number; born: number }
+interface Ev { type: string; mac: string; detail: string; at: number }
+
+const hosts = new Map<string, Host>();
+const edges = new Map<string, Edge>();
+const events: Ev[] = [];
+const started = Date.now();
+let serverStarted = started;
+let crc = 0;
+let packets = 0;
+let linksSinceBsod = 0;
+let demo = false;
+let sound = false;
+
+const $ = (id: string) => document.getElementById(id)!;
+const canvas = $('noc-canvas') as HTMLCanvasElement;
+const ctx = canvas.getContext('2d')!;
+const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+function addHost(n: { mac: string; nick: string; skill?: string; idea?: string; at?: number }) {
+  const h = hosts.get(n.mac);
+  if (h) {
+    h.nick = n.nick || h.nick;
+    h.skill = n.skill ?? h.skill;
+    h.idea = n.idea ?? h.idea;
+    return h;
+  }
+  const r = Math.min(canvas.width, canvas.height) * 0.35;
+  const ang = Math.random() * Math.PI * 2;
+  const nh: Host = { mac: n.mac, nick: n.nick, skill: n.skill ?? '', idea: n.idea ?? '', at: n.at ?? Date.now(), x: canvas.width / 2 + Math.cos(ang) * r, y: canvas.height / 2 + Math.sin(ang) * r, vx: 0, vy: 0, deg: 0, born: performance.now() };
+  hosts.set(n.mac, nh);
+  return nh;
+}
+
+function addEdge(l: { a: string; b: string; via: string; at?: number }, announce = true) {
+  const k = key(l.a, l.b);
+  if (edges.has(k)) return;
+  if (!hosts.has(l.a)) addHost({ mac: l.a, nick: l.a.slice(-5) });
+  if (!hosts.has(l.b)) addHost({ mac: l.b, nick: l.b.slice(-5) });
+  edges.set(k, { a: l.a, b: l.b, via: l.via, at: l.at ?? Date.now(), born: performance.now() });
+  hosts.get(l.a)!.deg++;
+  hosts.get(l.b)!.deg++;
+  packets += l.via === 'air' ? 3 : 1;
+  if (announce) {
+    pushEvent({ type: 'link', mac: l.a, detail: `${hosts.get(l.a)!.nick} <-> ${hosts.get(l.b)!.nick} ESTABLISHED via ${l.via}`, at: Date.now() });
+    if (sound) chirp();
+    if (++linksSinceBsod >= 10) {
+      linksSinceBsod = 0;
+      bsod('SO_MANY_FRIENDS_IRQL_NOT_LESS_OR_EQUAL');
+    }
+  }
+}
+
+function pushEvent(e: Ev) {
+  events.unshift(e);
+  if (events.length > 80) events.pop();
+  if (e.type === 'crc') crc += Number(e.detail) || 1;
+  if (e.type === 'bsod') bsod(e.detail || 'FRIENDSHIP_PAGE_FAULT_IN_NONPAGED_AREA');
+  renderTicker();
+}
+
+function applyState(s: ServerState) {
+  for (const n of s.nodes) addHost(n);
+  for (const l of s.links) addEdge(l, false);
+  crc = s.stats?.crc ?? crc;
+  packets = Math.max(packets, s.stats?.packets ?? 0);
+  serverStarted = s.stats?.started ?? serverStarted;
+  events.length = 0;
+  for (const e of s.events.slice(0, 40)) events.push(e);
+  renderTicker();
+}
+
+/* ---------- live feed ---------- */
+function connect() {
+  const base = apiBase();
+  if (!base) return startDemo();
+  let ws: WebSocket | null = null;
+  let backoff = 1000;
+  const open = () => {
+    ws = new WebSocket(`${base.replace(/^http/, 'ws')}/api/live`);
+    ws.onopen = () => {
+      backoff = 1000;
+      pushEvent({ type: 'info', mac: '', detail: 'NOC feed connected', at: Date.now() });
+    };
+    ws.onmessage = (m) => {
+      try {
+        const msg = JSON.parse(m.data);
+        if (msg.type === 'state') applyState(msg.state);
+        else if (msg.type === 'node') addHost(msg.node);
+        else if (msg.type === 'link') {
+          if (msg.nodes) for (const n of msg.nodes) addHost(n);
+          addEdge(msg.link);
+        } else if (msg.type === 'event') pushEvent(msg.event);
+      } catch {
+        /* ignore */
+      }
+    };
+    ws.onclose = () => {
+      setTimeout(open, backoff);
+      backoff = Math.min(backoff * 2, 15000);
+    };
+  };
+  open();
+  void api.state().then((s) => s && applyState(s));
+  setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
+}
+
+/* ---------- demo: 60 people in a hall ---------- */
+const demoNicks = ['โขง', 'ไท', 'พีม', 'มีมี่', 'กัส', 'Carrot', 'อาร์ต', 'นีโม่', 'Opec', 'นีน่า', 'ลีโอ', 'Nac', 'Thee', 'Juk', 'บีบี', 'Neo', 'Uddy', 'Folk', 'นรภัทร', 'Riffy', 'Poom', 'เบียร์', 'มิโนริ', 'สาสิ', 'แพน', 'เจ', 'บอส', 'ฟ้า', 'ตูน', 'ปอนด์', 'ไอซ์', 'กาย', 'มาร์ค', 'เอิร์ธ', 'พลอย', 'เฟิร์น', 'นิว', 'บีม', 'ก้อง', 'ต้น', 'แบงค์', 'กร', 'ออม', 'มิ้นท์', 'โอ๊ต', 'เตย', 'จูน', 'ภีม', 'ไนซ์', 'ปัน', 'เอม', 'วิน', 'ตาล', 'ภู', 'เดียร์', 'บุ๊ค', 'ฝ้าย', 'กัน', 'เป้', 'ปิง'];
+const demoSkills = ['Frontend', 'Backend', 'Design', 'Hardware', 'Data', 'Pitch', 'หาข้าว', 'ให้กำลังใจ', 'นอนเก่ง', 'ถามเก่ง'];
+const demoIdeas = ['เว็บที่โหลดช้าลงทุกครั้งที่กด', 'แอปเตือนให้หายใจ ทุก 3 วินาที', 'คีย์บอร์ดที่พิมพ์ได้แต่คำว่า ok', 'เครื่องคิดเลขที่ปัดเศษทุกอย่างเป็น 7', 'นาฬิกาปลุกที่ปลุกคนข้างบ้าน', 'เมาส์ที่ต้องเดินไปคลิกเอง', 'ตู้เย็นที่ส่ง LINE มาต่อว่า', 'เครื่องตรวจว่าโง่พอหรือยัง', 'โมเด็ม 300 baud ที่พูดภาษาไทย', 'แปรงสีฟันที่โพสต์เฟซบุ๊กให้'];
+function startDemo() {
+  demo = true;
+  $('noc-demo').hidden = false;
+  const macs: string[] = [];
+  demoNicks.forEach((nick, i) => {
+    const rnd = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
+    const mac = `02:${rnd()}:${rnd()}:${rnd()}:${rnd()}:${rnd()}`;
+    macs.push(mac);
+    setTimeout(() => addHost({ mac, nick, skill: demoSkills[i % demoSkills.length], idea: demoIdeas[i % demoIdeas.length] }), i * 120);
+  });
+  let n = 0;
+  const tick = () => {
+    if (n++ > 400) return;
+    const a = macs[Math.floor(Math.random() * macs.length)];
+    const b = macs[Math.floor(Math.random() * macs.length)];
+    if (a !== b) addEdge({ a, b, via: Math.random() < 0.85 ? 'air' : 'qr' });
+    if (Math.random() < 0.15) pushEvent({ type: 'crc', mac: a, detail: '1', at: Date.now() });
+    if (Math.random() < 0.08) pushEvent({ type: 'collision', mac: b, detail: 'carrier sense: channel busy, backing off', at: Date.now() });
+    setTimeout(tick, 900 + Math.random() * 1800);
+  };
+  setTimeout(tick, 8000);
+  pushEvent({ type: 'info', mac: '', detail: 'No NOC server configured: showing demo traffic for 60 hosts', at: Date.now() });
+}
+
+/* ---------- render ---------- */
+function resize() {
+  const r = canvas.parentElement!.getBoundingClientRect();
+  canvas.width = Math.max(300, Math.floor(r.width * devicePixelRatio));
+  canvas.height = Math.max(200, Math.floor(r.height * devicePixelRatio));
+}
+window.addEventListener('resize', resize);
+resize();
+
+function physics() {
+  const hs = Array.from(hosts.values());
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const k = Math.sqrt((W * H) / Math.max(1, hs.length)) * 0.55;
+  for (let i = 0; i < hs.length; i++) {
+    const a = hs[i];
+    for (let j = i + 1; j < hs.length; j++) {
+      const b = hs[j];
+      let dx = a.x - b.x;
+      let dy = a.y - b.y;
+      let d2 = dx * dx + dy * dy + 0.01;
+      if (d2 > k * k * 9) continue;
+      const f = (k * k) / d2;
+      dx *= f * 0.02;
+      dy *= f * 0.02;
+      a.vx += dx;
+      a.vy += dy;
+      b.vx -= dx;
+      b.vy -= dy;
+    }
+    a.vx += (cx - a.x) * 0.0015;
+    a.vy += (cy - a.y) * 0.0015;
+  }
+  for (const e of edges.values()) {
+    const a = hosts.get(e.a)!;
+    const b = hosts.get(e.b)!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.sqrt(dx * dx + dy * dy) + 0.01;
+    const f = ((d - k * 0.9) / d) * 0.01;
+    a.vx += dx * f;
+    a.vy += dy * f;
+    b.vx -= dx * f;
+    b.vy -= dy * f;
+  }
+  const pad = 40 * devicePixelRatio;
+  for (const h of hs) {
+    h.vx *= 0.85;
+    h.vy *= 0.85;
+    h.x = Math.max(pad, Math.min(W - pad, h.x + h.vx));
+    h.y = Math.max(pad, Math.min(H - pad, h.y + h.vy));
+  }
+}
+
+function draw() {
+  const now = performance.now();
+  const dpr = devicePixelRatio;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const e of edges.values()) {
+    const a = hosts.get(e.a)!;
+    const b = hosts.get(e.b)!;
+    const age = now - e.born;
+    const fresh = Math.max(0, 1 - age / 4000);
+    ctx.lineWidth = (1 + fresh * 3) * dpr;
+    ctx.strokeStyle = e.via === 'air' ? `rgba(170,255,200,${0.35 + fresh * 0.6})` : `rgba(255,230,150,${0.35 + fresh * 0.6})`;
+    ctx.shadowBlur = fresh * 16 * dpr;
+    ctx.shadowColor = '#8ef5a3';
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    if (age < 1500) {
+      const t = (age % 500) / 500;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 3 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.shadowBlur = 0;
+  ctx.font = `${12 * dpr}px 'Segoe UI', Tahoma, 'Noto Sans Thai', sans-serif`;
+  ctx.textAlign = 'center';
+  for (const h of hosts.values()) {
+    const r = (9 + Math.min(14, h.deg * 1.6)) * dpr;
+    const pop = Math.min(1, (now - h.born) / 600);
+    const rr = r * (0.3 + 0.7 * pop);
+    const g = ctx.createRadialGradient(h.x - rr * 0.35, h.y - rr * 0.4, rr * 0.1, h.x, h.y, rr);
+    const col = h.deg === 0 ? ['#ffd0d0', '#ff7b7b', '#a83232'] : h.deg >= 5 ? ['#fff3b0', '#ffd34d', '#b8860b'] : ['#e6ffee', '#8ef5a3', '#2f9e52'];
+    g.addColorStop(0, col[0]);
+    g.addColorStop(0.5, col[1]);
+    g.addColorStop(1, col[2]);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, rr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(h.x, h.y - rr * 0.45, rr * 0.55, rr * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4 * dpr;
+    ctx.fillText(h.nick, h.x, h.y + rr + 14 * dpr);
+    ctx.shadowBlur = 0;
+  }
+}
+
+function renderSide() {
+  const hs = Array.from(hosts.values());
+  const top = hs.filter((h) => h.deg > 0).sort((a, b) => b.deg - a.deg || a.at - b.at).slice(0, 8);
+  $('noc-top').innerHTML = top.map((h, i) => `<li><span class="n">${i + 1}</span><b></b><span class="deg">${h.deg}</span></li>`).join('');
+  Array.from($('noc-top').querySelectorAll('b')).forEach((b, i) => (b.textContent = `${top[i].nick} · ${top[i].skill || vendorFor(top[i].mac)}`));
+  const recent = Array.from(edges.values()).sort((a, b) => b.at - a.at).slice(0, 7);
+  $('noc-recent').innerHTML = recent.map(() => `<li><b></b><span class="mac"></span></li>`).join('');
+  Array.from($('noc-recent').querySelectorAll('li')).forEach((li, i) => {
+    const e = recent[i];
+    li.querySelector('b')!.textContent = `${hosts.get(e.a)!.nick} ↔ ${hosts.get(e.b)!.nick}`;
+    li.querySelector('.mac')!.textContent = e.via;
+  });
+  $('st-hosts').textContent = String(hosts.size);
+  $('st-links').textContent = String(edges.size);
+  $('st-packets').textContent = String(packets);
+  $('st-crc').textContent = String(crc);
+  const up = Math.floor((Date.now() - (demo ? started : serverStarted)) / 1000);
+  $('st-uptime').textContent = `${Math.floor(up / 3600)}:${String(Math.floor((up % 3600) / 60)).padStart(2, '0')}`;
+  const d = new Date();
+  $('noc-clock').textContent = [d.getHours(), d.getMinutes(), d.getSeconds()].map((v) => String(v).padStart(2, '0')).join(':');
+}
+
+let ideaIndex = 0;
+function rotateIdea() {
+  const withIdeas = Array.from(hosts.values()).filter((h) => h.idea);
+  if (!withIdeas.length) return;
+  const h = withIdeas[ideaIndex++ % withIdeas.length];
+  $('noc-idea').textContent = `“${h.idea}”`;
+  $('noc-idea-by').textContent = `— ${h.nick} · ${h.skill || vendorFor(h.mac)} · ICQ ${icqFor(h.mac)}`;
+}
+setInterval(rotateIdea, 7000);
+
+function renderTicker() {
+  const el = $('noc-ticker');
+  el.innerHTML = '';
+  for (const e of events.slice(0, 14)) {
+    const s = document.createElement('span');
+    const t = new Date(e.at);
+    const hh = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
+    s.textContent = `${hh} ${e.type.toUpperCase()} ${e.detail}`;
+    if (e.type === 'crc' || e.type === 'collision' || e.type === 'timeout') s.className = 'err';
+    el.appendChild(s);
+  }
+}
+
+function bsod(code: string) {
+  const el = $('noc-bsod');
+  el.textContent = `A problem has been detected and SHTX-NET has been shut down to prevent damage to your friendships.\n\n${code}\n\nIf this is the first time you've seen this Stop error screen, go talk to a stranger. If this screen appears again, follow these steps:\n\nCheck to make sure any new hardware or software is properly installed. If this is a new installation, ask your hardware or software manufacturer for any SHTX-NET updates you might need.\n\nIf problems continue, disable or remove any newly installed hardware or software. Disable BIOS memory options such as caching or shadowing. If you need to use Safe Mode to remove or disable components, restart your computer, press F8 to select Advanced Startup Options, and then select Safe Mode.\n\nTechnical information:\n\n*** STOP: 0x0000005H (0x7C0DE, 0x300BAUD, 0x${hosts.size.toString(16).toUpperCase()}, 0x${edges.size.toString(16).toUpperCase()})\n\nBeginning dump of physical memory\nPhysical memory dump complete.\nContact your system administrator or ไท for further assistance.`;
+  el.hidden = false;
+  setTimeout(() => (el.hidden = true), 6000);
+}
+
+/* ---------- sound: a real (tiny) FSK frame as the "new link" chime ---------- */
+let actx: AudioContext | null = null;
+function chirp() {
+  try {
+    actx ??= new AudioContext();
+    const pcm = encodePcm(buildFrame(new TextEncoder().encode('LINK')), actx.sampleRate);
+    const buf = actx.createBuffer(1, pcm.length, actx.sampleRate);
+    buf.copyToChannel(pcm, 0);
+    const src = actx.createBufferSource();
+    const gain = actx.createGain();
+    gain.gain.value = 0.25;
+    src.buffer = buf;
+    src.connect(gain).connect(actx.destination);
+    src.start();
+  } catch {
+    /* ignore */
+  }
+}
+$('noc-sound').addEventListener('click', (e) => {
+  sound = !sound;
+  (e.currentTarget as HTMLButtonElement).setAttribute('aria-pressed', String(sound));
+  (e.currentTarget as HTMLButtonElement).textContent = `Sound: ${sound ? 'on' : 'off'}`;
+  if (sound) chirp();
+});
+$('noc-full').addEventListener('click', () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()));
+
+function frame() {
+  physics();
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(renderSide, 500);
+connect();
+if (new URLSearchParams(location.search).has('demo') && !demo) startDemo();
