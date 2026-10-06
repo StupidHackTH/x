@@ -29,7 +29,7 @@ export const event = {
     website: 'https://stupid.hackathon.in.th',
     previous: 'https://stupid.hackathon.in.th/9/',
     facebook: 'https://www.facebook.com/creatorsgarten',
-    discord: 'https://creatorsgarten.org/discord',
+    discord: 'https://grtn.org/discord',
     creatorsgarten: 'https://creatorsgarten.org',
     instagram: '', // TBD
     sponsor: 'https://grtn.org/e/shtx/spon', // sponsor form
