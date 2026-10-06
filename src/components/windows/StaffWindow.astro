@@ -1,6 +1,6 @@
 ---
 import Window from '../Window.astro';
-import { staff } from '../../data/event';
+import { staff, staffGroups } from '../../data/event';
 import { asset } from '../../lib/asset';
 const wiki = (u: string) => `https://creatorsgarten.org/wiki/People/${u}`;
 const members = staff.filter((s) => s.wiki).length;
@@ -12,40 +12,52 @@ const members = staff.filter((s) => s.wiki).length;
       <h2 class="font-xp-title font-bold text-base text-[#0046d5]">EVENT STAFF · ทีมงานแห่งความเพี้ยน 🎭</h2>
       <p class="text-[11px] text-neutral-600">User Accounts — pick an account to blame · การ์ดที่กดได้คือสมาชิก Creatorsgarten</p>
     </div>
-    <ul class="staff-grid">
-      {staff.map((s) => {
-        const inner = (
-          <>
-            {s.photo ? (
-              <img src={asset(`staff/${s.photo}`)} alt="" class="staff-photo" loading="lazy" />
-            ) : (
-              <span class="staff-photo staff-photo-empty" aria-hidden="true">{s.name.slice(0, 1)}</span>
-            )}
-            <span class="staff-text">
-              <b class="staff-name">{s.name}</b>
-              {s.fullName && <span class="staff-full">{s.fullName}</span>}
-              {s.handle && <span class="staff-handle">@{s.handle}</span>}
-              <span class="staff-role">{s.role}</span>
-              {s.wiki && <span class="staff-link">creatorsgarten.org/wiki/People/{s.wiki}</span>}
-            </span>
-          </>
-        );
-        return (
-          <li>
-            {s.wiki ? (
-              <a href={wiki(s.wiki)} target="_blank" rel="noopener" class="staff-card staff-card-link" title={`เปิดโปรไฟล์ ${s.wiki} บน Creatorsgarten`}>{inner}</a>
-            ) : (
-              <div class="staff-card">{inner}</div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    {staffGroups.map((g) => {
+      const people = staff.filter((s) => s.group === g.id);
+      if (!people.length) return null;
+      return (
+        <section class="staff-section">
+          <h3 class="staff-section-title"><span>{g.title}</span><small>{g.blurb}</small></h3>
+          <ul class="staff-grid">
+            {people.map((s) => {
+              const inner = (
+                <>
+                  {s.photo ? (
+                    <img src={asset(`staff/${s.photo}`)} alt="" class="staff-photo" loading="lazy" />
+                  ) : (
+                    <span class="staff-photo staff-photo-empty" aria-hidden="true">{s.name.slice(0, 1)}</span>
+                  )}
+                  <span class="staff-text">
+                    <b class="staff-name">{s.name}</b>
+                    {s.fullName && <span class="staff-full">{s.fullName}</span>}
+                    {s.handle && <span class="staff-handle">@{s.handle}</span>}
+                    <span class="staff-role">{s.role}</span>
+                    {s.wiki && <span class="staff-link">creatorsgarten.org/wiki/People/{s.wiki}</span>}
+                  </span>
+                </>
+              );
+              return (
+                <li>
+                  {s.wiki ? (
+                    <a href={wiki(s.wiki)} target="_blank" rel="noopener" class="staff-card staff-card-link" title={`เปิดโปรไฟล์ ${s.wiki} บน Creatorsgarten`}>{inner}</a>
+                  ) : (
+                    <div class="staff-card">{inner}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      );
+    })}
   </div>
 </Window>
 
 <style>
-  /* Big user-account cards, three across. Members link to their Creatorsgarten profile. */
+  /* Big user-account cards, three across, grouped advisors → leads → staff. Members link to their Creatorsgarten profile. */
+  .staff-section + .staff-section { margin-top: 14px; }
+  .staff-section-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; padding: 3px 10px; border-left: 4px solid #316ac5; background: linear-gradient(90deg, #dbe8fa, transparent); font-family: var(--font-xp-title); font-weight: 700; font-size: 14px; color: #10305f; }
+  .staff-section-title small { font-size: 11px; font-weight: 400; color: #4b5d78; }
   .staff-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
   .staff-card {
     display: flex;

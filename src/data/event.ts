@@ -240,29 +240,42 @@ export const faq = [
   { q: 'อยากสปอนเซอร์', a: 'เปิดหน้าต่าง Funding Goal หรือ Sponsors เพื่อดู tier แล้วติดต่อทีมงานได้เลย' },
 ];
 
-// Staff. Roles come from the staff form (Oct 2026). `handle` is optional. `wiki` is the person's username on
+// Staff, shown in this order: advisors, leads, then everyone else (the Staff window groups by `group`).
+// Roles come from the staff form (Oct 2026). `handle` is optional. `wiki` is the person's username on
 // creatorsgarten.org/wiki/People (the Staff window links there); `fullName` and `photo` (public/staff/<wiki>.jpg,
-// 160px copies) were fetched from that profile. Run scripts/… or redo by hand when the wiki changes.
-export interface StaffMember { name: string; handle?: string; role: string; wiki?: string; fullName?: string; photo?: string }
+// 160px copies) were fetched from that profile.
+export type StaffGroup = 'advisor' | 'lead' | 'staff';
+export interface StaffMember { name: string; handle?: string; role: string; group: StaffGroup; wiki?: string; fullName?: string; photo?: string }
+export const staffGroups: { id: StaffGroup; title: string; blurb: string }[] = [
+  { id: 'advisor', title: 'Advisors', blurb: 'ที่ปรึกษา · คนที่คอยบอกว่าโง่ยังไม่พอ' },
+  { id: 'lead', title: 'Leads', blurb: 'หัวหน้าฝ่าย · คนที่โดนตามตอนตีสาม' },
+  { id: 'staff', title: 'Staff', blurb: 'ทีมงาน · คนที่ทำให้งานเกิดขึ้นจริง' },
+];
 export const staff: StaffMember[] = [
-  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
-  { name: 'ไท', handle: 'dtinth', role: 'Advisor', wiki: 'dtinth', fullName: 'Thai Pangsakulyanont', photo: 'dtinth.jpg' },
-  { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
-  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets' },
-  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
-  { name: 'อาร์ต', handle: 'cgix', role: 'Finance' },
-  { name: 'นีโม่', role: 'Finance' },
-  { name: 'Opec', handle: 'opecgame', role: 'Runner', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
-  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic' },
-  { name: 'นีน่า', role: 'Swag' },
-  { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
-  { name: 'Nac', role: 'Challenge', wiki: 'nacnano', fullName: 'Chotpisit Adunsehawat', photo: 'nacnano.jpg' },
-  { name: 'Juk', role: 'OB', wiki: 'juk', fullName: 'Chukkrit Visitsaktavorn', photo: 'juk.jpg' },
-  { name: 'บีบี', role: 'OB', wiki: 'siravijbb', fullName: 'Siravij Praevisavakij', photo: 'siravijbb.jpg' },
-  { name: 'Neo', handle: 'ne0negi', role: 'Staff' },
-  { name: 'Uddy', handle: 'wasinuddy', role: 'Staff' },
-  { name: 'โฟล์ค', role: 'Staff' },
-  { name: 'นรภัทร', role: 'Staff' },
+  // advisors
+  { name: 'ไท', handle: 'dtinth', role: 'Advisor', group: 'advisor', wiki: 'dtinth', fullName: 'Thai Pangsakulyanont', photo: 'dtinth.jpg' },
+  { name: 'Riffy', handle: 'rayriffy', role: 'Advisor', group: 'advisor', wiki: 'rayriffy', fullName: 'Phumrapee Limpianchop', photo: 'rayriffy.jpg' },
+  { name: 'Poom', handle: 'poom', role: 'Advisor', group: 'advisor', wiki: 'poom', fullName: 'Phoomparin Mano', photo: 'poom.jpg' },
+  // leads
+  { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', group: 'lead', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
+  { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', group: 'lead', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
+  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets', group: 'lead' },
+  { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', group: 'lead', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
+  // staff
+  { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
+  { name: 'นีโม่', role: 'Finance', group: 'staff' },
+  { name: 'Opec', handle: 'opecgame', role: 'Runner', group: 'staff', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
+  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic', group: 'staff' },
+  { name: 'นีน่า', role: 'Swag', group: 'staff' },
+  { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', group: 'staff', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
+  { name: 'Nac', role: 'Challenge', group: 'staff', wiki: 'nacnano', fullName: 'Chotpisit Adunsehawat', photo: 'nacnano.jpg' },
+  { name: 'Thee', handle: 'betich', role: 'Challenge', group: 'staff', wiki: 'betich', fullName: 'Panithi Makthiengtrong', photo: 'betich.jpg' },
+  { name: 'Juk', role: 'OB', group: 'staff', wiki: 'juk', fullName: 'Chukkrit Visitsaktavorn', photo: 'juk.jpg' },
+  { name: 'บีบี', role: 'OB', group: 'staff', wiki: 'siravijbb', fullName: 'Siravij Praevisavakij', photo: 'siravijbb.jpg' },
+  { name: 'Neo', handle: 'ne0negi', role: 'Staff', group: 'staff' },
+  { name: 'Uddy', handle: 'wasinuddy', role: 'Staff', group: 'staff' },
+  { name: 'โฟล์ค', role: 'Staff', group: 'staff' },
+  { name: 'นรภัทร', role: 'Staff', group: 'staff' },
 ];
 
 export const pastEditions = [
