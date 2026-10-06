@@ -248,7 +248,7 @@ export type StaffGroup = 'advisor' | 'organizer' | 'lead' | 'staff';
 export interface StaffMember { name: string; handle?: string; role: string; group: StaffGroup; wiki?: string; fullName?: string; photo?: string }
 export const staffGroups: { id: StaffGroup; title: string; blurb: string }[] = [
   { id: 'advisor', title: 'Advisors', blurb: 'ที่ปรึกษา · คนที่คอยบอกว่าโง่ยังไม่พอ' },
-  { id: 'organizer', title: 'Organizers', blurb: 'ผู้จัดงาน · คนที่ตามคนอื่นตอนตีสาม' },
+  { id: 'organizer', title: 'Organizers', blurb: 'ผู้จัดงาน · คนที่ตามคนอื่นตอนตีสาม และทำให้งานเกิดขึ้นจริง' },
   { id: 'lead', title: 'Leads', blurb: 'หัวหน้าฝ่าย · คนที่โดนตามตอนตีสาม และทำให้งานเกิดขึ้นจริง' },
   { id: 'staff', title: 'Staff', blurb: 'ทีมงาน · คนที่ทำให้งานเกิดขึ้นจริง' },
 ];
