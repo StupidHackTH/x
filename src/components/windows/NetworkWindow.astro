@@ -612,7 +612,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       upsertLink({ mac, nick: link.nick, via: 'air', at: Date.now() });
       showPeer(mac, link.needCards ? 'กำลังรับนามบัตรผ่านเสียง (ประมาณ 5 วินาที)…' : 'ดึงนามบัตรจาก NOC…');
       if (online()) {
-        void api.link(store.me!.mac, mac, 'air', { seq: link.seq, ack: link.ack });
+        void api.register(store.me!).then(() => api.link(store.me!.mac, mac, 'air', { seq: link.seq, ack: link.ack }));
         void api.node(mac).then((c) => {
           if (c) {
             upsertLink({ mac, nick: c.nick || link.nick, skill: c.skill, idea: c.idea, via: 'air', at: Date.now() });
@@ -677,6 +677,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         const me = store.me!;
         node.me = { mac: parseMac(me.mac)!, nick: me.nick, skill: me.skill, idea: me.idea };
       }
+      if (online()) void api.register(store.me!);
       void syncFromServer();
     }
 
@@ -770,7 +771,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       const card = await api.node(s);
       if (!card) return fail('ไม่พบ host นี้ใน NOC (เขายังไม่ได้ลงทะเบียน หรือพิมพ์ผิด)');
       upsertLink({ mac: s, nick: card.nick, skill: card.skill, idea: card.idea, via: 'manual', at: Date.now() });
-      void api.link(store.me!.mac, s, 'manual');
+      void api.register(store.me!).then(() => api.link(store.me!.mac, s, 'manual'));
       $('net-manual').hidden = true;
       log(`Manual link to ${card.nick} [${s}] via NOC`, 'ok');
       showPeer(s, 'เชื่อมผ่าน NOC (ไม่มีเสียงโมเด็ม เสียดายนะ)');
@@ -805,8 +806,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       if (s === store.me.mac) return;
       upsertLink({ mac: s, nick: params.get('n') ?? '', skill: params.get('s') ?? '', idea: params.get('i') ?? '', via: 'qr', at: Date.now() });
       log(`QR link: ${params.get('n') ?? s}`, 'ok');
-      void api.link(store.me.mac, s, 'qr');
-      void api.register(store.me);
+      void api.register(store.me).then(() => api.link(store.me!.mac, s, 'qr'));
       showPeer(s, 'เชื่อมผ่าน QR แทนเสียง ก็ยังนับว่าเพื่อนกัน');
     }
     {

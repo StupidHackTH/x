@@ -155,6 +155,23 @@ const app = new Elysia()
     },
     { body: t.Object({ type: t.Union([t.Literal('crc'), t.Literal('collision'), t.Literal('timeout'), t.Literal('bsod'), t.Literal('note')]), mac: t.Optional(t.String({ maxLength: 32 })), detail: t.Optional(t.String({ maxLength: 512 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
+  .delete('/api/nodes/:mac', ({ params, query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    const mac = normMac(params.mac);
+    if (!mac) {
+      set.status = 400;
+      return { error: 'bad mac' };
+    }
+    const nick = qNode.get(mac)?.nick ?? mac;
+    db.query('DELETE FROM links WHERE a = ? OR b = ?').run(mac, mac);
+    db.query('DELETE FROM nodes WHERE mac = ?').run(mac);
+    insertEvent.run('note', mac, `host ${nick} removed by staff`, Date.now());
+    broadcast({ type: 'state', state: state() });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .post('/api/reset', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;

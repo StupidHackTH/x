@@ -67,8 +67,18 @@ function pushEvent(e: Ev) {
 }
 
 function applyState(s: ServerState) {
+  // the server state is authoritative: drop hosts/links it no longer has (reset, kick), then merge
+  const macs = new Set(s.nodes.map((n) => n.mac));
+  for (const k of Array.from(hosts.keys())) if (!macs.has(k)) hosts.delete(k);
+  const keys = new Set(s.links.map((l) => key(l.a, l.b)));
+  for (const k of Array.from(edges.keys())) if (!keys.has(k)) edges.delete(k);
   for (const n of s.nodes) addHost(n);
   for (const l of s.links) addEdge(l, false);
+  for (const h of hosts.values()) h.deg = 0;
+  for (const e of edges.values()) {
+    hosts.get(e.a)!.deg++;
+    hosts.get(e.b)!.deg++;
+  }
   crc = s.stats?.crc ?? crc;
   packets = Math.max(packets, s.stats?.packets ?? 0);
   serverStarted = s.stats?.started ?? serverStarted;
@@ -326,6 +336,91 @@ $('noc-sound').addEventListener('click', (e) => {
   if (sound) chirp();
 });
 $('noc-full').addEventListener('click', () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()));
+
+/* ---------- staff controls: open /noc/?admin=<NET_ADMIN_TOKEN> once; the token stays in this browser ---------- */
+const ADMIN_KEY = 'shtx-noc-admin';
+function adminToken(): string {
+  try {
+    const q = new URLSearchParams(location.search);
+    const t = q.get('admin');
+    if (t !== null) {
+      if (t) localStorage.setItem(ADMIN_KEY, t);
+      else localStorage.removeItem(ADMIN_KEY);
+      q.delete('admin');
+      history.replaceState(null, '', `${location.pathname}${q.toString() ? `?${q}` : ''}`);
+    }
+    return localStorage.getItem(ADMIN_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+function setupAdmin() {
+  const token = adminToken();
+  const bar = $('noc-admin');
+  if (!token || !apiBase()) return;
+  bar.hidden = false;
+  const msg = $('adm-msg');
+  const say = (t: string) => {
+    msg.textContent = t;
+    setTimeout(() => (msg.textContent = ''), 4000);
+  };
+  const call = async (path: string, init: RequestInit) => {
+    const r = await fetch(`${apiBase()}${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`, { ...init, headers: { 'content-type': 'application/json' } });
+    if (r.status === 403) say('token ผิด (เปิดด้วย ?admin=<token> ใหม่)');
+    else if (!r.ok) say(`ล้มเหลว (${r.status})`);
+    return r.ok;
+  };
+  const reset = $('adm-reset') as HTMLButtonElement;
+  let armed: ReturnType<typeof setTimeout> | null = null;
+  reset.addEventListener('click', async () => {
+    if (!armed) {
+      reset.textContent = 'กดอีกครั้งเพื่อลบทุกอย่าง';
+      reset.classList.add('danger');
+      armed = setTimeout(() => {
+        armed = null;
+        reset.textContent = 'Reset game…';
+        reset.classList.remove('danger');
+      }, 5000);
+      return;
+    }
+    clearTimeout(armed);
+    armed = null;
+    reset.textContent = 'Reset game…';
+    reset.classList.remove('danger');
+    if (await call('/api/reset', { method: 'POST' })) {
+      linksSinceBsod = 0;
+      say('ล้างแล้ว: 0 hosts, 0 links');
+    }
+  });
+  $('adm-bsod').addEventListener('click', async () => {
+    const codes = ['FRIENDSHIP_PAGE_FAULT_IN_NONPAGED_AREA', 'IDEA_TOO_STUPID_FOR_KERNEL', 'IRQL_NOT_LESS_OR_EQUAL_TO_300_BAUD', 'DRIVER_HANDSHAKE_TIMEOUT'];
+    await call('/api/events', { method: 'POST', body: JSON.stringify({ type: 'bsod', detail: codes[Math.floor(Math.random() * codes.length)] }) });
+  });
+  const kick = async () => {
+    const q = ($('adm-kick') as HTMLInputElement).value.trim();
+    if (!q) return;
+    const hex = q.replace(/[^0-9a-fA-F]/g, '');
+    const h = Array.from(hosts.values()).find((x) => (hex.length === 12 && x.mac.replace(/:/g, '').toUpperCase() === hex.toUpperCase()) || x.nick.toLowerCase() === q.toLowerCase());
+    if (!h) return say('ไม่พบ host นี้');
+    if (await call(`/api/nodes/${encodeURIComponent(h.mac)}`, { method: 'DELETE' })) {
+      ($('adm-kick') as HTMLInputElement).value = '';
+      say(`เตะ ${h.nick} ออกแล้ว`);
+    }
+  };
+  $('adm-kick-btn').addEventListener('click', () => void kick());
+  $('adm-kick').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void kick();
+  });
+  $('adm-logout').addEventListener('click', () => {
+    try {
+      localStorage.removeItem(ADMIN_KEY);
+    } catch {
+      /* ignore */
+    }
+    bar.hidden = true;
+  });
+}
+setupAdmin();
 
 function frame() {
   physics();

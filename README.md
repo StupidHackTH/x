@@ -144,6 +144,12 @@ docker run -d --name ts-shtx-net --restart unless-stopped --network container:sh
 # → https://shtx-net.<tailnet>.ts.net  (set it as SHTX_NET_API)
 ```
 
+Staff controls: open `/noc/?admin=<NET_ADMIN_TOKEN>` once on the stage machine (the token is then remembered in that browser
+and stripped from the URL). A *Staff* bar appears on the graph: **Reset game** (two clicks, wipes hosts, links and events),
+**BSOD** (pushes a blue screen to every NOC screen), **Kick** (removes a host and its links by nickname or MAC, for
+anything rude on the projector) and **Log out**. The same things over HTTP: `POST /api/reset?token=…`,
+`POST /api/events?token=…` with `{"type":"bsod"}`, `DELETE /api/nodes/:mac?token=…`.
+
 ### How 60 people play
 
 Everyone runs the wizard in parallel (2–3 min, no audio). Then free roam: find someone you don't know, both tap *Start

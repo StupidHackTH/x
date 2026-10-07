@@ -38,6 +38,12 @@ import Icons from '../components/Icons.astro';
       .noc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
       .noc-demo { position: absolute; right: 14px; top: 12px; padding: 3px 10px; border-radius: 10px; background: rgba(255, 180, 0, 0.85); color: #3b2400; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
       .noc-demo[hidden] { display: none; }
+      .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
+      .noc-admin[hidden] { display: none; }
+      .noc-admin .noc-btn { padding: 3px 10px; font-size: 12px; }
+      .noc-admin .noc-btn.danger { background: linear-gradient(180deg, #ffb3b3, #d9534f); color: #fff; }
+      .noc-admin input { width: 170px; padding: 3px 8px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.85); color: #06264f; font: inherit; font-size: 12px; }
+      .noc-admin #adm-msg { color: #fff3b0; }
       .noc-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
       .panel { padding: 10px 14px; min-height: 0; }
       .panel h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #d4f1ff; }
@@ -81,6 +87,15 @@ import Icons from '../components/Icons.astro';
           <canvas id="noc-canvas"></canvas>
           <div class="noc-legend"><span><i style="background:#8ef5a3"></i>host</span><span><i style="background:#ffd34d"></i>core switch (5+ links)</span><span><i style="background:#ff7b7b"></i>isolated</span></div>
           <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
+          <div class="noc-admin glass" id="noc-admin" hidden>
+            <b>Staff</b>
+            <button type="button" class="noc-btn" id="adm-reset">Reset game…</button>
+            <button type="button" class="noc-btn" id="adm-bsod">BSOD</button>
+            <input id="adm-kick" placeholder="kick: ชื่อเล่น หรือ MAC" autocomplete="off" />
+            <button type="button" class="noc-btn" id="adm-kick-btn">Kick</button>
+            <button type="button" class="noc-btn" id="adm-logout" title="ลืม token ในเครื่องนี้">Log out</button>
+            <span id="adm-msg"></span>
+          </div>
         </section>
         <aside class="noc-side">
           <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
