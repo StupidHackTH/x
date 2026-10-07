@@ -35,7 +35,7 @@ export const funding: Funding = {
     return this.sponsors.length;
   },
   deadline: '2026-10-10',
-  updatedAt: '2026-10-06T19:10:00+07:00',
+  updatedAt: '2026-10-07T14:07:00+07:00',
   mock: false,
   sponsors: [
     { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com', logo: 'cleverse.svg' },
@@ -50,6 +50,7 @@ export const funding: Funding = {
     { name: 'Sasi Chanplakorn', tier: 'Individual', amount: 500.11, url: 'https://mindsch.github.io', logo: 'sasi.jpg', message: 'กดบัตรไม่ทันอีกแล้ว ฮือ สปอนทีมนะ ขอบคุณที่จัดอีเว้นสุดจะเริ่ด <3' },
     { name: 'Panthipa Suksirisorn', tier: 'Individual', amount: 550 },
     { name: 'ครอบครัวนิมมานนรวงศ์', tier: 'Individual', amount: 500.01 },
+    { name: 'Meen', tier: 'Individual', amount: 500.67, url: 'https://youtu.be/dQw4w9WgXcQ' },
   ],
 };
 
