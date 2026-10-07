@@ -155,6 +155,13 @@ const app = new Elysia()
     },
     { body: t.Object({ type: t.Union([t.Literal('crc'), t.Literal('collision'), t.Literal('timeout'), t.Literal('bsod'), t.Literal('note')]), mac: t.Optional(t.String({ maxLength: 32 })), detail: t.Optional(t.String({ maxLength: 512 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
+  .get('/api/admin/check', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'wrong password' };
+    }
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .delete('/api/nodes/:mac', ({ params, query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;

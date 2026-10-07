@@ -38,6 +38,10 @@ import Icons from '../components/Icons.astro';
       .noc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
       .noc-demo { position: absolute; right: 14px; top: 12px; padding: 3px 10px; border-radius: 10px; background: rgba(255, 180, 0, 0.85); color: #3b2400; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
       .noc-demo[hidden] { display: none; }
+      .noc-login { position: absolute; right: 14px; top: 74px; z-index: 20; display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; }
+      .noc-login[hidden] { display: none; }
+      .noc-login input { width: 180px; padding: 5px 8px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.9); color: #06264f; font: inherit; }
+      .noc-login #noc-login-msg { color: #ffb3b3; }
       .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
       .noc-admin[hidden] { display: none; }
       .noc-admin .noc-btn { padding: 3px 10px; font-size: 12px; }
@@ -81,7 +85,15 @@ import Icons from '../components/Icons.astro';
         </div>
         <button type="button" class="noc-btn" id="noc-sound" aria-pressed="false">Sound: off</button>
         <button type="button" class="noc-btn" id="noc-full">Full screen</button>
+        <button type="button" class="noc-btn" id="noc-staff">Staff</button>
       </header>
+      <form class="noc-login glass" id="noc-login" hidden>
+        <label for="noc-pass">รหัสผ่านทีมงาน</label>
+        <input id="noc-pass" type="password" autocomplete="current-password" />
+        <button type="submit" class="noc-btn">Log in</button>
+        <button type="button" class="noc-btn" id="noc-login-cancel">Cancel</button>
+        <span id="noc-login-msg"></span>
+      </form>
       <div class="noc-mid">
         <section class="noc-graph glass">
           <canvas id="noc-canvas"></canvas>

@@ -337,9 +337,9 @@ $('noc-sound').addEventListener('click', (e) => {
 });
 $('noc-full').addEventListener('click', () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()));
 
-/* ---------- staff controls: open /noc/?admin=<NET_ADMIN_TOKEN> once; the token stays in this browser ---------- */
+/* ---------- staff controls: Staff button → password (= NET_ADMIN_TOKEN), or /noc/?admin=<token>; remembered in this browser ---------- */
 const ADMIN_KEY = 'shtx-noc-admin';
-function adminToken(): string {
+function savedToken(): string {
   try {
     const q = new URLSearchParams(location.search);
     const t = q.get('admin');
@@ -354,20 +354,75 @@ function adminToken(): string {
     return '';
   }
 }
+async function checkToken(token: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${apiBase()}/api/admin/check?token=${encodeURIComponent(token)}`);
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
 function setupAdmin() {
-  const token = adminToken();
   const bar = $('noc-admin');
-  if (!token || !apiBase()) return;
-  bar.hidden = false;
+  const staffBtn = $('noc-staff') as HTMLButtonElement;
+  const login = $('noc-login') as HTMLFormElement;
+  const pass = $('noc-pass') as HTMLInputElement;
+  const loginMsg = $('noc-login-msg');
   const msg = $('adm-msg');
+  let token = '';
+  if (!apiBase()) {
+    staffBtn.hidden = true;
+    return;
+  }
   const say = (t: string) => {
     msg.textContent = t;
     setTimeout(() => (msg.textContent = ''), 4000);
   };
+  const showBar = (t: string) => {
+    token = t;
+    try {
+      localStorage.setItem(ADMIN_KEY, t);
+    } catch {
+      /* ignore */
+    }
+    bar.hidden = false;
+    staffBtn.hidden = true;
+    login.hidden = true;
+  };
+  const hideBar = () => {
+    token = '';
+    try {
+      localStorage.removeItem(ADMIN_KEY);
+    } catch {
+      /* ignore */
+    }
+    bar.hidden = true;
+    staffBtn.hidden = false;
+  };
+  staffBtn.addEventListener('click', () => {
+    login.hidden = false;
+    loginMsg.textContent = '';
+    pass.value = '';
+    pass.focus();
+  });
+  $('noc-login-cancel').addEventListener('click', () => (login.hidden = true));
+  login.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const t = pass.value;
+    if (!t) return;
+    loginMsg.textContent = '…';
+    if (await checkToken(t)) showBar(t);
+    else loginMsg.textContent = 'รหัสผ่านไม่ถูกต้อง';
+  });
+  const saved = savedToken();
+  if (saved) void checkToken(saved).then((ok) => (ok ? showBar(saved) : hideBar()));
+
   const call = async (path: string, init: RequestInit) => {
     const r = await fetch(`${apiBase()}${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`, { ...init, headers: { 'content-type': 'application/json' } });
-    if (r.status === 403) say('token ผิด (เปิดด้วย ?admin=<token> ใหม่)');
-    else if (!r.ok) say(`ล้มเหลว (${r.status})`);
+    if (r.status === 403) {
+      say('รหัสผ่านไม่ถูกต้องแล้ว ล็อกอินใหม่');
+      hideBar();
+    } else if (!r.ok) say(`ล้มเหลว (${r.status})`);
     return r.ok;
   };
   const reset = $('adm-reset') as HTMLButtonElement;
@@ -411,14 +466,7 @@ function setupAdmin() {
   $('adm-kick').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') void kick();
   });
-  $('adm-logout').addEventListener('click', () => {
-    try {
-      localStorage.removeItem(ADMIN_KEY);
-    } catch {
-      /* ignore */
-    }
-    bar.hidden = true;
-  });
+  $('adm-logout').addEventListener('click', hideBar);
 }
 setupAdmin();
 

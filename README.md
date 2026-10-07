@@ -144,8 +144,9 @@ docker run -d --name ts-shtx-net --restart unless-stopped --network container:sh
 # → https://shtx-net.<tailnet>.ts.net  (set it as SHTX_NET_API)
 ```
 
-Staff controls: open `/noc/?admin=<NET_ADMIN_TOKEN>` once on the stage machine (the token is then remembered in that browser
-and stripped from the URL). A *Staff* bar appears on the graph: **Reset game** (two clicks, wipes hosts, links and events),
+Staff controls: press **Staff** on `/noc` and enter the staff password (= `NET_ADMIN_TOKEN` on the server, kept in
+`~/shtx-net/admin.token` on the box; change it there and run `./run.sh`). The browser remembers it; `/noc/?admin=<password>`
+also works. A *Staff* bar appears on the graph: **Reset game** (two clicks, wipes hosts, links and events),
 **BSOD** (pushes a blue screen to every NOC screen), **Kick** (removes a host and its links by nickname or MAC, for
 anything rude on the projector) and **Log out**. The same things over HTTP: `POST /api/reset?token=…`,
 `POST /api/events?token=…` with `{"type":"bsod"}`, `DELETE /api/nodes/:mac?token=…`.
