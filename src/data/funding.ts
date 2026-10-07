@@ -50,7 +50,7 @@ export const funding: Funding = {
     { name: 'Sasi Chanplakorn', tier: 'Individual', amount: 500.11, url: 'https://mindsch.github.io', logo: 'sasi.jpg', message: 'กดบัตรไม่ทันอีกแล้ว ฮือ สปอนทีมนะ ขอบคุณที่จัดอีเว้นสุดจะเริ่ด <3' },
     { name: 'Panthipa Suksirisorn', tier: 'Individual', amount: 550 },
     { name: 'ครอบครัวนิมมานนรวงศ์', tier: 'Individual', amount: 500.01 },
-    { name: 'Meen', tier: 'Individual', amount: 500.67, url: 'https://youtu.be/dQw4w9WgXcQ', message: '[object Object]' },
+    { name: 'Meen', tier: 'Individual', amount: 500.67, url: 'https://youtu.be/dQw4w9WgXcQ', logo: 'meen.jpg', message: '[object Object]' },
   ],
 };
 
