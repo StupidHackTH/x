@@ -42,7 +42,7 @@ export const funding: Funding = {
     { name: 'Drawdy', tier: 'System32', amount: 55_000.1, url: 'https://drawdy.io', logo: 'drawdy.png', main: true },
     { name: 'ShakeSphere', tier: 'Normal Mode', amount: 15_000, logo: 'shakesphere.png' },
     { name: 'DEV Forward Co., Ltd.', tier: 'Safe Mode', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
-    { name: 'PaxaLabs', tier: 'Partner' },
+    { name: 'PaxaLabs', tier: 'Partner', logo: 'paxalabs.svg' },
     { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67, url: 'https://plengrai.gamepleng.com/', logo: 'gamepleng.jpg', message: 'เกมเพลงไร เปิดวันเดียวกับวันงานเลย' },
     { name: 'Mr. Thanyanit Jongjitragan', tier: 'Safe Mode', amount: 6_006.13, url: 'https://shopee.co.th/gentlestyles_official', logo: 'gentlestyles.jpg', message: 'ช่วยอุดหนุนเสื้อผ้าร้านนี้หน่อยครับ อยากได้ค่าคอมเพิ่มครับ 🙏 https://shopee.co.th/gentlestyles_official' },
     { name: 'Bier', tier: 'Individual', amount: 1_669, url: 'https://yuttakhanb.dev', logo: 'bier.jpg', message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
