@@ -51,7 +51,7 @@ export const venue = {
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('อาคารรุ่งโรจน์ธนกุล UNICITY พระราม 9'),
   transit: [
     { icon: 'train', label: 'MRT', text: 'สถานีพระราม 9 → Exit 2 ไปทาง Central Rama 9 → เดินไปอาคารรุ่งโรจน์ธนกุล (Unicity) → ขึ้นลิฟต์ชั้น 13 (ไม่ต้องแลกบัตร)' },
-    { icon: 'car', label: 'รถยนต์', text: 'จอดชั้น 2–3 · ฿20/ชม. (stamp ที่ Cleverse ลด ฿15)' },
+    { icon: 'car', label: 'รถยนต์', text: 'จอดชั้น 2–3 · ฿20/ชม. (stamp ที่ Cleverse ลด ฿15 ชั่วโมงแรก)' },
     { icon: 'motorbike', label: 'มอเตอร์ไซค์', text: 'จอดชั้น 1 · ฿5/ชม.' },
     { icon: 'wheelchair', label: 'Wheelchair', text: 'แนะนำ taxi หรือรถส่วนตัว (MRT ไม่แนะนำ มีบันได) → จอดชั้น 2A แล้วขึ้นลิฟต์ · ประตูและทางเข้าชั้น 13 กว้าง รองรับวีลแชร์' },
   ],
