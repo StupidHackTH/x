@@ -244,12 +244,13 @@ export const faq = [
 // Roles come from the staff form (Oct 2026). `handle` is optional. `wiki` is the person's username on
 // creatorsgarten.org/wiki/People (the Staff window links there); `fullName` and `photo` (public/staff/<wiki>.jpg,
 // 160px copies) were fetched from that profile.
-export type StaffGroup = 'advisor' | 'organizer' | 'lead' | 'staff';
+export type StaffGroup = 'advisor' | 'organizer' | 'lead' | 'staff' | 'faci';
 export interface StaffMember { name: string; handle?: string; role: string; group: StaffGroup; wiki?: string; fullName?: string; photo?: string }
 export const staffGroups: { id: StaffGroup; title: string; blurb: string }[] = [
   { id: 'advisor', title: 'Advisors', blurb: 'ที่ปรึกษา · คนที่คอยบอกว่าโง่ยังไม่พอ' },
   { id: 'organizer', title: 'Organizers', blurb: 'ผู้จัดงาน · คนที่ตามคนอื่นตอนตีสาม และทำให้งานเกิดขึ้นจริง' },
   { id: 'lead', title: 'Leads', blurb: 'หัวหน้าฝ่าย · คนที่โดนตามตอนตีสาม และทำให้งานเกิดขึ้นจริง' },
+  { id: 'faci', title: 'Facilitators', blurb: 'ผู้ดำเนินกิจกรรม · คนที่ทำให้คุณกล้าคุยกับคนแปลกหน้า' },
   { id: 'staff', title: 'Staff', blurb: 'ทีมงาน · คนที่ทำให้งานเกิดขึ้นจริง' },
 ];
 export const staff: StaffMember[] = [
@@ -263,6 +264,9 @@ export const staff: StaffMember[] = [
   { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', group: 'organizer', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
   { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets', group: 'lead' },
   { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', group: 'organizer', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
+  // facilitators
+  { name: 'หนุ่ม', role: 'Facilitator', group: 'faci', fullName: 'Noom' },
+  { name: 'Ice', role: 'Facilitator', group: 'faci', fullName: 'Kamol Treewatchararat' },
   // staff
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
   { name: 'นีโม่', role: 'Finance', group: 'staff' },
