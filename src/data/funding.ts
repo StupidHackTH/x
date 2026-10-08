@@ -35,7 +35,7 @@ export const funding: Funding = {
     return this.sponsors.length;
   },
   deadline: '2026-10-10',
-  updatedAt: '2026-10-07T14:07:00+07:00',
+  updatedAt: '2026-10-08T20:50:00+07:00',
   mock: false,
   sponsors: [
     { name: 'Cleverse', tier: 'Venue', url: 'https://cleverse.com', logo: 'cleverse.svg' },
@@ -44,6 +44,7 @@ export const funding: Funding = {
     { name: 'DEV Forward Co., Ltd.', tier: 'Safe Mode', amount: 5_000.1, url: 'https://devforward.tech', logo: 'devforward.svg', message: 'DEV Forward • Moving Forward Through Coding' },
     { name: 'PaxaLabs', tier: 'Partner' },
     { name: 'บริษัท เกมเพลง จำกัด', tier: 'Safe Mode', amount: 5_000.67, url: 'https://plengrai.gamepleng.com/', logo: 'gamepleng.jpg', message: 'เกมเพลงไร เปิดวันเดียวกับวันงานเลย' },
+    { name: 'Mr. Thanyanit Jongjitragan', tier: 'Safe Mode', amount: 6_006.13, url: 'https://shopee.co.th/gentlestyles_official', logo: 'gentlestyles.jpg', message: 'ช่วยอุดหนุนเสื้อผ้าร้านนี้หน่อยครับ อยากได้ค่าคอมเพิ่มครับ 🙏 https://shopee.co.th/gentlestyles_official' },
     { name: 'Bier', tier: 'Individual', amount: 1_669, url: 'https://yuttakhanb.dev', logo: 'bier.jpg', message: 'เล่าก็มั่ว ฟันก็หลอ ป้าเก็บฟันปลอม ไว้เคี้ยวข้าวดีกว่า' },
     { name: 'SarunInt', tier: 'Individual', amount: 1_013.25 },
     { name: 'Minori414', tier: 'Individual', amount: 862.07, message: 'ปีนี้ไม่สะดวกไป ขอส่งใจไปแทนละกัน' },
