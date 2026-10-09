@@ -1,6 +1,6 @@
 // NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
 // leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
-import { apiBase, api, type ServerState } from './netapi';
+import { apiBase, api, type ServerState, type HuntState } from './netapi';
 import { icqFor, vendorFor } from '../data/network';
 import { encodePcm, buildFrame } from './fsk';
 
@@ -87,6 +87,32 @@ function applyState(s: ServerState) {
   renderTicker();
 }
 
+/* ---------- Drawdy Logo Hunting ---------- */
+function renderHunt(h: HuntState | null) {
+  const keys = $('hunt-keys');
+  const done = $('hunt-done');
+  if (!h) return;
+  keys.innerHTML = '';
+  for (const k of h.keys) {
+    const d = document.createElement('div');
+    d.className = `hunt-key${k.finds ? ' found' : ''}`;
+    d.innerHTML = `<b></b><span></span>`;
+    d.querySelector('b')!.textContent = String(k.finds);
+    d.querySelector('span')!.textContent = k.name + (k.first ? ` · แรก: ${k.first.nick || '?'}` : '');
+    keys.appendChild(d);
+  }
+  done.innerHTML = h.completed.length ? `activated แล้ว <b>${h.completed.length}</b> คน: ` : `${h.devices} คนกำลังหา · ยังไม่มีใคร activate`;
+  if (h.completed.length) {
+    const s = document.createElement('span');
+    s.textContent = h.completed.slice(-8).map((c) => `${c.nick || '?'} (${c.cert})`).join(', ');
+    done.appendChild(s);
+  }
+}
+async function loadHunt() {
+  if (demo) return;
+  renderHunt(await api.hunt());
+}
+
 /* ---------- live feed ---------- */
 function connect() {
   const base = apiBase();
@@ -119,7 +145,9 @@ function connect() {
   };
   open();
   void api.state().then((s) => s && applyState(s));
+  void loadHunt();
   setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
+  setInterval(() => void loadHunt(), 30_000);
 }
 
 /* ---------- demo: 60 people in a hall ---------- */
@@ -148,6 +176,7 @@ function startDemo() {
   };
   setTimeout(tick, 8000);
   pushEvent({ type: 'info', mac: '', detail: 'No NOC server configured: showing demo traffic for 60 hosts', at: Date.now() });
+  renderHunt({ keys: ['Recycle Bin', 'My Computer', 'Desktop', 'C:\\Windows\\System32', 'Downloads', 'Program Files'].map((name, i) => ({ id: `k${i + 1}`, name, finds: [14, 22, 9, 3, 0, 5][i], first: i === 4 ? null : { nick: demoNicks[i * 3], at: Date.now() } })), completed: [{ nick: 'โขง', cert: 'ACT-7F3K2A', at: Date.now() }, { nick: 'ไท', cert: 'ACT-9Q1ZX4', at: Date.now() }], devices: 31 });
 }
 
 /* ---------- render ---------- */
@@ -465,6 +494,28 @@ function setupAdmin() {
   $('adm-kick-btn').addEventListener('click', () => void kick());
   $('adm-kick').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') void kick();
+  });
+  const huntReset = $('adm-hunt-reset') as HTMLButtonElement;
+  let huntArmed: ReturnType<typeof setTimeout> | null = null;
+  huntReset.addEventListener('click', async () => {
+    if (!huntArmed) {
+      huntReset.textContent = 'กดอีกครั้งเพื่อล้างผล hunt';
+      huntReset.classList.add('danger');
+      huntArmed = setTimeout(() => {
+        huntArmed = null;
+        huntReset.textContent = 'Reset hunt…';
+        huntReset.classList.remove('danger');
+      }, 5000);
+      return;
+    }
+    clearTimeout(huntArmed);
+    huntArmed = null;
+    huntReset.textContent = 'Reset hunt…';
+    huntReset.classList.remove('danger');
+    if (await call('/api/hunt', { method: 'DELETE' })) {
+      say('ล้างผล Logo Hunting แล้ว');
+      void loadHunt();
+    }
   });
   $('adm-logout').addEventListener('click', hideBar);
 }

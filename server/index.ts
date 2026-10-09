@@ -16,7 +16,40 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS nodes (mac TEXT PRIMARY KEY, nick TEXT NOT NULL, skill TEXT NOT NULL DEFAULT '', idea TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS links (a TEXT NOT NULL, b TEXT NOT NULL, via TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (a, b));
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
+  CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
 `);
+
+/* Drawdy Logo Hunting: the six product keys, as SHA-256 of the printed key (same list as src/data/hunt.ts) */
+const HUNT: { id: string; name: string; hash: string }[] = [
+  { id: 'k1', name: 'Recycle Bin', hash: 'e7822b577b7065240606fa98e24398735af63b470331f473ea7f17203797a036' },
+  { id: 'k2', name: 'My Computer', hash: '6d800f149c94130dc5ef3adf71298fdd9de66ced2e1feabd769d490169c2afde' },
+  { id: 'k3', name: 'Desktop', hash: '89ebb198348516fb06f869b5dcf2a407ecc024b3a15dc20f31e93ea0ac120e3c' },
+  { id: 'k4', name: 'C:\\Windows\\System32', hash: '32fc53e6e4525b0b7e406ef3ab205a22a6044681e4ebe93d2f6dfebab86e7be6' },
+  { id: 'k5', name: 'Downloads', hash: 'f285ac2970164637f20cd1be9f2d36aa6989c134b90e15f7ca98236e58a7896e' },
+  { id: 'k6', name: 'Program Files', hash: '3eb9158e52e4110f8ef8e87732b2d799f7da3ab2f1ef175ed58a6c73e78f0729' },
+];
+const huntCert = (device: string) => 'ACT-' + new Bun.CryptoHasher('sha256').update(`${device}|${HUNT.map((h) => h.id).join(',')}`).digest('hex').slice(0, 6).toUpperCase();
+const qHuntAll = db.query<{ device: string; key: string; nick: string; at: number }, []>('SELECT device, key, nick, at FROM hunt ORDER BY at');
+const qHuntDevice = db.query<{ key: string }, [string]>('SELECT key FROM hunt WHERE device = ? ORDER BY at');
+const insertFind = db.query('INSERT OR IGNORE INTO hunt (device, key, nick, at) VALUES (?, ?, ?, ?)');
+const huntState = () => {
+  const rows = qHuntAll.all();
+  const keys = HUNT.map((h) => {
+    const finds = rows.filter((r) => r.key === h.id);
+    return { id: h.id, name: h.name, finds: finds.length, first: finds[0] ? { nick: finds[0].nick, at: finds[0].at } : null };
+  });
+  const byDevice = new Map<string, { nick: string; keys: Set<string>; at: number }>();
+  for (const r of rows) {
+    const d = byDevice.get(r.device) ?? { nick: r.nick, keys: new Set<string>(), at: 0 };
+    d.keys.add(r.key);
+    d.nick = r.nick || d.nick;
+    d.at = Math.max(d.at, r.at);
+    byDevice.set(r.device, d);
+  }
+  const completed = Array.from(byDevice.entries()).filter(([, d]) => d.keys.size === HUNT.length).map(([device, d]) => ({ nick: d.nick, cert: huntCert(device), at: d.at })).sort((a, b) => a.at - b.at);
+  return { keys, completed, devices: byDevice.size };
+};
+
 const started = Date.now();
 
 const normMac = (s: string): string | null => {
@@ -186,6 +219,44 @@ const app = new Elysia()
     }
     db.exec('DELETE FROM links; DELETE FROM nodes; DELETE FROM events;');
     broadcast({ type: 'state', state: state() });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .get('/api/hunt', () => huntState())
+  .post(
+    '/api/hunt/find',
+    ({ body, set }) => {
+      const spot = HUNT.find((h) => h.id === body.key);
+      if (!spot || spot.hash !== body.proof.toLowerCase()) {
+        set.status = 400;
+        return { error: 'bad key' };
+      }
+      const device = clip(body.device, 40);
+      const nick = clip(body.nick, 24);
+      if (!device) {
+        set.status = 400;
+        return { error: 'no device' };
+      }
+      const at = Date.now();
+      const r = insertFind.run(device, spot.id, nick, at);
+      const found = qHuntDevice.all(device).map((x) => x.key);
+      const complete = found.length === HUNT.length;
+      if (r.changes > 0) {
+        const detail = `${nick || device.slice(-5)} found ${spot.name}${complete ? ' — ACTIVATED' : ''}`;
+        insertEvent.run('hunt', '', detail, at);
+        broadcast({ type: 'hunt', find: { nick, key: spot.id, name: spot.name, at, complete } });
+        broadcast({ type: 'event', event: { type: 'hunt', mac: '', detail, at } });
+      }
+      return { ok: true, fresh: r.changes > 0, found, complete, cert: complete ? huntCert(device) : undefined };
+    },
+    { body: t.Object({ device: t.String({ maxLength: 64 }), nick: t.Optional(t.String({ maxLength: 64 })), key: t.String({ maxLength: 8 }), proof: t.String({ maxLength: 64 }) }) },
+  )
+  .delete('/api/hunt', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.exec('DELETE FROM hunt;');
+    broadcast({ type: 'hunt', reset: true });
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .ws('/api/live', {

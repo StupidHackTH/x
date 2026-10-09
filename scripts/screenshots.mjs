@@ -63,6 +63,7 @@ async function hover(sel) {
 /* SHTX-NET: a seeded identity + 5 contacts so the main view, the peer card and the certificate can be captured */
 const SEED_NET = `localStorage.setItem('shtx-net-v1', JSON.stringify({me:{mac:'02:29:CA:6C:55:FD',nick:'โขง',skill:'Frontend',idea:'เว็บที่โหลดช้าลงทุกครั้งที่กด',answers:[0,0,0,1,4],created:Date.now()},links:[{mac:'02:29:CA:2A:7B:A2',nick:'ไท',skill:'Advisor',idea:'โง่ยังไม่พอ',via:'air',at:Date.now()-60000},{mac:'02:4F:10:7B:C2:19',nick:'Riffy',skill:'Design',idea:'แอปเตือนให้หายใจ ทุก 3 วินาที',via:'qr',at:Date.now()-240000},{mac:'02:0A:61:7D:94:22',nick:'Poom',skill:'Hardware',idea:'เมาส์ที่ต้องเดินไปคลิกเอง',via:'air',at:Date.now()-600000},{mac:'02:66:21:0C:AB:90',nick:'พีม',skill:'Pitch',idea:'นาฬิกาปลุกที่ปลุกคนข้างบ้าน',via:'air',at:Date.now()-900000},{mac:'02:9C:03:55:E1:07',nick:'มีมี่',skill:'หาข้าว',idea:'ตู้เย็นที่ส่ง LINE มาต่อว่า',via:'manual',at:Date.now()-1200000}]})); location.reload();`;
 const CLEAR_NET = `localStorage.removeItem('shtx-net-v1'); location.reload();`;
+const SEED_HUNT = `localStorage.setItem('shtx-hunt-v1', JSON.stringify({device:'dev-demo',nick:'โขง',found:{k1:Date.now()-3600000,k2:Date.now()-1800000,k3:Date.now()-600000}})); location.reload();`;
 const seedNet = { eval: SEED_NET, wait: 1800 };
 const clearNet = { eval: CLEAR_NET, wait: 1800 };
 const PEER_URL = '/?skip&open=shtxnet&peer=0229CA2A7BA2&n=%E0%B9%84%E0%B8%97&s=Advisor&i=%E0%B9%82%E0%B8%87%E0%B9%88%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%9E%E0%B8%AD';
@@ -105,6 +106,7 @@ await shot('08c-xp-net-main', 'Network Connections: my business card, modem stat
 await shot('08d-xp-net-peer', 'CONNECTION ESTABLISHED: the peer card after a handshake (here via the QR fallback)', { device: XP, url: PEER_URL, wait: 1800 });
 await shot('08e-xp-net-cert', 'Proof of Friendship certificate after 5 handshakes', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [{ click: '#net-cert-btn', wait: 500 }] });
 await shot('08f-xp-net-qr', 'QR fallback for loud rooms: the other phone scans with its normal camera', { device: XP, url: '/?skip&open=shtxnet', wait: 1200, steps: [{ click: '#net-qr', wait: 800 }] });
+await shot('08g-xp-activate', 'Activate Windows: Drawdy Logo Hunting as Windows Product Activation, 3 of 6 keys found', { device: XP, url: '/?skip&open=activate', wait: 1200, steps: [{ eval: SEED_HUNT, wait: 1800 }] });
 await shot('09-noc', 'NOC stage screen (/noc): live mesh of 60 hosts, core switches, dumb idea of the moment, event ticker (demo data)', { device: XP, url: '/noc/?demo', wait: 17000 });
 await shot('07-xp-recycle', 'Recycle Bin', { device: XP, url: '/?skip&open=recycle', wait: 1200 });
 
@@ -149,6 +151,7 @@ await shot('34-ios-faq', 'FAQ as grouped lists', { device: IPHONE, url: '/?skip&
 await shot('35-ios-alert', 'Error dialog as an iOS alert (Turn Off Computer gag)', { device: IPHONE, url: '/?skip&open=register', wait: 900, steps: [{ click: '.xp-startmenu-footer [data-action="shutdown"]' }] });
 await shot('36-ios-camera', 'Camera app on iPhone, Frutiger Aero look, portrait frame', { device: IPHONE, url: '/?skip&open=camera', wait: 900, steps: [start, filter('aero')] });
 await shot('36b-ios-net', 'SHTX-NET on iPhone: card, Start listening / Connect, contacts', { device: IPHONE, url: '/?skip&open=shtxnet', wait: 900, steps: [seedNet] });
+await shot('36d-ios-activate', 'Activate Windows on iPhone', { device: IPHONE, url: '/?skip&open=activate', wait: 900, steps: [{ eval: SEED_HUNT, wait: 1800 }] });
 await shot('36c-ios-net-peer', 'Peer card overlay on iPhone', { device: IPHONE, url: PEER_URL, wait: 1500 });
 await shot('37-ios-recording', 'VIDEO mode while recording: timer and red stop square', { device: IPHONE, steps: [{ click: '.cam-modes [data-cam-mode="video"]', wait: 300 }, { click: '.cam-shutter', wait: 2500 }] });
 await shot('38-ios-review', 'Review of the clip from the thumbnail: Share and Save (share sheet on iPhone)', { device: IPHONE, steps: [{ click: '.cam-shutter', wait: 1500 }, { click: '.cam-thumb', wait: 900 }] });

@@ -60,4 +60,12 @@ export const api = {
   linksOf: (mac: string) => call<{ links: ServerLink[] }>(`/api/nodes/${encodeURIComponent(mac)}/links`),
   event: (type: string, mac: string, detail = '') => call<{ ok: boolean }>('/api/events', { method: 'POST', body: JSON.stringify({ type, mac, detail }) }),
   state: () => call<ServerState>('/api/state'),
+  huntFind: (device: string, nick: string, key: string, proof: string) => call<{ ok: boolean; complete?: boolean }>('/api/hunt/find', { method: 'POST', body: JSON.stringify({ device, nick, key, proof }) }),
+  hunt: () => call<HuntState>('/api/hunt'),
 };
+
+export interface HuntState {
+  keys: { id: string; name: string; finds: number; first: { nick: string; at: number } | null }[];
+  completed: { nick: string; cert: string; at: number }[];
+  devices: number;
+}

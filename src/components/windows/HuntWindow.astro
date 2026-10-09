@@ -1,0 +1,285 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+import { huntSpots, huntSponsor } from '../../data/hunt';
+import { asset } from '../../lib/asset';
+
+// Drawdy Logo Hunting as "Windows Product Activation": six product keys hidden around the venue (src/data/hunt.ts),
+// scan a card's QR (?open=activate&key=…) or type the key; six keys = Windows is activated, show the code at the booth.
+---
+
+<Window id="activate" menu={['File', 'Help']} status="Windows Product Activation · Logo Hunting by Drawdy" beige>
+  <div class="act" id="act" data-state="pending">
+    <header class="act-banner">
+      <div>
+        <h2>Let's activate Windows</h2>
+        <p>Drawdy ซ่อน product key ไว้ 6 ชิ้นทั่วงาน หาให้ครบแล้ว Windows ของคุณจะถูก activate เอาไปรับของรางวัลที่บูท Drawdy</p>
+      </div>
+      <Icon name="activate" class="act-banner-icon" />
+    </header>
+
+    <div class="act-body">
+      <div class="act-progress">
+        <div class="act-bar"><i id="act-bar"></i></div>
+        <span id="act-count">0 of {huntSpots.length} product keys</span>
+      </div>
+
+      <ol class="act-keys" id="act-keys">
+        {huntSpots.map((s) => (
+          <li data-key={s.id} data-day={s.day}>
+            <span class="act-check" aria-hidden="true"><Icon name="check" class="mono" /></span>
+            <span class="act-name"><Icon name="folder" class="mono" /> {s.name}</span>
+            <span class="act-hint">{s.hint}</span>
+            <span class="act-locked">คำใบ้ปล่อย Day {s.day}</span>
+            <span class="act-when" data-when></span>
+          </li>
+        ))}
+      </ol>
+
+      <form class="act-form" id="act-form" novalidate>
+        <label class="act-field">Product key <input id="act-key" placeholder="DRWDY-XXXXX-XXXXX" autocomplete="off" spellcheck="false" autocapitalize="characters" /></label>
+        <label class="act-field">ชื่อเล่น (ขึ้นจอใหญ่) <input id="act-nick" maxlength="12" autocomplete="off" placeholder="เช่น โขง" /></label>
+        <button type="submit" class="xp-btn primary" id="act-submit">Activate</button>
+        <p class="act-msg" id="act-msg" hidden></p>
+      </form>
+      <p class="act-rules">สแกน QR บนการ์ด หรือพิมพ์ key · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
+    </div>
+
+    <footer class="act-sponsor">
+      <span>Logo Hunting by</span>
+      <a href={huntSponsor.url} target="_blank" rel="noopener"><img src={asset(`sponsors/${huntSponsor.logo}`)} alt={huntSponsor.name} /></a>
+    </footer>
+
+    <div class="act-done" id="act-done" hidden>
+      <div class="act-done-card">
+        <div class="act-done-head"><Icon name="activate" /> Windows is now activated</div>
+        <p>ขอบคุณที่ activate กับ Drawdy เอาหน้านี้ไปโชว์ที่บูท Drawdy เพื่อรับของรางวัล</p>
+        <div class="act-cert" id="act-cert">ACT-000000</div>
+        <p class="act-done-nick" id="act-done-nick"></p>
+        <img src={asset(`sponsors/${huntSponsor.logo}`)} alt="Drawdy" />
+        <div class="act-done-btns"><button type="button" class="xp-btn primary" id="act-back">OK</button></div>
+      </div>
+    </div>
+  </div>
+</Window>
+
+<style is:global>
+  .act { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: hidden; }
+  .act-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .act-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
+  .act-banner p { margin: 0; color: #333; }
+  .act-banner-icon { width: 48px; height: 48px; flex: none; }
+  .act-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .act-progress { display: flex; align-items: center; gap: 10px; }
+  .act-bar { flex: 1; height: 16px; border: 1px solid #7f9db9; background: #fff; padding: 2px; }
+  .act-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #3d8cf0 0 8px, transparent 8px 10px); transition: width 300ms; }
+  .act[data-state='activated'] .act-bar i { background: repeating-linear-gradient(90deg, #39b54a 0 8px, transparent 8px 10px); }
+  .act-keys { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .act-keys li { display: grid; grid-template-columns: 22px 1fr; grid-template-rows: auto auto; column-gap: 6px; padding: 8px 10px; background: #fff; border: 1px solid #c8c8c8; }
+  .act-check { grid-row: 1 / span 2; width: 18px; height: 18px; border: 1px solid #7f9db9; background: #fff; display: grid; place-items: center; color: #0b7a2a; }
+  .act-check .icon { width: 14px; height: 14px; visibility: hidden; }
+  .act-keys li.found .act-check .icon { visibility: visible; }
+  .act-keys li.found { background: #eefbea; border-color: #8fd39a; }
+  .act-name { font-weight: bold; display: flex; align-items: center; gap: 4px; }
+  .act-name .icon { width: 14px; height: 14px; color: #c9a227; }
+  .act-hint { color: #444; font-size: 11px; }
+  .act-locked { color: #999; font-size: 11px; font-style: italic; }
+  .act-keys li:not(.locked) .act-locked, .act-keys li.locked .act-hint { display: none; }
+  .act-keys li.found .act-hint, .act-keys li.found .act-locked { display: none; }
+  .act-when { color: #0b7a2a; font-size: 11px; }
+  .act-keys li:not(.found) .act-when { display: none; }
+  .act-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px 10px; align-items: end; padding: 10px 12px; background: #fff; border: 1px solid #a0a0a0; }
+  .act-field { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #333; }
+  .act-field input { padding: 4px 6px; border: 1px solid #7f9db9; font: 13px 'Lucida Console', 'Courier New', monospace; text-transform: uppercase; }
+  .act-field input#act-nick { text-transform: none; font-family: inherit; }
+  .act-form .xp-btn.primary { font-weight: bold; }
+  .act-msg { grid-column: 1 / -1; margin: 0; font-size: 11px; color: #b00; }
+  .act-msg.ok { color: #0b7a2a; }
+  .act-msg[hidden] { display: none; }
+  .act-rules { margin: 0; font-size: 11px; color: #555; }
+  .act-sponsor { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; border-top: 1px solid #a0a0a0; background: #fff; font-size: 11px; color: #555; }
+  .act-sponsor img { height: 22px; }
+  .act-done { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(0, 0, 0, 0.45); }
+  .act-done[hidden] { display: none; }
+  .act-done-card { width: min(100%, 400px); background: #fff; border: 1px solid #0a246a; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .act-done-head { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: bold; color: #0a246a; }
+  .act-done-head .icon { width: 28px; height: 28px; }
+  .act-done-card p { margin: 0; }
+  .act-cert { font: bold 30px 'Lucida Console', 'Courier New', monospace; letter-spacing: 2px; color: #0b7a2a; padding: 8px 16px; border: 2px dashed #8fd39a; background: #eefbea; }
+  .act-done-nick { color: #555; }
+  .act-done-card img { height: 28px; }
+  @media (max-width: 767px) {
+    .act-keys { grid-template-columns: 1fr; }
+    .act-form { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  import { huntSpots, huntDays } from '../../data/hunt';
+  import { api, hasApi } from '../../scripts/netapi';
+
+  interface HuntStore {
+    device: string;
+    nick: string;
+    found: Record<string, number>;
+    cert?: string;
+  }
+  const KEY = 'shtx-hunt-v1';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  async function sha256(s: string): Promise<string> {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function setupHunt() {
+    const root = $('act');
+    if (!root) return;
+    const store = load();
+
+    function load(): HuntStore {
+      let s: Partial<HuntStore> = {};
+      try {
+        s = JSON.parse(localStorage.getItem(KEY) || '{}');
+      } catch {
+        /* ignore */
+      }
+      let net: { me?: { mac?: string; nick?: string } } = {};
+      try {
+        net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
+      } catch {
+        /* ignore */
+      }
+      const device = s.device || net.me?.mac || `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, cert: s.cert };
+    }
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(store));
+      } catch {
+        /* ignore */
+      }
+    }
+
+    /* Hints unlock by event day (Bangkok time); before the event everything shows, labelled as test mode */
+    function todayBkk() {
+      return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+    }
+    function unlockedDay(): number {
+      const t = todayBkk();
+      if (t < huntDays[1]) return 9; // test mode: all hints
+      if (t < huntDays[2]) return 1;
+      return 2;
+    }
+
+    const total = huntSpots.length;
+    const items = Array.from(root.querySelectorAll<HTMLLIElement>('#act-keys li'));
+    const msg = $('act-msg');
+
+    function render() {
+      const day = unlockedDay();
+      $('act-mode').textContent = day === 9 ? 'โหมดทดสอบ: คำใบ้โชว์ครบก่อนวันงาน' : `วันนี้ปล่อยคำใบ้ถึง Day ${day}`;
+      let n = 0;
+      for (const li of items) {
+        const id = li.dataset.key!;
+        const at = store.found[id];
+        li.classList.toggle('found', !!at);
+        li.classList.toggle('locked', !at && Number(li.dataset.day) > day);
+        if (at) {
+          n++;
+          const d = new Date(at);
+          li.querySelector('[data-when]')!.textContent = `เจอแล้ว ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+      }
+      $('act-bar').style.width = `${Math.round((n / total) * 100)}%`;
+      $('act-count').textContent = `${n} of ${total} product keys`;
+      root.dataset.state = n === total ? 'activated' : 'pending';
+      $<HTMLInputElement>('act-nick').value = store.nick;
+    }
+
+    function say(text: string, ok = false) {
+      msg.textContent = text;
+      msg.classList.toggle('ok', ok);
+      msg.hidden = false;
+    }
+
+    function normalize(raw: string) {
+      const s = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (s.length !== 15) return raw.trim().toUpperCase();
+      return `${s.slice(0, 5)}-${s.slice(5, 10)}-${s.slice(10, 15)}`;
+    }
+
+    async function certFor() {
+      const ids = huntSpots.map((s) => s.id).join(',');
+      return `ACT-${(await sha256(`${store.device}|${ids}`)).slice(0, 6).toUpperCase()}`;
+    }
+
+    async function redeem(raw: string, via: 'qr' | 'typed') {
+      const key = normalize(raw);
+      if (!key) return;
+      let hash = '';
+      try {
+        hash = await sha256(key);
+      } catch {
+        say('เบราว์เซอร์นี้เข้ารหัสไม่ได้ (ต้องเปิดผ่าน https)');
+        return;
+      }
+      const spot = huntSpots.find((s) => s.hash === hash);
+      if (!spot) {
+        say('Product key ไม่ถูกต้อง ลองพิมพ์ใหม่ตามการ์ด (0 กับ O ไม่มีใน key)');
+        return;
+      }
+      const nick = $<HTMLInputElement>('act-nick').value.trim().slice(0, 12);
+      if (nick) store.nick = nick;
+      if (store.found[spot.id]) {
+        say(`${spot.name} เจอไปแล้ว หาอันอื่นต่อ`, true);
+        render();
+        return;
+      }
+      store.found[spot.id] = Date.now();
+      save();
+      render();
+      say(`เจอ ${spot.name} แล้ว (${via === 'qr' ? 'สแกน' : 'พิมพ์'})`, true);
+      if (hasApi()) void api.huntFind(store.device, store.nick, spot.id, hash);
+      if (Object.keys(store.found).length === total) await complete();
+    }
+
+    async function complete() {
+      if (!store.cert) {
+        store.cert = await certFor();
+        save();
+      }
+      $('act-cert').textContent = store.cert;
+      $('act-done-nick').textContent = store.nick ? `${store.nick} · ${new Date().toLocaleDateString('th-TH')}` : new Date().toLocaleDateString('th-TH');
+      $('act-done').hidden = false;
+    }
+
+    $('act-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $<HTMLInputElement>('act-key');
+      void redeem(input.value, 'typed').then(() => (input.value = ''));
+    });
+    $<HTMLInputElement>('act-nick').addEventListener('change', (e) => {
+      store.nick = (e.target as HTMLInputElement).value.trim().slice(0, 12);
+      save();
+    });
+    $('act-back').addEventListener('click', () => ($('act-done').hidden = true));
+    root.querySelector('.act-progress')!.addEventListener('click', () => {
+      if (root.dataset.state === 'activated') void complete();
+    });
+
+    render();
+    {
+      const params = new URLSearchParams(location.search);
+      const key = params.get('key');
+      if (key) {
+        params.delete('key');
+        const q = params.toString().replace('skip=', 'skip');
+        history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
+        void redeem(key, 'qr');
+      }
+    }
+  }
+
+  setupHunt();
+</script>

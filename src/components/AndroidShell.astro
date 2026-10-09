@@ -10,8 +10,8 @@ import { asset } from '../lib/asset';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const homeIds = ['about', 'schedule', 'venue', 'camera', 'shtxnet', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
-const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'shtxnet', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const homeIds = ['about', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const drawerIds = ['about', 'register', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
 const links = [
   { label: 'Browser', icon: 'website', href: event.links.website },
   { label: 'Facebook', icon: 'facebook', href: event.links.facebook },
