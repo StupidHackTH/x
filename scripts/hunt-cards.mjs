@@ -31,7 +31,7 @@ for (const [i, spot] of huntSpots.entries()) {
         <img class="qr" src="${qr}" alt="">
         <div class="key">${esc(key)}</div>
         <p class="how">สแกน QR หรือเปิด <b>stupid.hackathon.in.th/x</b> → Activate Windows แล้วพิมพ์ key นี้</p>
-        <p class="rule">ห้ามหยิบ ห้ามย้ายการ์ด ให้คนอื่นหาเจอด้วย · ครบ 6 ใบ รับของรางวัลที่บูท Drawdy</p>
+        <p class="rule">ห้ามหยิบ ห้ามย้ายการ์ด ให้คนอื่นหาเจอด้วย</p>
       </div>
     </div>
     <div class="taskbar"><span class="start">start</span><span>STUPID HACKATHON X · 10-11 OCT 2026</span></div>
