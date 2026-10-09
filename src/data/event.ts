@@ -13,7 +13,7 @@ export const event = {
   dates: '10–11 ต.ค. 2026 (เสาร์–อาทิตย์)',
   datesEn: 'Sat 10 – Sun 11 October 2026',
   duration: '2 วัน 1 คืน · ค้างคืนที่ venue ได้ (ไม่บังคับ)',
-  time: 'ประกาศเร็ว ๆ นี้ (Day 1 เริ่มช่วงสาย · Day 2 ปิดช่วงเย็น)',
+  time: 'เสาร์ ลงทะเบียน 10:00 · อาทิตย์ เลิก 17:00 (ค้างคืนได้ ไม่บังคับ)',
   timeConfirmed: false,
   capacity: 60,
   organizer: 'Creatorsgarten',
@@ -88,15 +88,27 @@ export const showers = [
 // Agenda outline. Exact times will be announced.
 export const agenda = [
   { day: 'Day 1 · เสาร์ 10 ต.ค.', items: [
-    { time: 'สาย', title: 'ลงทะเบียน · เปิดงาน', note: 'เวลาจะประกาศอีกครั้ง' },
-    { time: 'เช้า', title: 'Ice-breaking & จับทีม', note: 'มาคนเดียวก็ได้ เดี๋ยวหาทีมให้' },
-    { time: 'บ่าย', title: 'เริ่ม hack', note: 'ห้ามทำของมีประโยชน์' },
-    { time: 'เย็น–ค่ำ', title: 'hack ต่อ · ค้างคืนได้', note: 'ค้างคืนไม่บังคับ' },
+    { time: '10:00–10:30', title: 'ลงทะเบียน', note: 'เอาตั๋ว Eventpop + บัตรประชาชนมา' },
+    { time: '10:30–11:00', title: 'เปิดงาน', note: 'มาสายไม่ว่า แต่พลาดมุกเปิดงาน' },
+    { time: '11:10–12:00', title: 'Ice breaking ทุบน้ำแข็ง & จับทีม', note: 'เปิด SHTX-NET รอได้เลย มาคนเดียวก็ได้ เดี๋ยวหาทีมให้' },
+    { time: '12:00–13:00', title: 'Lunch', note: 'กินก่อน โง่ทีหลัง' },
+    { time: '13:10', title: 'เริ่ม hack', note: 'ห้ามทำของมีประโยชน์' },
+    { time: '15:30', title: 'Snack · ทีมงานเดินเช็กทีม', note: 'ช่วยทีมที่ติด หรือไอเดียยังมีประโยชน์เกินไป' },
+    { time: '18:30–19:30', title: 'อาหารเย็น', note: 'hack ต่อได้ถ้าอยาก' },
+    { time: '20:00–20:30', title: 'กิจกรรมเบา ๆ', note: 'ไม่บังคับ' },
+    { time: '22:00', title: 'Headcount คนค้างคืน', note: 'คนกลับบ้านแจ้งทีมงานก่อนกลับ' },
+    { time: '00:00', title: 'Midnight snack', note: 'ของกินตอนเที่ยงคืน ไม่มีประโยชน์เช่นกัน' },
+    { time: '01:00–07:00', title: 'Quiet hours', note: 'ลดเสียง มีคนนอน' },
   ] },
   { day: 'Day 2 · อาทิตย์ 11 ต.ค.', items: [
-    { time: 'เช้า', title: 'hack ต่อ', note: 'กาแฟคือ system requirement' },
-    { time: 'บ่าย', title: 'Pitching & awards', note: 'บั๊กคือฟีเจอร์' },
-    { time: '~18:00', title: 'ปิดงาน', note: 'It is now safe to turn off your computer.' },
+    { time: '08:30–09:00', title: 'ฉันข้าว', note: 'อาหารเช้า กาแฟคือ system requirement' },
+    { time: '11:00–11:50', title: 'Final ไอเดีย', note: 'ตัดจบ 11:50 ไม่ต่อเวลา' },
+    { time: '12:00–12:50', title: 'ฉันเพล', note: 'อาหารกลางวัน' },
+    { time: '13:00', title: 'Session บ่าย · เริ่ม live', note: 'ใครยังไม่ได้ activate Windows รีบ' },
+    { time: '13:10–13:30', title: 'Drawdy on stage', note: 'main sponsor 20 นาที' },
+    { time: '13:30', title: 'Pitching', note: 'ทีมละ 7 นาที + Q&A 3 นาที · บั๊กคือฟีเจอร์' },
+    { time: 'หลัง pitching', title: 'ถ่ายรูปหมู่ · คืนเงินมัดจำ', note: 'มัดจำ ฿300 คืนตรงนี้' },
+    { time: '17:00', title: 'ปิดงาน · เก็บของ', note: 'It is now safe to turn off your computer. คืนสถานที่ไม่เกิน 18:30' },
   ] },
 ];
 
