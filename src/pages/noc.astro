@@ -42,6 +42,11 @@ import Icons from '../components/Icons.astro';
       .noc-login[hidden] { display: none; }
       .noc-login input { width: 180px; padding: 5px 8px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.9); color: #06264f; font: inherit; }
       .noc-login #noc-login-msg { color: #ffb3b3; }
+      .noc-paused { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 15; padding: 18px 40px; border-radius: 16px; background: rgba(3, 26, 61, 0.8); border: 2px solid #ffd34d; color: #fff; text-align: center; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+      .noc-paused b { display: block; font-size: 64px; letter-spacing: 8px; color: #ffd34d; line-height: 1; }
+      .noc-paused span { font-size: 18px; }
+      .noc-paused[hidden] { display: none; }
+      .noc-admin .noc-btn[aria-pressed='true'] { background: linear-gradient(180deg, #ffd27a, #e0901a); color: #3b2400; }
       .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
       .noc-admin[hidden] { display: none; }
       .noc-admin .noc-btn { padding: 3px 10px; font-size: 12px; }
@@ -105,12 +110,15 @@ import Icons from '../components/Icons.astro';
           <canvas id="noc-canvas"></canvas>
           <div class="noc-legend"><span><i style="background:#8ef5a3"></i>host</span><span><i style="background:#ffd34d"></i>core switch (5+ links)</span><span><i style="background:#ff7b7b"></i>isolated</span></div>
           <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
+          <div class="noc-paused" id="noc-paused" hidden><b>PAUSED</b><span id="noc-paused-what"></span></div>
           <div class="noc-admin glass" id="noc-admin" hidden>
             <b>Staff</b>
             <button type="button" class="noc-btn" id="adm-reset">Reset game…</button>
             <button type="button" class="noc-btn" id="adm-bsod">BSOD</button>
             <input id="adm-kick" placeholder="kick: ชื่อเล่น หรือ MAC" autocomplete="off" />
             <button type="button" class="noc-btn" id="adm-kick-btn">Kick</button>
+            <button type="button" class="noc-btn" id="adm-pause-net" title="หยุด/เปิด SHTX-NET">Pause SHTX-NET</button>
+            <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
             <button type="button" class="noc-btn" id="adm-hunt-reset" title="ล้างผล Logo Hunting">Reset hunt…</button>
             <button type="button" class="noc-btn" id="adm-logout" title="ลืม token ในเครื่องนี้">Log out</button>
             <span id="adm-msg"></span>

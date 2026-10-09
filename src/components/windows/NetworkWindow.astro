@@ -594,8 +594,27 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       }, 30_000);
     }
 
+    let netPaused = false;
+    async function refreshPause() {
+      if (!online()) return;
+      const p = await api.pause();
+      if (!p) return;
+      netPaused = p.net;
+      root.dataset.paused = netPaused ? '1' : '';
+      if (netPaused) {
+        statusEl.textContent = 'Paused by staff';
+        subEl.textContent = 'ทีมงานหยุดเกมชั่วคราว รอประกาศ';
+      } else if (node) setLinkState(node.state);
+    }
+    void refreshPause();
+    setInterval(() => void refreshPause(), 20_000);
+
     listenBtn.addEventListener('click', () => (modem.listening ? stopListening() : void startListening()));
     connectBtn.addEventListener('click', async () => {
+      if (netPaused) {
+        log('Game paused by staff. Connect is disabled until they resume.', 'err');
+        return;
+      }
       if (!(await startListening())) return;
       if (!node) return;
       if (node.state === 'idle' || node.state === 'established') {

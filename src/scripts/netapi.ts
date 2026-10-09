@@ -36,6 +36,7 @@ export interface ServerState {
   links: { a: string; b: string; via: string; at: number }[];
   events: { type: string; mac: string; detail: string; at: number }[];
   stats: { packets: number; crc: number; started: number };
+  pause?: PauseState;
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -62,7 +63,13 @@ export const api = {
   state: () => call<ServerState>('/api/state'),
   huntFind: (device: string, nick: string, key: string, proof: string) => call<{ ok: boolean; complete?: boolean }>('/api/hunt/find', { method: 'POST', body: JSON.stringify({ device, nick, key, proof }) }),
   hunt: () => call<HuntState>('/api/hunt'),
+  pause: () => call<PauseState>('/api/pause'),
 };
+
+export interface PauseState {
+  hunt: boolean;
+  net: boolean;
+}
 
 export interface HuntState {
   keys: { id: string; name: string; finds: number; first: { nick: string; at: number } | null }[];

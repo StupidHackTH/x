@@ -17,7 +17,13 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS links (a TEXT NOT NULL, b TEXT NOT NULL, via TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (a, b));
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
+  CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 `);
+
+/* Pause switches (survive restarts): while paused the server refuses new links / finds and every screen shows it */
+const qSetting = db.query<{ v: string }, [string]>('SELECT v FROM settings WHERE k = ?');
+const setSetting = db.query('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v');
+const pauseState = () => ({ hunt: qSetting.get('pause.hunt')?.v === '1', net: qSetting.get('pause.net')?.v === '1' });
 
 /* Drawdy Logo Hunting: the six product keys, as SHA-256 of the printed key (same list as src/data/hunt.ts) */
 const HUNT: { id: string; name: string; hash: string }[] = [
@@ -77,6 +83,7 @@ const state = () => ({
   links: qLinks.all(),
   events: qEvents.all(),
   stats: { packets: qPackets.get()?.n ?? 0, crc: qCrc.get()?.n ?? 0, started },
+  pause: pauseState(),
 });
 
 /* live feed */
@@ -158,6 +165,10 @@ const app = new Elysia()
         set.status = 400;
         return { error: 'bad pair' };
       }
+      if (pauseState().net) {
+        set.status = 423;
+        return { error: 'paused' };
+      }
       const [a, b] = a0 < b0 ? [a0, b0] : [b0, a0];
       for (const m of [a, b]) if (!qNode.get(m)) upsertNode.run(m, m.slice(-5), '', '', Date.now());
       const at = Date.now();
@@ -221,10 +232,31 @@ const app = new Elysia()
     broadcast({ type: 'state', state: state() });
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .get('/api/pause', () => pauseState())
+  .post(
+    '/api/pause',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      if (body.hunt !== undefined) setSetting.run('pause.hunt', body.hunt ? '1' : '0');
+      if (body.net !== undefined) setSetting.run('pause.net', body.net ? '1' : '0');
+      const pause = pauseState();
+      insertEvent.run('note', '', `pause: hunt=${pause.hunt ? 'on' : 'off'} net=${pause.net ? 'on' : 'off'}`, Date.now());
+      broadcast({ type: 'pause', pause });
+      return pause;
+    },
+    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
   .get('/api/hunt', () => huntState())
   .post(
     '/api/hunt/find',
     ({ body, set }) => {
+      if (pauseState().hunt) {
+        set.status = 423;
+        return { error: 'paused' };
+      }
       const spot = HUNT.find((h) => h.id === body.key);
       if (!spot || spot.hash !== body.proof.toLowerCase()) {
         set.status = 400;

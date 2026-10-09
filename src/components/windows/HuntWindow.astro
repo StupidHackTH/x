@@ -214,9 +214,27 @@ import { asset } from '../../lib/asset';
       return `ACT-${(await sha256(`${store.device}|${ids}`)).slice(0, 6).toUpperCase()}`;
     }
 
+    let paused = false;
+    async function refreshPause() {
+      if (!hasApi() || !navigator.onLine) return;
+      const p = await api.pause();
+      if (!p) return;
+      paused = p.hunt;
+      $<HTMLButtonElement>('act-submit').disabled = paused;
+      root.dataset.paused = paused ? '1' : '';
+      if (paused) say('เกมหยุดชั่วคราว รอทีมงานประกาศเปิดอีกครั้ง');
+      else if (msg.textContent?.startsWith('เกมหยุดชั่วคราว')) msg.hidden = true;
+    }
+    void refreshPause();
+    setInterval(() => void refreshPause(), 20_000);
+
     async function redeem(raw: string, via: 'qr' | 'typed') {
       const key = normalize(raw);
       if (!key) return;
+      if (paused) {
+        say('เกมหยุดชั่วคราว รอทีมงานประกาศเปิดอีกครั้ง');
+        return;
+      }
       let hash = '';
       try {
         hash = await sha256(key);

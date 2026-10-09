@@ -66,7 +66,27 @@ function pushEvent(e: Ev) {
   renderTicker();
 }
 
+let pauseNow = { hunt: false, net: false };
+function renderPause(p: { hunt: boolean; net: boolean }) {
+  pauseNow = p;
+  const el = $('noc-paused');
+  const what = [p.net ? 'SHTX-NET' : '', p.hunt ? 'Logo Hunting' : ''].filter(Boolean).join(' · ');
+  el.hidden = !what;
+  $('noc-paused-what').textContent = what ? `${what} หยุดชั่วคราว รอทีมงานประกาศ` : '';
+  const bn = document.getElementById('adm-pause-net');
+  const bh = document.getElementById('adm-pause-hunt');
+  if (bn) {
+    bn.setAttribute('aria-pressed', String(p.net));
+    bn.textContent = p.net ? 'Resume SHTX-NET' : 'Pause SHTX-NET';
+  }
+  if (bh) {
+    bh.setAttribute('aria-pressed', String(p.hunt));
+    bh.textContent = p.hunt ? 'Resume hunt' : 'Pause hunt';
+  }
+}
+
 function applyState(s: ServerState) {
+  if (s.pause) renderPause(s.pause);
   // the server state is authoritative: drop hosts/links it no longer has (reset, kick), then merge
   const macs = new Set(s.nodes.map((n) => n.mac));
   for (const k of Array.from(hosts.keys())) if (!macs.has(k)) hosts.delete(k);
@@ -494,6 +514,12 @@ function setupAdmin() {
   $('adm-kick-btn').addEventListener('click', () => void kick());
   $('adm-kick').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') void kick();
+  });
+  $('adm-pause-net').addEventListener('click', async () => {
+    await call('/api/pause', { method: 'POST', body: JSON.stringify({ net: !pauseNow.net }) });
+  });
+  $('adm-pause-hunt').addEventListener('click', async () => {
+    await call('/api/pause', { method: 'POST', body: JSON.stringify({ hunt: !pauseNow.hunt }) });
   });
   const huntReset = $('adm-hunt-reset') as HTMLButtonElement;
   let huntArmed: ReturnType<typeof setTimeout> | null = null;
