@@ -178,7 +178,7 @@ import { asset } from '../../lib/asset';
 
     function render() {
       const day = unlockedDay();
-      $('act-mode').textContent = day === 0 ? 'คำใบ้จะปล่อยวันงาน (Day 1 สามใบ · Day 2 อีกสามใบ)' : `วันนี้ปล่อยคำใบ้ถึง Day ${day}`;
+      $('act-mode').textContent = day === 0 ? 'คำใบ้ทั้ง 6 ใบจะปล่อยวันงาน 10 ต.ค.' : 'คำใบ้ปล่อยครบแล้ว';
       let n = 0;
       for (const li of items) {
         const id = li.dataset.key!;
