@@ -167,7 +167,7 @@ import { asset } from '../../lib/asset';
     }
     function unlockedDay(): number {
       const t = todayBkk();
-      if (t < huntDays[1]) return 9; // test mode: all hints
+      if (t < huntDays[1]) return 0; // before the event: no hints yet (keys still work)
       if (t < huntDays[2]) return 1;
       return 2;
     }
@@ -178,7 +178,7 @@ import { asset } from '../../lib/asset';
 
     function render() {
       const day = unlockedDay();
-      $('act-mode').textContent = day === 9 ? 'โหมดทดสอบ: คำใบ้โชว์ครบก่อนวันงาน' : `วันนี้ปล่อยคำใบ้ถึง Day ${day}`;
+      $('act-mode').textContent = day === 0 ? 'คำใบ้จะปล่อยวันงาน (Day 1 สามใบ · Day 2 อีกสามใบ)' : `วันนี้ปล่อยคำใบ้ถึง Day ${day}`;
       let n = 0;
       for (const li of items) {
         const id = li.dataset.key!;
