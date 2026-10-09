@@ -268,6 +268,18 @@ import { asset } from '../../lib/asset';
       if (root.dataset.state === 'activated') void complete();
     });
 
+    {
+      // ?open=activate&reset=1 wipes this phone's progress (staff testing); the server keeps its own records
+      const params = new URLSearchParams(location.search);
+      if (params.get('reset')) {
+        store.found = {};
+        store.cert = undefined;
+        save();
+        params.delete('reset');
+        const q = params.toString().replace('skip=', 'skip');
+        history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
+      }
+    }
     render();
     {
       const params = new URLSearchParams(location.search);
