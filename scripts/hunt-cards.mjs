@@ -1,5 +1,6 @@
 // Prints the six Drawdy Logo Hunting cards (A6, XP "Found New Hardware" look) with QR codes.
-// usage: HUNT_KEYS="DRWDY-…,DRWDY-…,…(6, in k1..k6 order)" node --experimental-strip-types scripts/hunt-cards.mjs [outdir]
+// usage: HUNT_KEYS="DRWDY-…,DRWDY-…,…(6, in k1..k6 order)" [A4=1] node --experimental-strip-types scripts/hunt-cards.mjs [outdir]
+//        A4=1 imposes 2×2 cards per A4 sheet (two sheets, cut marks) instead of one A6 page per card
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -36,8 +37,18 @@ for (const [i, spot] of huntSpots.entries()) {
     <div class="taskbar"><span class="start">start</span><span>STUPID HACKATHON X · 10-11 OCT 2026</span></div>
   </section>`);
 }
+const A4 = process.env.A4 === '1';
+const sheets = A4 ? [cards.slice(0, 4), cards.slice(4)] : [];
+const body = A4
+  ? sheets.map((cs) => `<div class="sheet">${cs.join('')}<i class="cut v"></i><i class="cut h"></i></div>`).join('')
+  : cards.join('\n');
 const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><style>
-  @page { size: A6; margin: 0; }
+  @page { size: ${A4 ? 'A4' : 'A6'}; margin: 0; }
+  .sheet { position: relative; width: 210mm; height: 297mm; display: grid; grid-template-columns: 105mm 105mm; grid-auto-rows: 148mm; page-break-after: always; background: #fff; }
+  .sheet .card { page-break-after: auto; outline: 0.3mm dashed rgba(0,0,0,.35); outline-offset: -0.15mm; }
+  .cut { position: absolute; background: transparent; border: 0; pointer-events: none; }
+  .cut.v { left: 105mm; top: 0; height: 297mm; border-left: 0.3mm dashed #999; }
+  .cut.h { top: 148mm; left: 0; width: 210mm; border-top: 0.3mm dashed #999; }
   * { box-sizing: border-box; } body { margin: 0; font-family: Tahoma, 'Inter Thai Looped', sans-serif; }
   .card { position: relative; width: 105mm; height: 148mm; overflow: hidden; page-break-after: always; background: #2f8be8; }
   .sky { position: absolute; inset: 0; background: linear-gradient(180deg, #0f4fb8 0%, #2f8be8 30%, #8fd3ff 60%, #d9f2ff 72%); }
@@ -53,9 +64,9 @@ const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><style>
   .how { margin: 0; font-size: 8.5pt; color: #222; line-height: 1.35; } .rule { margin: 1.5mm 0 0; font-size: 7pt; color: #777; line-height: 1.3; }
   .taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 8mm; display: flex; align-items: center; gap: 3mm; padding-right: 3mm; color: #fff; font: 700 7pt Tahoma, sans-serif; letter-spacing: 1px; background: linear-gradient(180deg, #3b7fe0 0%, #245edb 6%, #2460d8 70%, #1b47b0 100%); }
   .start { height: 8mm; padding: 0 4mm 0 3mm; display: flex; align-items: center; font: italic 700 9pt Tahoma, sans-serif; background: linear-gradient(180deg, #5ad85a 0%, #3cb43c 8%, #2f9e2f 60%, #227d22 100%); border-radius: 0 4mm 4mm 0; }
-</style></head><body>${cards.join('\n')}</body></html>`;
+</style></head><body>${body}</body></html>`;
 writeFileSync(`${OUT}/cards.html`, html);
-const pdf = `${OUT}/shtx-logo-hunting-cards.pdf`;
+const pdf = `${OUT}/shtx-logo-hunting-cards${A4 ? '-A4' : ''}.pdf`;
 const r = spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=5000', `--user-data-dir=${OUT}/.profile`, `--print-to-pdf=${pdf}`, `file://${OUT}/cards.html`], { encoding: 'utf8', timeout: 90000, killSignal: 'SIGKILL' });
 spawnSync(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=2', '--window-size=397,562', '--virtual-time-budget=5000', `--user-data-dir=${OUT}/.profile2`, `--screenshot=${OUT}/card-1.png`, `file://${OUT}/cards.html`], { encoding: 'utf8', timeout: 90000, killSignal: 'SIGKILL' });
 console.log('wrote', pdf, (r.stderr || '').includes('bytes written') ? 'ok' : '(check)');
