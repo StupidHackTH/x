@@ -86,6 +86,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
             <small id="net-substatus">กด Start เพื่อเปิดไมค์และฟังสัญญาณ</small>
           </div>
           <div class="net-meter" title="ระดับเสียงที่ไมค์ได้ยิน"><i id="net-level"></i></div>
+          <small class="net-levelnum" id="net-levelnum">—</small>
         </div>
 
         <div class="net-actions">
@@ -98,6 +99,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
             <option value="0.08">ใกล้มาก (ชนกัน)</option>
             <option value="0.05" selected>ปกติ (1 ฝ่ามือ)</option>
             <option value="0.02">ไกล (เสียงดัง)</option>
+            <option value="0.006">ไมค์เบามาก (iPhone)</option>
           </select></label>
         </div>
         <p class="net-howto">วิธีเล่น: ทั้งสองเครื่องกด <b>Start listening</b> · วางมือถือห่างกันประมาณ 1 ฝ่ามือ เปิดเสียง 40–60% · ฝ่ายหนึ่งกด <b>Connect</b> แล้วรอฟังเสียงโมเด็ม ประมาณ 6 วินาที</p>
@@ -243,6 +245,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   .net-meter { width: 90px; height: 10px; background: #ddd; border: 1px solid #888; overflow: hidden; flex: none; }
   .net-meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #39d353, #ffd34d 70%, #ff4d4d); transition: width 80ms linear; }
   .net-meter[data-busy] { outline: 2px solid #ffb300; }
+  .net-levelnum { font: 10px 'Lucida Console', monospace; color: #555; width: 38px; text-align: right; }
   .net-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .net-actions .xp-btn.primary { font-weight: bold; }
   .net-range select { font: inherit; }
@@ -518,15 +521,27 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       connectBtn.disabled = !modem.listening && s === 'idle' && false;
     }
 
+    const inAppBrowser = /FBAN|FBAV|FB_IAB|Messenger|Line\/|Instagram|Twitter|TikTok/i.test(navigator.userAgent);
     async function startListening(): Promise<boolean> {
       if (modem.listening) return true;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        const why = inAppBrowser ? 'เบราว์เซอร์ในแอป (LINE/Facebook/Messenger) ไม่ให้ใช้ไมค์' : !window.isSecureContext ? 'ต้องเปิดผ่าน https' : 'เบราว์เซอร์นี้ไม่รองรับไมค์';
+        log(`Microphone unavailable: ${why}`, 'err');
+        statusEl.textContent = 'ใช้ไมค์ไม่ได้';
+        subEl.textContent = `${why} กดเมนู ⋯ แล้วเลือก "เปิดใน Safari/Chrome" หรือใช้ QR fallback`;
+        return false;
+      }
       try {
         await modem.listen();
       } catch (e) {
-        log(`Microphone unavailable: ${(e as Error).message}`, 'err');
-        subEl.textContent = 'เปิดไมค์ไม่ได้ ตรวจสิทธิ์ของเบราว์เซอร์ หรือใช้ QR fallback';
+        const err = e as Error;
+        const why = err.name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตให้ใช้ไมค์ (กด Allow หรือเปิดสิทธิ์ในตั้งค่าเบราว์เซอร์)' : err.name === 'NotFoundError' ? 'ไม่พบไมโครโฟน' : err.message;
+        log(`Microphone unavailable: ${err.name} ${err.message}`, 'err');
+        statusEl.textContent = 'เปิดไมค์ไม่ได้';
+        subEl.textContent = `${why} หรือใช้ QR fallback`;
         return false;
       }
+      if (modem.ctx && modem.ctx.state !== 'running') log(`AudioContext is ${modem.ctx.state}; tap Start again if nothing moves`, 'err');
       root.dataset.listen = 'on';
       listenBtn.textContent = 'Stop listening';
       pingBtn.disabled = false;
@@ -544,13 +559,16 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       listenBtn.textContent = 'Start listening';
       pingBtn.disabled = true;
       levelEl.style.width = '0';
+      $('net-levelnum').textContent = '—';
       meter.removeAttribute('data-busy');
       if (node) setLinkState(node.state);
       log('Microphone released', 'info');
     }
 
+    let levelTick = 0;
     modem.onLevel = (level, busy) => {
       levelEl.style.width = `${Math.round(Math.min(1, level * 1.5) * 100)}%`;
+      if (++levelTick % 5 === 0) $('net-levelnum').textContent = (level / 4).toFixed(3);
       if (busy) meter.setAttribute('data-busy', '');
       else meter.removeAttribute('data-busy');
       const errs = modem.decoder?.errors ?? 0;

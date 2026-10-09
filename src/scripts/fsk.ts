@@ -290,6 +290,11 @@ export class AudioModem {
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
       video: false,
     });
+    // iOS Safari suspends/interrupts a running context when the mic session starts: resume again afterwards
+    if (ctx.state !== 'running') await ctx.resume().catch(() => {});
+    ctx.onstatechange = () => {
+      if (this.listening && ctx.state !== 'running') void ctx.resume().catch(() => {});
+    };
     const src = ctx.createMediaStreamSource(this.stream);
     this.decoder = new FskDecoder(ctx.sampleRate, this.o, (p, level) => this.onFrame(p, level));
     this.proc = ctx.createScriptProcessor(2048, 1, 1);
