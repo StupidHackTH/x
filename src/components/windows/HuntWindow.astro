@@ -12,7 +12,7 @@ import { asset } from '../../lib/asset';
   <div class="act" id="act" data-state="pending">
     <header class="act-banner">
       <div>
-        <h2>Let's activate Windows</h2>
+        <h2 id="act-title">Let's activate Windows</h2>
         <p>Drawdy ซ่อน product key ไว้ 6 ชิ้นทั่วงาน หาให้ครบแล้ว Windows ของคุณจะถูก activate เอาไปรับของรางวัลที่บูท Drawdy</p>
       </div>
       <Icon name="activate" class="act-banner-icon" />
@@ -328,6 +328,19 @@ import { asset } from '../../lib/asset';
         history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
       }
     }
+    /* A different XP-era headline every time the window loads, because why not */
+    const titles = [
+      "Let's activate Windows",
+      'Your copy of Windows may not be genuine',
+      'Found New Hardware: Drawdy',
+      'Please insert disc 2 of 6',
+      'Windows Genuine Advantage (ไม่มีจริง)',
+      'This copy of Windows is 0 of 6 activated',
+      'Activation required. Hunting optional. (ไม่จริง บังคับ)',
+      'ครบ 6 key แล้ว Windows จะไม่ค้างอีกเลย (โกหก)',
+    ];
+    $('act-title').textContent = titles[Math.floor(Math.random() * titles.length)];
+
     render();
     {
       // The QR on the cards is a decoy: scanning it gets you rickrolled. The key has to be typed from the card.
