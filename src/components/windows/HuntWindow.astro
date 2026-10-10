@@ -30,7 +30,7 @@ import { asset } from '../../lib/asset';
             <span class="act-check" aria-hidden="true"><Icon name="check" class="mono" /></span>
             <span class="act-name"><Icon name="folder" class="mono" /> {s.name}</span>
             <span class="act-hint">{s.hint}</span>
-            <span class="act-locked">คำใบ้ปล่อย Day {s.day}</span>
+            <span class="act-locked">ยังไม่มีคำใบ้ กด "สุ่มคำใบ้" ด้านล่าง</span>
             <span class="act-when" data-when></span>
           </li>
         ))}
@@ -42,6 +42,10 @@ import { asset } from '../../lib/asset';
         <button type="submit" class="xp-btn primary" id="act-submit">Activate</button>
         <p class="act-msg" id="act-msg" hidden></p>
       </form>
+      <div class="act-hintbar">
+        <button type="button" class="xp-btn" id="act-hint">สุ่มคำใบ้</button>
+        <span id="act-hint-info"></span>
+      </div>
       <p class="act-rules">สแกน QR บนการ์ด หรือพิมพ์ key · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
     </div>
 
@@ -96,6 +100,9 @@ import { asset } from '../../lib/asset';
   .act-msg { grid-column: 1 / -1; margin: 0; font-size: 11px; color: #b00; }
   .act-msg.ok { color: #0b7a2a; }
   .act-msg[hidden] { display: none; }
+  .act-hintbar { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #333; }
+  .act-hintbar .xp-btn[disabled] { opacity: 0.6; }
+  .act-keys li.revealed { background: #fff8d6; border-color: #e3cf6d; }
   .act-rules { margin: 0; font-size: 11px; color: #555; }
   .act-sponsor { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; border-top: 1px solid #a0a0a0; background: #fff; font-size: 11px; color: #555; }
   .act-sponsor img { height: 22px; }
@@ -115,15 +122,18 @@ import { asset } from '../../lib/asset';
 </style>
 
 <script>
-  import { huntSpots, huntDays } from '../../data/hunt';
+  import { huntSpots } from '../../data/hunt';
   import { api, hasApi } from '../../scripts/netapi';
 
   interface HuntStore {
     device: string;
     nick: string;
     found: Record<string, number>;
+    hints: Record<string, number>; // spot id → when the player drew its hint
+    lastHintAt: number;
     cert?: string;
   }
+  const HINT_COOLDOWN = 2 * 60 * 1000; // one random hint every 2 minutes
   const KEY = 'shtx-hunt-v1';
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -151,7 +161,7 @@ import { asset } from '../../lib/asset';
         /* ignore */
       }
       const device = s.device || net.me?.mac || `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
-      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, cert: s.cert };
+      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, hints: s.hints || {}, lastHintAt: s.lastHintAt || 0, cert: s.cert };
     }
     function save() {
       try {
@@ -161,30 +171,47 @@ import { asset } from '../../lib/asset';
       }
     }
 
-    /* Hints unlock by event day (Bangkok time); before the event everything shows, labelled as test mode */
-    function todayBkk() {
-      return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+    /* Hints are drawn by the player: "สุ่มคำใบ้" reveals one random hint for a spot not found yet, with a cooldown */
+    function hintCandidates() {
+      return huntSpots.filter((sp) => !store.found[sp.id] && !store.hints[sp.id]);
     }
-    function unlockedDay(): number {
-      const t = todayBkk();
-      if (t < huntDays[1]) return 0; // before the event: no hints yet (keys still work)
-      if (t < huntDays[2]) return 1;
-      return 2;
+    function hintWait() {
+      return Math.max(0, store.lastHintAt + HINT_COOLDOWN - Date.now());
     }
+    function renderHintBar() {
+      const btn = $<HTMLButtonElement>('act-hint');
+      const left = hintCandidates().length;
+      const wait = hintWait();
+      btn.disabled = left === 0 || wait > 0;
+      btn.textContent = wait > 0 ? `สุ่มคำใบ้ (อีก ${Math.ceil(wait / 1000)} วิ)` : 'สุ่มคำใบ้';
+      $('act-hint-info').textContent = left === 0 ? 'คำใบ้ออกครบแล้ว' : `เหลือคำใบ้ที่ยังไม่ได้สุ่ม ${left} ใบ · สุ่มได้ทุก ${HINT_COOLDOWN / 60000} นาที`;
+    }
+    function drawHint() {
+      const pool = hintCandidates();
+      if (!pool.length || hintWait() > 0) return;
+      const spot = pool[Math.floor(Math.random() * pool.length)];
+      store.hints[spot.id] = Date.now();
+      store.lastHintAt = Date.now();
+      save();
+      render();
+      say(`คำใบ้ใหม่: ${spot.name} — ${spot.hint}`, true);
+    }
+    $('act-hint').addEventListener('click', drawHint);
+    setInterval(renderHintBar, 1000);
 
     const total = huntSpots.length;
     const items = Array.from(root.querySelectorAll<HTMLLIElement>('#act-keys li'));
     const msg = $('act-msg');
 
     function render() {
-      const day = unlockedDay();
-      $('act-mode').textContent = day === 0 ? 'คำใบ้ทั้ง 6 ใบจะปล่อยวันงาน 10 ต.ค.' : 'คำใบ้ปล่อยครบแล้ว';
+      $('act-mode').textContent = 'คำใบ้ได้จากการกดสุ่มเท่านั้น';
       let n = 0;
       for (const li of items) {
         const id = li.dataset.key!;
         const at = store.found[id];
         li.classList.toggle('found', !!at);
-        li.classList.toggle('locked', !at && Number(li.dataset.day) > day);
+        li.classList.toggle('revealed', !at && !!store.hints[id]);
+        li.classList.toggle('locked', !at && !store.hints[id]);
         if (at) {
           n++;
           const d = new Date(at);
@@ -195,6 +222,7 @@ import { asset } from '../../lib/asset';
       $('act-count').textContent = `${n} of ${total} product keys`;
       root.dataset.state = n === total ? 'activated' : 'pending';
       $<HTMLInputElement>('act-nick').value = store.nick;
+      renderHintBar();
     }
 
     function say(text: string, ok = false) {
@@ -291,6 +319,8 @@ import { asset } from '../../lib/asset';
       const params = new URLSearchParams(location.search);
       if (params.get('reset')) {
         store.found = {};
+        store.hints = {};
+        store.lastHintAt = 0;
         store.cert = undefined;
         save();
         params.delete('reset');
