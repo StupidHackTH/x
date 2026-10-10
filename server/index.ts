@@ -257,6 +257,18 @@ const app = new Elysia()
     },
     { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
+  /* The host with the most QR links (and at least 10) gets "ransomwared": the phone must do real air handshakes to recover */
+  .get('/api/ransom', () => {
+    const counts = new Map<string, number>();
+    for (const l of qLinks.all()) {
+      if (l.via !== 'qr') continue;
+      counts.set(l.a, (counts.get(l.a) ?? 0) + 1);
+      counts.set(l.b, (counts.get(l.b) ?? 0) + 1);
+    }
+    const top = Array.from(counts.entries()).sort((x, y) => y[1] - x[1])[0];
+    if (!top || top[1] < 10) return { macs: [], top: null };
+    return { macs: [top[0]], top: { mac: top[0], nick: qNode.get(top[0])?.nick ?? '', qr: top[1] } };
+  })
   .get('/api/hunt', () => huntState())
   .post(
     '/api/hunt/hints',

@@ -64,6 +64,7 @@ export const api = {
   huntFind: (device: string, nick: string, key: string, proof: string) => call<{ ok: boolean; complete?: boolean }>('/api/hunt/find', { method: 'POST', body: JSON.stringify({ device, nick, key, proof }) }),
   hunt: () => call<HuntState>('/api/hunt'),
   pause: () => call<PauseState>('/api/pause'),
+  ransom: () => call<{ macs: string[]; top: { mac: string; nick: string; qr: number } | null }>('/api/ransom'),
 };
 
 export interface PauseState {

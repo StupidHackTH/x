@@ -159,6 +159,20 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       </div>
     </div>
 
+    <div class="net-ransom" id="net-ransom" hidden>
+      <pre class="net-ransom-skull" aria-hidden="true">      _____
+     /     \
+    | () () |
+     \  ^  /
+      |||||
+      |||||</pre>
+      <h3>CONGRATULATIONS!</h3>
+      <p class="net-ransom-big">YOU ARE SO RANSOMWARE</p>
+      <p>Your QR fallback has been encrypted with military-grade 300-baud FSK. You have connected via QR <b id="net-ransom-count">?</b> times. That is not networking. That is scanning.</p>
+      <p>To decrypt, connect via <b>AIR connection</b> (real acoustic handshake) with <b id="net-ransom-left">3</b> more humans. No Bitcoin accepted.</p>
+      <p class="net-ransom-timer">DEADLINE: <span id="net-ransom-timer">23:59:59</span> · WALLET: 1QRsp4mm3rXXXXXXXXXXXXXXXXXXX</p>
+      <button type="button" class="net-ransom-btn" id="net-ransom-ok">I UNDERSTAND (ปิดเสียงเตือน)</button>
+    </div>
     <div class="net-overlay" id="net-cert" hidden>
       <div class="net-dialog wide">
         <div class="net-certificate" id="net-certificate">
@@ -303,6 +317,16 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   .net-certificate.gold .net-cert-gold-tag { display: block; }
   .net-cert-seal { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, #d94c4c, #8a1b1b); color: #fff; font: bold 9px/1.2 Arial, sans-serif; letter-spacing: 1px; transform: rotate(-12deg); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
 
+  .net-ransom { position: absolute; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; text-align: center; background: #000; color: #ff3b3b; font: 13px/1.45 'Lucida Console', 'Courier New', monospace; overflow: auto; }
+  .net-ransom[hidden] { display: none; }
+  .net-ransom-skull { margin: 0; font-size: 12px; line-height: 1.1; color: #ff6b6b; }
+  .net-ransom h3 { margin: 4px 0 0; font-size: 26px; letter-spacing: 3px; animation: net-ransom-blink 0.7s steps(2) infinite; }
+  .net-ransom-big { margin: 0; font-size: 20px; font-weight: bold; color: #fff; background: #c00; padding: 4px 12px; }
+  .net-ransom p { margin: 0; max-width: 520px; }
+  .net-ransom-timer { color: #ffd34d; }
+  .net-ransom-btn { margin-top: 8px; padding: 8px 16px; background: #c00; color: #fff; border: 2px solid #ff6b6b; font: bold 13px 'Lucida Console', monospace; cursor: pointer; }
+  @keyframes net-ransom-blink { 50% { opacity: 0.2; } }
+  .net[data-ransom='1'] #net-qr, .net[data-ransom='1'] #net-manual-btn { background: #000 !important; color: #ff3b3b !important; border-color: #ff3b3b !important; }
   @media (max-width: 767px) {
     .net-wizard-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
     .net-steps { grid-row: auto; flex-direction: row; flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px; }
@@ -328,6 +352,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   interface Store {
     me: Me | null;
     links: Link[];
+    ransom?: { at: number; airAtStart: number; qr: number } | null; // the QR-abuser penalty: 3 real air links to decrypt
   }
 
   const KEY = 'shtx-net-v1';
@@ -349,7 +374,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     function load(): Store {
       try {
         const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [] };
+        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [], ransom: s.ransom ?? null };
       } catch {
         /* ignore */
       }
@@ -657,6 +682,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     function onEstablished(link: Established) {
       const mac = formatMac(link.peer);
       upsertLink({ mac, nick: link.nick, via: 'air', at: Date.now() });
+      checkRansomProgress();
       showPeer(mac, link.needCards ? 'กำลังรับนามบัตรผ่านเสียง (ประมาณ 5 วินาที)…' : 'ดึงนามบัตรจาก NOC…');
       if (online()) {
         void api.register(store.me!).then(() => api.link(store.me!.mac, mac, 'air', { seq: link.seq, ack: link.ack }));
@@ -734,6 +760,9 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       }
       if (online()) void api.register(store.me!);
       void syncFromServer();
+      renderRansom();
+      if (store.ransom) showRansom();
+      else void pollRansom();
     }
 
     async function syncFromServer() {
@@ -753,6 +782,98 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         log(`Synced ${r.links.length} link(s) from NOC`, 'info');
       }
     }
+
+    /* ---------- ransomware (the QR abuser) ---------- */
+    const RANSOM_AIR = 3;
+    const airLinks = () => store.links.filter((l) => l.via === 'air').length;
+    let alarm: { osc: OscillatorNode; lfo: OscillatorNode } | null = null;
+    async function alarmOn() {
+      if (alarm) return;
+      try {
+        const ctx = modem.ctx ?? (modem.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)());
+        if (ctx.state !== 'running') await ctx.resume();
+        const osc = ctx.createOscillator();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 900;
+        lfo.type = 'triangle';
+        lfo.frequency.value = 2.5;
+        lfoGain.gain.value = 350;
+        lfo.connect(lfoGain).connect(osc.frequency);
+        gain.gain.value = 0.35;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        lfo.start();
+        alarm = { osc, lfo };
+      } catch {
+        /* no audio */
+      }
+    }
+    function alarmOff() {
+      if (!alarm) return;
+      try {
+        alarm.osc.stop();
+        alarm.lfo.stop();
+      } catch {
+        /* ignore */
+      }
+      alarm = null;
+    }
+    function renderRansom() {
+      const r = store.ransom;
+      root.dataset.ransom = r ? '1' : '';
+      ($('net-qr') as HTMLButtonElement).textContent = r ? 'QR ENCRYPTED' : 'QR fallback';
+      ($('net-manual-btn') as HTMLButtonElement).disabled = !!r;
+      if (!r) return;
+      $('net-ransom-count').textContent = String(r.qr);
+      $('net-ransom-left').textContent = String(Math.max(0, RANSOM_AIR - (airLinks() - r.airAtStart)));
+    }
+    function showRansom() {
+      renderRansom();
+      $('net-ransom').hidden = false;
+      void alarmOn();
+      log('!!! RANSOMWARE DETECTED: QR fallback encrypted. Connect via AIR to decrypt. !!!', 'err');
+    }
+    function startRansom(qr: number) {
+      store.ransom = { at: Date.now(), airAtStart: airLinks(), qr };
+      save();
+      showRansom();
+    }
+    function checkRansomProgress() {
+      const r = store.ransom;
+      if (!r) return;
+      if (airLinks() - r.airAtStart >= RANSOM_AIR) {
+        store.ransom = null;
+        save();
+        alarmOff();
+        $('net-ransom').hidden = true;
+        renderRansom();
+        log('DECRYPTED. Your QR fallback is back. Welcome to the real world.', 'ok');
+      } else renderRansom();
+    }
+    async function pollRansom() {
+      if (!store.me || !online() || store.ransom) return;
+      const r = await api.ransom();
+      if (r && r.macs.includes(store.me.mac)) startRansom(r.top?.qr ?? store.links.filter((l) => l.via === 'qr').length);
+    }
+    $('net-ransom-ok').addEventListener('click', () => {
+      alarmOff();
+      $('net-ransom').hidden = true;
+    });
+    document.addEventListener('pointerdown', () => {
+      if (!$('net-ransom').hidden && !alarm) void alarmOn();
+    });
+    setInterval(() => {
+      if ($('net-ransom').hidden) return;
+      const left = Math.max(0, 86_399_000 - (Date.now() - (store.ransom?.at ?? Date.now())));
+      const h = Math.floor(left / 3_600_000);
+      const m = Math.floor((left % 3_600_000) / 60_000);
+      const sec = Math.floor((left % 60_000) / 1000);
+      $('net-ransom-timer').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }, 1000);
+    setInterval(() => void pollRansom(), 60_000);
 
     /* ---------- overlays ---------- */
     root.querySelectorAll<HTMLButtonElement>('[data-close-overlay]').forEach((b) =>
@@ -783,6 +904,10 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     $('net-edit').addEventListener('click', openWizard);
 
     $('net-qr').addEventListener('click', async () => {
+      if (store.ransom) {
+        showRansom();
+        return;
+      }
       const me = store.me!;
       const u = new URL(location.href);
       u.search = '';
@@ -808,6 +933,10 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     });
 
     $('net-manual-btn').addEventListener('click', () => {
+      if (store.ransom) {
+        showRansom();
+        return;
+      }
       $('net-manual-err').hidden = true;
       $('net-manual').hidden = false;
       $<HTMLInputElement>('net-manual-mac').focus();
@@ -863,6 +992,11 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       if (!mac || !store.me) return;
       const s = formatMac(mac);
       if (s === store.me.mac) return;
+      if (store.ransom) {
+        log(`QR link from ${params.get('n') ?? s} refused: your QR is encrypted. Go talk to them with sound.`, 'err');
+        showRansom();
+        return;
+      }
       upsertLink({ mac: s, nick: params.get('n') ?? '', skill: params.get('s') ?? '', idea: params.get('i') ?? '', via: 'qr', at: Date.now() });
       log(`QR link: ${params.get('n') ?? s}`, 'ok');
       void api.register(store.me).then(() => api.link(store.me!.mac, s, 'qr'));
@@ -883,6 +1017,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     const syncOpen = () => {
       const open = !win.hidden && !win.hasAttribute('data-minimized');
       if (!open && modem.listening) stopListening();
+      if (!open) alarmOff();
     };
     new MutationObserver(syncOpen).observe(win, { attributes: true, attributeFilter: ['hidden', 'data-minimized'] });
     document.addEventListener('visibilitychange', () => {
@@ -909,6 +1044,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       buildFrame,
       formatMac,
       parseMac,
+      ransom: (qr = 42) => startRansom(qr),
     };
   }
 
