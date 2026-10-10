@@ -163,8 +163,8 @@ for the certificate; the NOC shows the mesh, the core switches and the dumb idea
 
 Sponsor activation game: six Drawdy product keys are hidden around the venue (`src/data/hunt.ts` holds the spot names,
 hints, release day and the SHA-256 of each key; the plain keys are only on the printed cards and in the organizer's notes).
-The **Activate Windows** window (`src/components/windows/HuntWindow.astro`) is a Windows Product Activation wizard: scan a
-card's QR (`?open=activate&key=…`) or type the key, hints are drawn by the player ("สุ่มคำใบ้": one random hint for an unfound spot every 2 minutes), six keys = "Windows is now activated" with a certificate code (`ACT-xxxxxx`, derived from the device id) to show at
+The **Activate Windows** window (`src/components/windows/HuntWindow.astro`) is a Windows Product Activation wizard: type the key from the card (the
+card's QR, `?open=activate&key=…`, is a decoy that rickrolls the scanner), hints are drawn by the player ("สุ่มคำใบ้": one random hint for an unfound spot every 2 minutes), six keys = "Windows is now activated" with a certificate code (`ACT-xxxxxx`, derived from the device id) to show at
 the Drawdy booth. Finds are reported to the NOC server (`POST /api/hunt/find` with the key hash as proof); `/noc` shows
 finds per spot, first finders and who has activated; the Staff bar has *Reset hunt*.
 

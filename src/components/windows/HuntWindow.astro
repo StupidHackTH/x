@@ -46,7 +46,7 @@ import { asset } from '../../lib/asset';
         <button type="button" class="xp-btn" id="act-hint">สุ่มคำใบ้</button>
         <span id="act-hint-info"></span>
       </div>
-      <p class="act-rules">สแกน QR บนการ์ด หรือพิมพ์ key · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
+      <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
     </div>
 
     <footer class="act-sponsor">
@@ -330,13 +330,14 @@ import { asset } from '../../lib/asset';
     }
     render();
     {
+      // The QR on the cards is a decoy: scanning it gets you rickrolled. The key has to be typed from the card.
       const params = new URLSearchParams(location.search);
-      const key = params.get('key');
-      if (key) {
+      if (params.get('key')) {
         params.delete('key');
         const q = params.toString().replace('skip=', 'skip');
         history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
-        void redeem(key, 'qr');
+        if (hasApi()) void api.event('note', '', 'someone scanned a Drawdy card QR and got rickrolled');
+        setTimeout(() => location.replace('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), 250);
       }
     }
   }
