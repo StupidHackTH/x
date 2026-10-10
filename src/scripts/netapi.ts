@@ -84,7 +84,28 @@ export const api = {
   projects: () => call<{ projects: Project[] }>('/api/projects'),
   vote: (device: string, target: string) => call<{ ok: boolean; error?: string }>('/api/vote', { method: 'POST', body: JSON.stringify({ device, target }) }),
   votes: () => call<VoteState>('/api/votes'),
+  bingo: (device: string, nick: string, lines: number, cells: number) => call<{ ok: boolean }>('/api/bingo', { method: 'POST', body: JSON.stringify({ device, nick, lines, cells }) }),
+  bingoBoard: () => call<BingoBoard>('/api/bingo'),
+  deadPixel: () => call<DeadPixelState | null>('/api/deadpixel'),
 };
+
+export interface BingoBoard {
+  players: number;
+  bingos: number;
+  blackouts: number;
+  top: { nick: string; lines: number; cells: number; at: number }[];
+}
+
+export interface DeadPixel {
+  round: number;
+  at: number;
+  deadline: number;
+  macs: string[];
+}
+
+export interface DeadPixelState extends DeadPixel {
+  nodes: { mac: string; nick: string; revived: boolean }[];
+}
 
 export interface VoteState {
   open: boolean;
@@ -111,6 +132,7 @@ export interface PauseState {
   vote?: boolean; // voting open
   update?: number; // timestamp of the last staff "Windows Update" push (0 = never)
   updateMsg?: string;
+  dp?: DeadPixel | null; // current Dead Pixel round, if any
 }
 
 export interface HuntState {

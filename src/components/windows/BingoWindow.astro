@@ -1,0 +1,257 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+
+// Packet Loss Bingo: a 3×3 card of "find someone who…" prompts, dealt per phone from a seeded shuffle. A cell is
+// ticked by naming one of your SHTX-NET contacts (each contact can fill only one cell), so the card forces real
+// conversations. One line = BINGO, all eight = BLACKOUT. Progress goes to the NOC leaderboard.
+---
+
+<Window id="bingo" menu={['Game', 'Help']} status="Packet Loss Bingo · ใช้ contact จาก SHTX-NET" beige>
+  <div class="bg" id="bg">
+    <header class="bg-banner">
+      <div>
+        <h2>Packet Loss Bingo</h2>
+        <p id="bg-sub">หาคนที่ตรงกับช่อง แล้วเลือกจาก contact ของคุณ 1 คนต่อ 1 ช่อง ได้ 1 แถว = BINGO ครบทุกช่อง = BLACKOUT</p>
+      </div>
+      <Icon name="bingo" class="bg-banner-icon" />
+    </header>
+    <div class="bg-grid" id="bg-grid"></div>
+    <p class="bg-status" id="bg-status"></p>
+    <div class="bg-pick" id="bg-pick" hidden>
+      <div class="bg-pick-box">
+        <h3 id="bg-pick-title">ใครตรงกับช่องนี้?</h3>
+        <div class="bg-pick-list" id="bg-pick-list"></div>
+        <div class="bg-pick-actions"><button type="button" class="xp-btn" id="bg-pick-cancel">Cancel</button></div>
+      </div>
+    </div>
+  </div>
+</Window>
+
+<style is:global>
+  .bg { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: auto; }
+  .bg-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .bg-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
+  .bg-banner p { margin: 0; color: #333; }
+  .bg-banner-icon { width: 44px; height: 44px; flex: none; }
+  .bg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 18px 0; }
+  .bg-cell { position: relative; min-height: 92px; padding: 8px 6px; background: #fff; border: 1px solid #7f9db9; text-align: center; font: 11.5px/1.3 Tahoma, 'Inter Thai Looped', sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; white-space: pre-line; }
+  .bg-cell:hover { background: #f3f7fd; }
+  .bg-cell.on { background: #d9f2dc; border-color: #2f9e52; }
+  .bg-cell.free { background: #fff6c9; border-color: #c9a227; cursor: default; }
+  .bg-cell .who { display: block; font-size: 10.5px; color: #1b7a2a; font-weight: bold; }
+  .bg-cell .tick { position: absolute; top: 2px; right: 5px; font-size: 14px; color: #2f9e52; }
+  .bg-cell.line { box-shadow: 0 0 0 2px #ffb300 inset; }
+  .bg-status { margin: 0; padding: 10px 18px 14px; font-size: 12px; color: #333; }
+  .bg-status b { color: #b8860b; }
+  .bg-pick { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(0, 0, 0, 0.45); }
+  .bg-pick[hidden] { display: none; }
+  .bg-pick-box { width: min(100%, 360px); max-height: 100%; display: flex; flex-direction: column; background: #ece9d8; border: 1px solid #0a246a; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25); }
+  .bg-pick-box h3 { margin: 0; padding: 6px 10px; background: linear-gradient(90deg, #0a246a, #3a6ea5); color: #fff; font-size: 12px; }
+  .bg-pick-list { flex: 1; min-height: 0; max-height: 50vh; overflow: auto; margin: 10px; background: #fff; border: 1px solid #7f9db9; }
+  .bg-pick-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+  .bg-pick-row:hover { background: #316ac5; color: #fff; }
+  .bg-pick-row.used { opacity: 0.45; cursor: not-allowed; }
+  .bg-pick-row small { font: 10px 'Lucida Console', monospace; }
+  .bg-pick-empty { padding: 16px; text-align: center; color: #666; }
+  .bg-pick-actions { display: flex; justify-content: flex-end; padding: 0 10px 10px; }
+</style>
+
+<script>
+  import { api, hasApi, deviceId } from '../../scripts/netapi';
+
+  const KEY = 'shtx-bingo-v1';
+  const POOL = [
+    'เจอคนที่เขียน Rust',
+    'เจอคนที่เมื่อคืนนอนไม่ถึง 3 ชม.',
+    'เจอคนที่มาจากต่างจังหวัด',
+    'เจอคนที่เคยมา Stupid Hackathon แล้ว',
+    'เจอคนที่ใช้ Vim จริงจัง',
+    'เจอคนที่ใช้ Windows เป็นเครื่องหลัก',
+    'เจอคนที่ใช้ Linux เป็นเครื่องหลัก',
+    'เจอคนที่ไอเดียโง่กว่าของคุณ',
+    'เจอคนที่มาคนเดียว',
+    'เจอคนที่ยังเป็นนักเรียน/นักศึกษา',
+    'เจอคนสาย hardware',
+    'เจอคนที่ไม่ได้เขียนโค้ดเลย',
+    'เจอคนที่เคย deploy วันศุกร์แล้วพัง',
+    'เจอคนที่ชอบ tab มากกว่า space',
+    'เจอคนที่ชื่อเล่นเป็นชื่ออาหาร',
+    'เจอคนที่ใส่เสื้อ hackathon งานอื่น',
+    'เจอคนที่วันนี้ดื่มกาแฟเกิน 3 แก้ว',
+    'เจอคนที่มี side project ที่ไม่เคยเสร็จ',
+    'เจอคนที่เคยทำ production ล่ม',
+    'เจอคนที่ไม่ได้เรียนสายคอม',
+    'เจอคนที่ทำเกม',
+    'เจอคนที่โดน rickroll วันนี้',
+    'เจอคนที่ติด RANSOMWARE ของ SHTX-NET',
+    'เจอคนที่มี contact SHTX-NET เกิน 20',
+    'เจอคนที่ activate Windows ครบ 6 ช่อง',
+    'เจอคนที่เป็นทีมงาน',
+    'เจอคนที่ชอบ dark mode มากกว่า light',
+    'เจอคนที่ยังใช้ jQuery',
+  ];
+  const FREE = 4;
+  const LINES = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function rng(seed: string) {
+    let h = 1779033703 ^ seed.length;
+    for (let i = 0; i < seed.length; i++) {
+      h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    let a = h >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function setupBingo() {
+    const root = $('bg');
+    if (!root) return;
+    const device = deviceId();
+    type Cell = { mac: string; nick: string } | null;
+    type Store = { device: string; card: number[]; cells: Cell[]; lines: number; sentCells: number; sentLines: number };
+    let store: Store | null = null;
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (s?.card?.length === 9) store = s;
+    } catch {
+      /* ignore */
+    }
+    if (!store) {
+      const r = rng(device);
+      const idx = POOL.map((_, i) => i);
+      for (let i = idx.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+      }
+      const card = idx.slice(0, 8);
+      card.splice(FREE, 0, -1);
+      store = { device, card, cells: Array(9).fill(null), lines: 0, sentCells: -1, sentLines: -1 };
+    }
+    const st = store;
+    const save = () => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(st));
+      } catch {
+        /* ignore */
+      }
+    };
+    const filled = (i: number) => i === FREE || !!st.cells[i];
+    const lineHits = () => LINES.filter((l) => l.every(filled));
+    const count = () => st.cells.filter(Boolean).length;
+    const contacts = (): { mac: string; nick: string }[] => {
+      try {
+        const net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
+        return (net.links ?? []).map((l: { mac: string; nick: string }) => ({ mac: l.mac, nick: l.nick || l.mac }));
+      } catch {
+        return [];
+      }
+    };
+    const myNick = (): string => {
+      try {
+        const net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
+        if (net.me?.nick) return net.me.nick;
+        const hunt = JSON.parse(localStorage.getItem('shtx-hunt-v1') || '{}');
+        return hunt.nick || '';
+      } catch {
+        return '';
+      }
+    };
+
+    function render() {
+      const grid = $('bg-grid');
+      grid.innerHTML = '';
+      const hits = lineHits();
+      const inLine = new Set(hits.flat());
+      st.card.forEach((p, i) => {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        const free = i === FREE;
+        cell.className = `bg-cell${free ? ' free on' : st.cells[i] ? ' on' : ''}${inLine.has(i) ? ' line' : ''}`;
+        cell.innerHTML = `<span class="tick"></span><span class="text"></span><span class="who"></span>`;
+        cell.querySelector('.text')!.textContent = free ? 'FREE\nเจอตัวเอง' : POOL[p];
+        cell.querySelector('.who')!.textContent = free ? myNick() || 'คุณ' : st.cells[i]?.nick || '';
+        cell.querySelector('.tick')!.textContent = filled(i) ? '✔' : '';
+        if (!free) cell.addEventListener('click', () => (st.cells[i] ? untick(i) : pick(i)));
+        grid.appendChild(cell);
+      });
+      const n = count();
+      const status = $('bg-status');
+      status.innerHTML = '';
+      if (n === 8) status.innerHTML = '<b>BLACKOUT!</b> ครบทุกช่อง packet loss 0% ไปอวดที่จอ NOC ได้';
+      else if (hits.length) status.innerHTML = `<b>BINGO!</b> ${hits.length} แถว · ติ๊กแล้ว ${n}/8 ช่อง ต่อให้ครบเพื่อ BLACKOUT`;
+      else status.textContent = `ติ๊กแล้ว ${n}/8 ช่อง · contact ที่ใช้ได้ ${contacts().length} คน`;
+      st.lines = hits.length;
+    }
+    let picking = -1;
+    function pick(i: number) {
+      picking = i;
+      $('bg-pick-title').textContent = POOL[st.card[i]];
+      const list = $('bg-pick-list');
+      list.innerHTML = '';
+      const used = new Set(st.cells.filter(Boolean).map((c) => c!.mac));
+      const cs = contacts();
+      if (!cs.length) list.innerHTML = '<div class="bg-pick-empty">ยังไม่มี contact ไปต่อ SHTX-NET กับคนก่อน แล้วค่อยกลับมาติ๊ก</div>';
+      for (const c of cs) {
+        const row = document.createElement('div');
+        row.className = `bg-pick-row${used.has(c.mac) ? ' used' : ''}`;
+        row.innerHTML = `<span></span><small></small>`;
+        row.querySelector('span')!.textContent = c.nick;
+        row.querySelector('small')!.textContent = used.has(c.mac) ? 'ใช้แล้ว' : c.mac;
+        if (!used.has(c.mac))
+          row.addEventListener('click', () => {
+            st.cells[picking] = { mac: c.mac, nick: c.nick };
+            $('bg-pick').hidden = true;
+            picking = -1;
+            save();
+            render();
+            void report();
+          });
+        list.appendChild(row);
+      }
+      $('bg-pick').hidden = false;
+    }
+    function untick(i: number) {
+      st.cells[i] = null;
+      save();
+      render();
+      void report();
+    }
+    $('bg-pick-cancel').addEventListener('click', () => {
+      $('bg-pick').hidden = true;
+      picking = -1;
+    });
+    async function report() {
+      if (!hasApi() || !navigator.onLine) return;
+      const cells = count();
+      const lines = st.lines;
+      if (cells === st.sentCells && lines === st.sentLines) return;
+      const r = await api.bingo(device, myNick(), lines, cells);
+      if (r?.ok) {
+        st.sentCells = cells;
+        st.sentLines = lines;
+        save();
+      }
+    }
+    render();
+    save();
+    void report();
+    setInterval(render, 30_000); // contact count / nick may change while the window is open
+  }
+  setupBingo();
+</script>

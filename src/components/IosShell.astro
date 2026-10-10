@@ -22,11 +22,12 @@ const tiles: Record<string, { bg: string }> = {
   activate: { bg: 'linear-gradient(180deg,#ffe27a,#c98a00)' },
   submit: { bg: 'linear-gradient(180deg,#fff,#cfd8e3)' },
   vote: { bg: 'linear-gradient(180deg,#ff9a9a,#c41e1e)' },
+  bingo: { bg: 'linear-gradient(180deg,#b9f6c3,#1f8a3a)' },
   conduct: { bg: 'linear-gradient(180deg,#8fd9a8,#1f8a4c)' },
   recycle: { bg: 'linear-gradient(180deg,#d9d9d9,#7a7a7a)' },
 };
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const gridIds = ['about', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const gridIds = ['about', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
 const dockIds = ['register', 'funding'];
 const eventDay = 10;
 ---

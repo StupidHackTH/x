@@ -18,6 +18,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS votes (device TEXT PRIMARY KEY, target TEXT NOT NULL, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS projects (device TEXT PRIMARY KEY, team TEXT NOT NULL, members TEXT NOT NULL DEFAULT '', project TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', needs TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, first_at INTEGER NOT NULL);
 `);
@@ -32,7 +33,21 @@ const pauseState = () => ({
   vote: qSetting.get('vote.open')?.v === '1',
   update: Number(qSetting.get('update.at')?.v ?? 0),
   updateMsg: qSetting.get('update.msg')?.v ?? '',
+  dp: deadPixel(),
 });
+type DeadPixel = { round: number; at: number; deadline: number; macs: string[] };
+function deadPixel(): DeadPixel | null {
+  try {
+    return JSON.parse(qSetting.get('deadpixel')?.v || 'null');
+  } catch {
+    return null;
+  }
+}
+const qAirSince = db.query<{ c: number }, [string, string, number]>("SELECT COUNT(*) c FROM links WHERE (a = ? OR b = ?) AND via = 'air' AND at > ?");
+const qActiveMacs = db.query<{ mac: string }, [number]>('SELECT DISTINCT n.mac FROM nodes n JOIN links l ON l.a = n.mac OR l.b = n.mac WHERE l.at > ?');
+const qBingo = db.query<{ device: string; nick: string; lines: number; cells: number; at: number }, []>('SELECT device, nick, lines, cells, at FROM bingo ORDER BY cells DESC, lines DESC, at ASC');
+const qBingoOne = db.query<{ lines: number; cells: number }, [string]>('SELECT lines, cells FROM bingo WHERE device = ?');
+const upsertBingo = db.query('INSERT INTO bingo (device, nick, lines, cells, at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(device) DO UPDATE SET nick = excluded.nick, lines = excluded.lines, cells = excluded.cells, at = excluded.at');
 const qVotes = db.query<{ device: string; target: string; at: number }, []>('SELECT device, target, at FROM votes ORDER BY at');
 const upsertVote = db.query('INSERT INTO votes (device, target, at) VALUES (?, ?, ?) ON CONFLICT(device) DO UPDATE SET target = excluded.target, at = excluded.at');
 type Project = { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; first_at: number };
@@ -375,6 +390,86 @@ const app = new Elysia()
     db.query('DELETE FROM votes').run();
     insertEvent.run('note', '', 'votes cleared', Date.now());
     broadcast({ type: 'vote' });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  /* Packet Loss Bingo leaderboard */
+  .get('/api/bingo', () => {
+    const rows = qBingo.all();
+    return { players: rows.length, bingos: rows.filter((r) => r.lines > 0).length, blackouts: rows.filter((r) => r.cells >= 8).length, top: rows.slice(0, 10).map((r) => ({ nick: r.nick || r.device, lines: r.lines, cells: r.cells, at: r.at })) };
+  })
+  .post(
+    '/api/bingo',
+    ({ body }) => {
+      const device = clip(body.device, 40);
+      if (!device) return { ok: false };
+      const prev = qBingoOne.get(device);
+      const lines = Math.max(0, Math.min(8, body.lines | 0));
+      const cells = Math.max(0, Math.min(8, body.cells | 0));
+      const nick = clip(body.nick, 12);
+      const now = Date.now();
+      upsertBingo.run(device, nick, lines, cells, now);
+      const name = nick || device;
+      if (cells >= 8 && (prev?.cells ?? 0) < 8) {
+        insertEvent.run('note', '', `BLACKOUT: ${name} filled the whole bingo card`, now);
+        broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `BLACKOUT: ${name} filled the whole bingo card`, at: now } });
+      } else if (lines > 0 && (prev?.lines ?? 0) === 0) {
+        insertEvent.run('note', '', `BINGO: ${name} completed a line`, now);
+        broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `BINGO: ${name} completed a line`, at: now } });
+      }
+      broadcast({ type: 'bingo' });
+      return { ok: true };
+    },
+    { body: t.Object({ device: t.String({ maxLength: 64 }), nick: t.Optional(t.String({ maxLength: 40 })), lines: t.Integer(), cells: t.Integer() }) },
+  )
+  .delete('/api/bingo', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM bingo').run();
+    broadcast({ type: 'bingo' });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  /* Dead Pixel: staff kill a few random active nodes; each must make one new AIR link before the deadline */
+  .get('/api/deadpixel', () => {
+    const dp = deadPixel();
+    if (!dp) return null;
+    return { ...dp, nodes: dp.macs.map((mac) => ({ mac, nick: qNode.get(mac)?.nick ?? mac, revived: (qAirSince.get(mac, mac, dp.at)?.c ?? 0) > 0 })) };
+  })
+  .post(
+    '/api/deadpixel',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const count = Math.max(1, Math.min(20, body.count ?? 5));
+      const minutes = Math.max(1, Math.min(120, body.minutes ?? 10));
+      const now = Date.now();
+      let pool = qActiveMacs.all(now - 3 * 3600 * 1000).map((r) => r.mac);
+      if (pool.length < count) pool = qNodes.all().map((n) => n.mac);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const macs = pool.slice(0, count);
+      const dp: DeadPixel = { round: (deadPixel()?.round ?? 0) + 1, at: now, deadline: now + minutes * 60_000, macs };
+      setSetting.run('deadpixel', JSON.stringify(dp));
+      const names = macs.map((m) => qNode.get(m)?.nick ?? m).join(', ');
+      insertEvent.run('note', '', `DEAD PIXEL round ${dp.round}: ${names} — ${minutes} min to make a new AIR link`, now);
+      broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `DEAD PIXEL round ${dp.round}: ${names} — ${minutes} min to make a new AIR link`, at: now } });
+      broadcast({ type: 'deadpixel' });
+      return dp;
+    },
+    { body: t.Object({ count: t.Optional(t.Integer()), minutes: t.Optional(t.Integer()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .delete('/api/deadpixel', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM settings WHERE k = ?').run('deadpixel');
+    broadcast({ type: 'deadpixel' });
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())

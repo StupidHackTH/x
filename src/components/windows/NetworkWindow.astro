@@ -188,6 +188,18 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       </div>
       <div class="net-eas-crawl bottom" aria-hidden="true"><span>▲ EMERGENCY ALERT SYSTEM ▲ THIS IS NOT A TEST ▲ SHTX-NET CIVIL NETWORK AUTHORITY HAS ISSUED A RANSOMWARE WARNING FOR THIS DEVICE ▲ QR ABUSE DETECTED ▲ SEEK HUMAN CONTACT IMMEDIATELY ▲ ประกาศภาวะฉุกเฉิน ▲ เครื่องนี้ติด RANSOMWARE เพราะสแกน QR มากเกินไป ▲ กรุณาเชื่อมต่อด้วยเสียงกับมนุษย์จริง ▲ </span></div>
     </div>
+    <div class="net-dead" id="net-dead" hidden role="alertdialog" aria-label="Dead Pixel">
+      <i class="net-dead-px" aria-hidden="true"></i>
+      <div class="net-dead-body">
+        <p class="net-dead-kicker">SHTX-NET NODE HEALTH SERVICE · ROUND <span id="net-dead-round">1</span></p>
+        <h3 id="net-dead-title">DEAD PIXEL DETECTED</h3>
+        <p class="net-dead-sub" id="net-dead-sub">at (<span id="net-dead-x">0</span>, <span id="net-dead-y">0</span>) · host <span id="net-dead-mac">—</span></p>
+        <p class="net-dead-text" id="net-dead-text">Your node was randomly selected for termination. Make <b>1 new AIR connection</b> (a real acoustic handshake) before the countdown ends to stay routable. Otherwise your Proof of Friendship is <b>revoked</b> until you make 2 more.</p>
+        <p class="net-dead-text th" id="net-dead-th">node ของคุณถูกสุ่มให้ตาย ไปจ่อมือถือกับคนใหม่ 1 คนแล้วกด Connect ทางเสียงก่อนหมดเวลา ไม่งั้นใบ cert ถูกถอน (คืนได้เมื่อ air link เพิ่มอีก 2)</p>
+        <div class="net-dead-timer" id="net-dead-timer">10:00</div>
+        <button type="button" class="net-dead-btn" id="net-dead-ok">OK · ไปหาคน</button>
+      </div>
+    </div>
     <div class="net-overlay" id="net-cert" hidden>
       <div class="net-dialog wide">
         <div class="net-certificate" id="net-certificate">
@@ -364,6 +376,26 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   @keyframes net-eas-flicker { 50% { filter: brightness(0.93); } }
   @media (max-width: 640px) { .net-eas-main { flex-direction: column; text-align: center; } .net-eas-crawl { height: 36px; font-size: 15px; } }
   @media (max-height: 760px) and (min-width: 641px) { .net-eas-head { font-size: clamp(26px, 5vw, 44px); } .net-eas-body { gap: 6px; } .net-ransom-skull { font-size: 13px; } .net-ransom h3 { font-size: 26px; } .net-ransom-big { font-size: 20px; margin-bottom: 6px; } .net-eas-text { font-size: 13px; margin-bottom: 4px; } .net-ransom-timer { font-size: 30px !important; } .net-ransom-btn { padding: 8px 20px; margin-top: 6px; } }
+  /* Dead Pixel: the screen "dies" to black with one stuck pixel; fixed to the viewport, moved to <body> when shown */
+  .net-dead { position: fixed; inset: 0; z-index: 2147482500; display: flex; align-items: center; justify-content: center; padding: 20px; background: #000; color: #e8e8e8; font: 14px/1.5 'Lucida Console', 'Courier New', monospace; text-align: center; animation: net-dead-glitch 3s steps(1) infinite; }
+  .net-dead[hidden] { display: none; }
+  .net-dead-px { position: absolute; width: 3px; height: 3px; background: #fff; left: 37%; top: 29%; box-shadow: 0 0 6px #fff; animation: net-dead-stuck 0.9s steps(2) infinite; }
+  .net-dead-body { max-width: 640px; }
+  .net-dead-kicker { margin: 0 0 6px; font-size: 11px; letter-spacing: 3px; color: #888; }
+  .net-dead h3 { margin: 0; font-size: clamp(28px, 7vw, 58px); letter-spacing: 3px; color: #fff; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+  .net-dead[data-mode='revived'] h3 { color: #8ef5a3; text-shadow: 0 0 18px #2f9e52; }
+  .net-dead[data-mode='demoted'] h3 { color: #ff3b3b; text-shadow: 0 0 18px #c00; }
+  .net-dead-sub { margin: 4px 0 14px; color: #aaa; font-size: 12px; }
+  .net-dead-text { margin: 0 0 8px; font-size: clamp(13px, 2vw, 16px); }
+  .net-dead-text b { color: #ffd200; }
+  .net-dead-text.th { color: #bbb; }
+  .net-dead-timer { margin: 10px 0 6px; font-size: clamp(40px, 10vw, 84px); font-weight: bold; color: #ffd200; font-variant-numeric: tabular-nums; }
+  .net-dead[data-mode='revived'] .net-dead-timer, .net-dead[data-mode='demoted'] .net-dead-timer { display: none; }
+  .net-dead-btn { margin-top: 10px; padding: 10px 24px; background: #000; color: #fff; border: 2px solid #fff; font: bold 15px 'Lucida Console', monospace; cursor: pointer; }
+  @keyframes net-dead-stuck { 50% { opacity: 0.2; } }
+  @keyframes net-dead-glitch { 0%, 96% { transform: none; filter: none; } 97% { transform: translateX(3px); filter: hue-rotate(90deg); } 98% { transform: translateX(-3px); } 99% { transform: none; filter: invert(0.05); } }
+  .net-certificate.dead { filter: grayscale(1) contrast(0.9); background: #f2f2f2; border-color: #555; }
+  .net-certificate.dead .net-cert-seal { background: radial-gradient(circle, #777, #222 60%, #000); color: #fff; }
   .net[data-ransom='1'] #net-qr, .net[data-ransom='1'] #net-manual-btn { background: #000 !important; color: #ff3b3b !important; border-color: #ff3b3b !important; }
   @media (max-width: 767px) {
     .net-wizard-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
@@ -391,6 +423,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     me: Me | null;
     links: Link[];
     ransom?: { at: number; airAtStart: number; qr: number } | null; // the QR-abuser penalty: 3 real air links to decrypt
+    dp?: { round: number; at: number; deadline: number; airAtStart: number; status: 'dead' | 'revived' | 'demoted' | 'restored'; airAtDeadline?: number } | null; // Dead Pixel round
   }
 
   const KEY = 'shtx-net-v1';
@@ -412,7 +445,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     function load(): Store {
       try {
         const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [], ransom: s.ransom ?? null };
+        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [], ransom: s.ransom ?? null, dp: s.dp ?? null };
       } catch {
         /* ignore */
       }
@@ -674,6 +707,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       if (!p) return;
       netPaused = p.net;
       root.dataset.paused = netPaused ? '1' : '';
+      handleDeadPixel(p.dp ?? null);
       if (netPaused) {
         statusEl.textContent = 'Paused by staff';
         subEl.textContent = 'ทีมงานหยุดเกมชั่วคราว รอประกาศ';
@@ -955,6 +989,84 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     }, 1000);
     setInterval(() => void pollRansom(), 60_000);
 
+    /* ---------- Dead Pixel (staff kill random nodes; one new AIR link revives) ---------- */
+    const DEAD_RESTORE = 2;
+    function fmtLeft(ms: number) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+    function showDead(mode: 'dead' | 'revived' | 'demoted') {
+      const el = $('net-dead');
+      if (el.parentElement !== document.body) document.body.appendChild(el);
+      el.dataset.mode = mode;
+      const d = store.dp!;
+      $('net-dead-round').textContent = String(d.round);
+      $('net-dead-mac').textContent = store.me?.mac ?? '—';
+      $('net-dead-x').textContent = String(d.at % 1920);
+      $('net-dead-y').textContent = String(d.deadline % 1080);
+      if (mode === 'dead') {
+        $('net-dead-title').textContent = 'DEAD PIXEL DETECTED';
+        $('net-dead-text').innerHTML = 'Your node was randomly selected for termination. Make <b>1 new AIR connection</b> (a real acoustic handshake) before the countdown ends to stay routable. Otherwise your Proof of Friendship is <b>revoked</b> until you make 2 more.';
+        $('net-dead-th').textContent = 'node ของคุณถูกสุ่มให้ตาย ไปจ่อมือถือกับคนใหม่ 1 คนแล้วกด Connect ทางเสียงก่อนหมดเวลา ไม่งั้นใบ cert ถูกถอน (คืนได้เมื่อ air link เพิ่มอีก 2)';
+        $('net-dead-ok').textContent = 'OK · ไปหาคน';
+        navigator.vibrate?.([200, 100, 200, 100, 800]);
+      } else if (mode === 'revived') {
+        $('net-dead-title').textContent = 'PIXEL REVIVED';
+        $('net-dead-text').innerHTML = 'AIR link confirmed. Your node is routable again. Carry on being stupid.';
+        $('net-dead-th').textContent = 'รอดแล้ว node กลับมาใช้งานได้ตามปกติ';
+        $('net-dead-ok').textContent = 'Nice';
+      } else {
+        $('net-dead-title').textContent = 'CERTIFICATE REVOKED';
+        $('net-dead-text').innerHTML = 'Deadline passed with no new AIR link. Your Proof of Friendship now reads <b>DEAD PIXEL</b> until you make <b>2 more AIR connections</b>.';
+        $('net-dead-th').textContent = 'หมดเวลา ใบ cert ถูกถอน ต่อ air link อีก 2 คนเพื่อเอาคืน';
+        $('net-dead-ok').textContent = 'ก็ได้';
+      }
+      el.hidden = false;
+    }
+    function handleDeadPixel(dp: { round: number; at: number; deadline: number; macs: string[] } | null) {
+      if (!store.me) return;
+      if (!dp) return; // rounds are never cancelled on the phone; an ended round just stops being delivered
+      if (!dp.macs.includes(store.me.mac)) return;
+      if (store.dp && store.dp.round >= dp.round) return;
+      if (Date.now() > dp.deadline) return; // round already over when we first heard about it
+      store.dp = { round: dp.round, at: dp.at, deadline: dp.deadline, airAtStart: airLinks(), status: 'dead' };
+      save();
+      log(`!!! DEAD PIXEL round ${dp.round}: this node was selected for termination. One new AIR link before ${new Date(dp.deadline).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} or the certificate is revoked. !!!`, 'err');
+      showDead('dead');
+    }
+    function checkDeadPixel() {
+      const d = store.dp;
+      if (!d) return;
+      const now = Date.now();
+      if (d.status === 'dead') {
+        if (airLinks() > d.airAtStart) {
+          d.status = 'revived';
+          save();
+          log('DEAD PIXEL: AIR link confirmed — node revived.', 'ok');
+          showDead('revived');
+          return;
+        }
+        if (now > d.deadline) {
+          d.status = 'demoted';
+          d.airAtDeadline = airLinks();
+          save();
+          log('DEAD PIXEL: deadline passed — Proof of Friendship REVOKED until 2 more AIR links.', 'err');
+          showDead('demoted');
+          return;
+        }
+        if (!$('net-dead').hidden) $('net-dead-timer').textContent = fmtLeft(d.deadline - now);
+      } else if (d.status === 'demoted' && airLinks() - (d.airAtDeadline ?? 0) >= DEAD_RESTORE) {
+        d.status = 'restored';
+        save();
+        log('DEAD PIXEL: 2 new AIR links — certificate restored.', 'ok');
+      }
+    }
+    $('net-dead-ok').addEventListener('click', () => {
+      $('net-dead').hidden = true;
+    });
+    setInterval(checkDeadPixel, 1000);
+    if (store.dp?.status === 'dead') showDead('dead');
+
     /* ---------- overlays ---------- */
     root.querySelectorAll<HTMLButtonElement>('[data-close-overlay]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -1044,9 +1156,11 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     $('net-cert-btn').addEventListener('click', () => {
       const me = store.me!;
       const gold = store.links.length >= GOLD_LINKS;
-      $('net-certificate').classList.toggle('gold', gold);
-      $('net-cert-rank').textContent = gold ? 'Gold Core Switch' : 'Fully Routable Host';
-      $('net-cert-seal').innerHTML = gold ? 'GOLD<br />40+' : 'CSMA/CA<br />APPROVED';
+      const dead = store.dp?.status === 'demoted';
+      $('net-certificate').classList.toggle('gold', gold && !dead);
+      $('net-certificate').classList.toggle('dead', dead);
+      $('net-cert-rank').textContent = dead ? 'Dead Pixel (certificate REVOKED — 2 more AIR links to restore)' : gold ? 'Gold Core Switch' : 'Fully Routable Host';
+      $('net-cert-seal').innerHTML = dead ? 'DEAD<br />PIXEL' : gold ? 'GOLD<br />40+' : 'CSMA/CA<br />APPROVED';
       $('net-cert-name').textContent = me.nick;
       $('net-cert-mac').textContent = me.mac;
       $('net-cert-count').textContent = String(store.links.length);
@@ -1125,6 +1239,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       formatMac,
       parseMac,
       ransom: (qr = 42) => startRansom(qr),
+      deadpixel: (minutes = 10) => handleDeadPixel({ round: (store.dp?.round ?? 0) + 1, at: Date.now(), deadline: Date.now() + minutes * 60_000, macs: [store.me?.mac ?? ''] }),
     };
   }
 

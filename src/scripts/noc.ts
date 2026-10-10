@@ -1,6 +1,6 @@
 // NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
 // leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
-import { apiBase, api, type ServerState, type HuntState, type PauseState } from './netapi';
+import { apiBase, api, type ServerState, type HuntState, type PauseState, type DeadPixelState } from './netapi';
 import { icqFor, vendorFor } from '../data/network';
 import { encodePcm, buildFrame } from './fsk';
 
@@ -135,6 +135,59 @@ async function loadRansom() {
   if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
 }
 
+/* ---------- Dead Pixel round: banner + dying nodes on the mesh ---------- */
+let deadNow: DeadPixelState | null = null;
+const deadStatus = new Map<string, boolean>(); // mac → revived
+async function loadDeadPixel() {
+  if (demo) return;
+  const r = await api.deadPixel();
+  deadNow = r ?? null;
+  deadStatus.clear();
+  if (deadNow) for (const n of deadNow.nodes) deadStatus.set(n.mac, n.revived);
+  renderDeadPixel();
+}
+function renderDeadPixel() {
+  const el = $('noc-dead');
+  const d = deadNow;
+  if (!d || Date.now() > d.deadline + 10 * 60_000) {
+    el.hidden = true;
+    return;
+  }
+  const left = Math.max(0, d.deadline - Date.now());
+  const mm = `${String(Math.floor(left / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
+  const revived = d.nodes.filter((n) => n.revived).length;
+  const t = $('noc-dead-text');
+  t.innerHTML = '';
+  t.append(`round ${d.round} · ${left > 0 ? mm : 'หมดเวลา'} · revived ${revived}/${d.nodes.length} · `);
+  d.nodes.forEach((n, i) => {
+    const s = document.createElement(n.revived ? 'i' : 's');
+    s.textContent = n.nick;
+    t.appendChild(s);
+    if (i < d.nodes.length - 1) t.append(', ');
+  });
+  el.hidden = false;
+}
+setInterval(renderDeadPixel, 1000);
+
+/* ---------- Packet Loss Bingo leaderboard ---------- */
+async function loadBingo() {
+  if (demo) return;
+  const r = await api.bingoBoard();
+  if (!r) return;
+  const ol = $('noc-bingo');
+  ol.innerHTML = '';
+  (ol.closest('.panel') as HTMLElement).hidden = r.players === 0;
+  for (const [i, p] of r.top.slice(0, 5).entries()) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="n"></span><b></b><span class="deg"></span>`;
+    li.querySelector('.n')!.textContent = String(i + 1);
+    li.querySelector('b')!.textContent = `${p.cells >= 8 ? '★ ' : p.lines ? '✔ ' : ''}${p.nick}`;
+    li.querySelector('.deg')!.textContent = p.cells >= 8 ? 'BLACKOUT' : p.lines ? `BINGO ×${p.lines}` : `${p.cells}/8`;
+    ol.appendChild(li);
+  }
+  $('noc-bingo-stats').textContent = r.players ? `(${r.players} เล่น · ${r.bingos} bingo · ${r.blackouts} blackout)` : '(ยังไม่มีใครเล่น)';
+}
+
 /* ---------- Most Stupid Project vote ---------- */
 async function loadVotes() {
   if (demo) return;
@@ -142,8 +195,9 @@ async function loadVotes() {
   if (!r) return;
   const ol = $('noc-vote');
   ol.innerHTML = '';
+  (ol.closest('.panel') as HTMLElement).hidden = !r.open && r.total === 0;
   const max = Math.max(1, ...r.results.map((x) => x.votes));
-  r.results.slice(0, 8).forEach((x, i) => {
+  r.results.slice(0, 6).forEach((x, i) => {
     const li = document.createElement('li');
     if (!r.open && r.total > 0 && i === 0 && x.votes > 0) li.className = 'win';
     li.innerHTML = `<span class="n"></span><b><i></i><span></span></b><span class="deg"></span>`;
@@ -163,7 +217,8 @@ async function loadProjects() {
   if (!r) return;
   const ol = $('noc-projects');
   ol.innerHTML = '';
-  for (const p of r.projects.slice(0, 12)) {
+  (ol.closest('.panel') as HTMLElement).hidden = r.projects.length === 0;
+  for (const p of r.projects.slice(0, 6)) {
     const li = document.createElement('li');
     li.innerHTML = `<span class="n"></span><b></b><span class="mac"></span>`;
     li.querySelector('.n')!.textContent = String(p.order);
@@ -221,6 +276,10 @@ function connect() {
           if (msg.nodes) for (const n of msg.nodes) addHost(n);
           addEdge(msg.link);
         } else if (msg.type === 'event') pushEvent(msg.event);
+        else if (msg.type === 'project') void loadProjects();
+        else if (msg.type === 'vote') void loadVotes();
+        else if (msg.type === 'bingo') void loadBingo();
+        else if (msg.type === 'deadpixel') void loadDeadPixel();
       } catch {
         /* ignore */
       }
@@ -236,6 +295,10 @@ function connect() {
   void loadRansom();
   void loadProjects();
   void loadVotes();
+  void loadBingo();
+  void loadDeadPixel();
+  setInterval(() => void loadBingo(), 30_000);
+  setInterval(() => void loadDeadPixel(), 10_000);
   setInterval(() => void loadProjects(), 30_000);
   setInterval(() => void loadVotes(), 15_000);
   setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
@@ -362,7 +425,10 @@ function draw() {
     const rr = r * (0.3 + 0.7 * pop);
     const g = ctx.createRadialGradient(h.x - rr * 0.35, h.y - rr * 0.4, rr * 0.1, h.x, h.y, rr);
     const victim = h.mac === ransomMac;
-    const col = victim ? ['#ff6b6b', '#8a0000', '#000'] : h.deg === 0 ? ['#ffd0d0', '#ff7b7b', '#a83232'] : h.deg >= 5 ? ['#fff3b0', '#ffd34d', '#b8860b'] : ['#e6ffee', '#8ef5a3', '#2f9e52'];
+    const deadState = deadNow && Date.now() < deadNow.deadline + 10 * 60_000 ? deadStatus.get(h.mac) : undefined; // undefined = not in the round, false = dying, true = revived
+    const dying = deadState === false;
+    if (dying) ctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(now / 90 + h.x));
+    const col = dying ? ['#eee', '#777', '#111'] : victim ? ['#ff6b6b', '#8a0000', '#000'] : h.deg === 0 ? ['#ffd0d0', '#ff7b7b', '#a83232'] : h.deg >= 5 ? ['#fff3b0', '#ffd34d', '#b8860b'] : ['#e6ffee', '#8ef5a3', '#2f9e52'];
     g.addColorStop(0, col[0]);
     g.addColorStop(0.5, col[1]);
     g.addColorStop(1, col[2]);
@@ -374,18 +440,19 @@ function draw() {
     ctx.beginPath();
     ctx.ellipse(h.x, h.y - rr * 0.45, rr * 0.55, rr * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    if (victim) {
-      ctx.strokeStyle = '#ff3b3b';
+    if (victim || deadState === true) {
+      ctx.strokeStyle = victim ? '#ff3b3b' : '#8ef5a3';
       ctx.lineWidth = 3 * dpr;
       ctx.beginPath();
       ctx.arc(h.x, h.y, rr + 4 * dpr + Math.sin(now / 150) * 2 * dpr, 0, Math.PI * 2);
       ctx.stroke();
     }
-    ctx.fillStyle = victim ? '#ff6b6b' : '#fff';
+    ctx.fillStyle = dying ? '#ddd' : deadState === true ? '#8ef5a3' : victim ? '#ff6b6b' : '#fff';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 4 * dpr;
-    ctx.fillText(victim ? `☠ ${h.nick} · RANSOMWARE` : h.nick, h.x, h.y + rr + 14 * dpr);
+    ctx.fillText(dying ? `✖ ${h.nick} · DEAD PIXEL` : deadState === true ? `✚ ${h.nick} · REVIVED` : victim ? `☠ ${h.nick} · RANSOMWARE` : h.nick, h.x, h.y + rr + 14 * dpr);
     ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -623,6 +690,32 @@ function setupAdmin() {
     voteReset.textContent = 'Reset votes…';
     voteReset.classList.remove('danger');
     if (await call('/api/votes', { method: 'DELETE' })) say('ล้างคะแนนโหวตแล้ว');
+  });
+  $('adm-dead').addEventListener('click', async () => {
+    const r = await call<{ macs: string[] }>('/api/deadpixel', { method: 'POST', body: JSON.stringify({ count: 5, minutes: 10 }) });
+    if (r) say(`Dead Pixel: สุ่ม ${r.macs.length} node แล้ว มีเวลา 10 นาที`);
+  });
+  $('adm-dead-end').addEventListener('click', async () => {
+    if (await call('/api/deadpixel', { method: 'DELETE' })) say('จบรอบ Dead Pixel แล้ว');
+  });
+  const bingoReset = $('adm-bingo-reset') as HTMLButtonElement;
+  let bingoArmed: ReturnType<typeof setTimeout> | null = null;
+  bingoReset.addEventListener('click', async () => {
+    if (!bingoArmed) {
+      bingoReset.textContent = 'กดอีกครั้งเพื่อล้าง bingo';
+      bingoReset.classList.add('danger');
+      bingoArmed = setTimeout(() => {
+        bingoArmed = null;
+        bingoReset.textContent = 'Reset bingo…';
+        bingoReset.classList.remove('danger');
+      }, 5000);
+      return;
+    }
+    clearTimeout(bingoArmed);
+    bingoArmed = null;
+    bingoReset.textContent = 'Reset bingo…';
+    bingoReset.classList.remove('danger');
+    if (await call('/api/bingo', { method: 'DELETE' })) say('ล้างกระดาน bingo แล้ว');
   });
   $('adm-update').addEventListener('click', async () => {
     const updateMsg = ($('adm-update-msg') as HTMLInputElement).value.trim();

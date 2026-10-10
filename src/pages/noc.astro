@@ -54,6 +54,12 @@ import Icons from '../components/Icons.astro';
       .noc-ransom { position: absolute; right: 14px; top: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 10px; background: #000; border: 2px solid #ff3b3b; color: #ff6b6b; font: 13px 'Lucida Console', 'Courier New', monospace; box-shadow: 0 0 18px rgba(255, 59, 59, 0.6); }
       .noc-ransom b { color: #ff3b3b; letter-spacing: 2px; animation: noc-blink 0.7s steps(2) infinite; }
       .noc-ransom[hidden] { display: none; }
+      .noc-dead { position: absolute; left: 14px; top: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 10px; background: #000; border: 2px solid #ddd; color: #ddd; font: 13px 'Lucida Console', 'Courier New', monospace; box-shadow: 0 0 18px rgba(255, 255, 255, 0.35); max-width: 60%; }
+      .noc-dead b { letter-spacing: 2px; color: #fff; text-shadow: 2px 0 #f0f, -2px 0 #0ff; animation: noc-blink 1.4s steps(2) infinite; }
+      .noc-dead s { color: #888; }
+      .noc-dead i { color: #8ef5a3; font-style: normal; }
+      .noc-dead[hidden] { display: none; }
+      .panel.bingo li .deg { min-width: 54px; text-align: center; }
       @keyframes noc-blink { 50% { opacity: 0.25; } }
       .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
       .noc-admin[hidden] { display: none; }
@@ -62,7 +68,8 @@ import Icons from '../components/Icons.astro';
       .noc-admin input { width: 170px; padding: 3px 8px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.85); color: #06264f; font: inherit; font-size: 12px; }
       .noc-admin #adm-msg { color: #fff3b0; }
       .noc-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
-      .panel { padding: 10px 14px; min-height: 0; }
+      .panel { padding: 10px 14px; min-height: 0; flex: 0 1 auto; overflow: hidden; } /* panels shrink and clip their rows instead of overlapping when many are visible */
+      .panel[hidden] { display: none; }
       .panel h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #d4f1ff; }
       .panel ol, .panel ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
       .panel li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
@@ -125,6 +132,7 @@ import Icons from '../components/Icons.astro';
           <div class="noc-legend"><span><i style="background:#8ef5a3"></i>host</span><span><i style="background:#ffd34d"></i>core switch (5+ links)</span><span><i style="background:#ff7b7b"></i>isolated</span></div>
           <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
           <div class="noc-ransom" id="noc-ransom" hidden><b>RANSOMWARE</b><span id="noc-ransom-text"></span></div>
+          <div class="noc-dead" id="noc-dead" hidden><b>DEAD PIXEL</b><span id="noc-dead-text"></span></div>
           <form class="noc-hints glass" id="noc-hints" hidden>
             <b>คำใบ้ Logo Hunting (แก้แล้วมือถือทุกเครื่องอัปเดตภายใน 1 นาที)</b>
             <div id="noc-hints-rows"></div>
@@ -141,6 +149,9 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
             <button type="button" class="noc-btn" id="adm-submit" title="เปิด/ปิดรับโปรเจกต์">Close submissions</button>
             <button type="button" class="noc-btn" id="adm-vote" title="เปิด/ปิดโหวต Most Stupid Project">Open voting</button>
+            <button type="button" class="noc-btn" id="adm-dead" title="สุ่ม 5 node ให้ตาย ต้อง air link ใหม่ใน 10 นาที">Dead Pixel round</button>
+            <button type="button" class="noc-btn" id="adm-dead-end" title="จบรอบ Dead Pixel">End round</button>
+            <button type="button" class="noc-btn" id="adm-bingo-reset" title="ล้างกระดาน Bingo">Reset bingo…</button>
             <button type="button" class="noc-btn" id="adm-vote-reset" title="ล้างคะแนนโหวต">Reset votes…</button>
             <input id="adm-update-msg" placeholder="Windows Update: ข้อความท้ายอัปเดต" autocomplete="off" />
             <button type="button" class="noc-btn" id="adm-update" title="ส่งหน้า Windows Update ไปทุกเครื่องที่เปิดเว็บอยู่">Push update</button>
@@ -155,6 +166,7 @@ import Icons from '../components/Icons.astro';
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
           <div class="panel glass vote"><h3>Most Stupid Project <span id="noc-vote-state"></span></h3><ol id="noc-vote"></ol></div>
+          <div class="panel glass bingo"><h3>Packet Loss Bingo <span id="noc-bingo-stats"></span></h3><ol id="noc-bingo"></ol></div>
           <div class="panel glass hunt"><h3>Drawdy Logo Hunting</h3><div class="hunt-keys" id="hunt-keys"></div><div class="hunt-done" id="hunt-done">ยังไม่มีใคร activate</div></div>
           <div class="panel glass idea"><h3>Dumb idea of the moment</h3><blockquote id="noc-idea">…</blockquote><cite id="noc-idea-by"></cite></div>
         </aside>
