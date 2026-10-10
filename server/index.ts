@@ -567,3 +567,38 @@ if (TLS_CERT && TLS_KEY) {
     console.log(`…and https on port ${tls.server?.port}`);
   } else console.log(`TLS files not found yet (${TLS_CERT}); serving plain http only. Restart after the certificate is issued.`);
 }
+
+/* HTTPS reverse proxy in front of the popular-voting app (Uddy's shtx-voting container, plain http on the docker network)
+   so the site can embed it without mixed content. Same Let's Encrypt cert, port VOTE_PROXY_PORT (8444). */
+const VOTE_UPSTREAM = (process.env.VOTE_UPSTREAM ?? '').replace(/\/$/, '');
+const VOTE_PROXY_PORT = Number(process.env.VOTE_PROXY_PORT ?? 8444);
+if (VOTE_UPSTREAM && TLS_CERT && TLS_KEY) {
+  const DROP_RES = ['connection', 'keep-alive', 'transfer-encoding', 'content-encoding', 'content-length', 'upgrade'];
+  Bun.serve({
+    port: VOTE_PROXY_PORT,
+    tls: { cert: Bun.file(TLS_CERT), key: Bun.file(TLS_KEY) },
+    idleTimeout: 0, // SSE streams (/api/live, /api/obs) sit idle for minutes
+    async fetch(req, server) {
+      const url = new URL(req.url);
+      const headers = new Headers(req.headers);
+      headers.delete('accept-encoding'); // identity bodies only, so they can be passed through untouched
+      headers.set('x-forwarded-proto', 'https');
+      headers.set('x-forwarded-host', url.host); // Next.js compares this with Origin for server actions; Auth.js builds redirects from it
+      headers.set('x-forwarded-for', server.requestIP(req)?.address ?? '');
+      try {
+        const up = await fetch(VOTE_UPSTREAM + url.pathname + url.search, {
+          method: req.method,
+          headers,
+          body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer(),
+          redirect: 'manual',
+        });
+        const h = new Headers(up.headers);
+        for (const k of DROP_RES) h.delete(k);
+        return new Response(up.body, { status: up.status, headers: h });
+      } catch {
+        return new Response('popular vote app is not running', { status: 502, headers: { 'content-type': 'text/plain' } });
+      }
+    },
+  });
+  console.log(`…popular vote proxy: https on port ${VOTE_PROXY_PORT} → ${VOTE_UPSTREAM}`);
+}
