@@ -43,7 +43,9 @@ const pauseState = () => ({
 /* ---- Prizes (synced from Grist) and awards: places 1-3 by vote, everyone else by lucky draw ---- */
 type Prize = { id: string; item: string; tier: string; count: number; cost: number; note: string; pos: number };
 type Award = { id: number; kind: string; place: number; mac: string; nick: string; team: string; prize_id: string; item: string; qty: number; weight: number; ord: number; at: number; revealed: number; claimed: number };
-const POOL_TIER = 'ของแจกกลางทาง';
+const POOL_TIERS = ['T3', 'ของแจกกลางทาง']; // lucky-draw pool: the Grist sheet uses T3 for everyday giveaways
+const POOL_TIER = POOL_TIERS[0];
+const isPool = (tier: string) => POOL_TIERS.includes(tier);
 const qPrizes = db.query<Prize, []>('SELECT * FROM prizes ORDER BY pos');
 const insertPrize = db.query('INSERT INTO prizes (id, item, tier, count, cost, note, pos) VALUES (?, ?, ?, ?, ?, ?, ?)');
 const qAwards = db.query<Award, []>('SELECT * FROM awards ORDER BY ord');
@@ -569,7 +571,7 @@ const app = new Elysia()
         db.query('DELETE FROM prizes').run();
         body.prizes.forEach((p, i) => insertPrize.run(clip(p.id, 20) || `X${i}`, clip(p.item, 120), clip(p.tier, 40), Math.max(0, p.count ?? 1), Number(p.cost) || 0, clip(p.note, 200), i));
       })();
-      const tickets = body.prizes.filter((p) => p.tier === POOL_TIER).reduce((s, p) => s + Math.max(0, p.count ?? 1), 0);
+      const tickets = body.prizes.filter((p) => isPool(p.tier ?? '')).reduce((s, p) => s + Math.max(0, p.count ?? 1), 0);
       insertEvent.run('note', '', `prize list synced: ${body.prizes.length} items, ${tickets} lucky-draw tickets`, Date.now());
       broadcast({ type: 'prizes' });
       return { ok: true, items: body.prizes.length, tickets };
@@ -611,8 +613,8 @@ const app = new Elysia()
         }
       } else {
         for (const { place, proj } of teams) {
-          const items = prizes.filter((p) => p.tier === `T${place}`);
-          if (!items.length) return { ok: false, error: `no prize with tier T${place} in the prize list` };
+          const items = prizes.filter((p) => p.tier === `T${place}` && !isPool(p.tier));
+          if (!items.length) return { ok: false, error: `no prize with tier T${place} in the prize list (T3 is the lucky-draw pool; use gacha for 3 places)` };
           for (const it of items) insertAward.run('place', place, proj!.device, proj!.team, proj!.team, it.id, it.item, it.count, 0, 1_000_000 + (10 - place), Date.now());
           done.push({ place, team: proj!.team, items: items.map((i) => i.item) });
         }
@@ -632,7 +634,7 @@ const app = new Elysia()
       }
       const participants = shuffle(drawParticipants(body.minLinks ?? 1, body.exclude ?? []));
       const prizes = qPrizes.all();
-      const tickets = shuffle(prizes.filter((p) => p.tier === POOL_TIER).flatMap((p) => Array.from({ length: p.count }, () => p)));
+      const tickets = shuffle(prizes.filter((p) => isPool(p.tier)).flatMap((p) => Array.from({ length: p.count }, () => p)));
       // T1/T2 items the placed teams did not take (gacha leftovers) become the first bonus-round prizes
       const used = new Map<string, number>();
       for (const a of qAwards.all()) if (a.kind === 'place' || a.kind === 'gacha') used.set(a.prize_id, (used.get(a.prize_id) ?? 0) + a.qty);
