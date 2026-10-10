@@ -37,7 +37,7 @@ import { asset } from '../../lib/asset';
       </ol>
 
       <form class="act-form" id="act-form" novalidate>
-        <label class="act-field">Product key <input id="act-key" placeholder="DRWDY-XXXX-XXXX" autocomplete="off" spellcheck="false" autocapitalize="characters" /></label>
+        <label class="act-field">Product key <input id="act-key" placeholder="DRWDY-XXXXX-XXXXX" autocomplete="off" spellcheck="false" autocapitalize="characters" /></label>
         <label class="act-field">ชื่อเล่น (ขึ้นจอใหญ่) <input id="act-nick" maxlength="12" autocomplete="off" placeholder="เช่น โขง" /></label>
         <button type="submit" class="xp-btn primary" id="act-submit">Activate</button>
         <p class="act-msg" id="act-msg" hidden></p>
@@ -203,12 +203,10 @@ import { asset } from '../../lib/asset';
       msg.hidden = false;
     }
 
-    /* Keys look like DRWDY-XXXX-XXXX; accept any casing, dashes/spaces or none, and the 8 characters without the prefix */
     function normalize(raw: string) {
-      let s = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (s.length === 8) s = `DRWDY${s}`;
-      if (s.length !== 13 || !s.startsWith('DRWDY')) return raw.trim().toUpperCase();
-      return `DRWDY-${s.slice(5, 9)}-${s.slice(9, 13)}`;
+      const s = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (s.length !== 15) return raw.trim().toUpperCase();
+      return `${s.slice(0, 5)}-${s.slice(5, 10)}-${s.slice(10, 15)}`;
     }
 
     async function certFor() {
@@ -246,7 +244,7 @@ import { asset } from '../../lib/asset';
       }
       const spot = huntSpots.find((s) => s.hash === hash);
       if (!spot) {
-        say('Product key ไม่ถูกต้อง ลองพิมพ์ใหม่ตามการ์ด (key ไม่มีตัว 0 O 1 I L 2 Z 5 S 6 G 8 B)');
+        say('Product key ไม่ถูกต้อง ลองพิมพ์ใหม่ตามการ์ด (0 กับ O ไม่มีใน key)');
         return;
       }
       const nick = $<HTMLInputElement>('act-nick').value.trim().slice(0, 12);
