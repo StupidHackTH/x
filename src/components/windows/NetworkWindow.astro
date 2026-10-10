@@ -169,8 +169,8 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       <h3>CONGRATULATIONS!</h3>
       <p class="net-ransom-big">YOU ARE SO RANSOMWARE</p>
       <p>Your QR fallback has been encrypted with military-grade 300-baud FSK. You have connected via QR <b id="net-ransom-count">?</b> times. That is not networking. That is scanning.</p>
-      <p>To decrypt, connect via <b>AIR connection</b> (real acoustic handshake) with <b id="net-ransom-left">3</b> more humans. No Bitcoin accepted.</p>
-      <p class="net-ransom-timer">DEADLINE: <span id="net-ransom-timer">23:59:59</span> · WALLET: 1QRsp4mm3rXXXXXXXXXXXXXXXXXXX</p>
+      <p>To decrypt, connect via <b>AIR connection</b> (real acoustic handshake) with <b id="net-ransom-left">3</b> more humans before the deadline. No Bitcoin accepted.</p>
+      <p class="net-ransom-timer">DEADLINE: <span id="net-ransom-timer">03:59:59</span> · WALLET: 1QRsp4mm3rXXXXXXXXXXXXXXXXXXX</p>
       <button type="button" class="net-ransom-btn" id="net-ransom-ok">I UNDERSTAND (ปิดเสียงเตือน)</button>
     </div>
     <div class="net-overlay" id="net-cert" hidden>
@@ -761,6 +761,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       if (online()) void api.register(store.me!);
       void syncFromServer();
       renderRansom();
+      checkRansomProgress();
       if (store.ransom) showRansom();
       else void pollRansom();
     }
@@ -785,6 +786,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
 
     /* ---------- ransomware (the QR abuser) ---------- */
     const RANSOM_AIR = 3;
+    const RANSOM_TTL = 4 * 3600 * 1000; // the penalty expires by itself after 4 hours
     const airLinks = () => store.links.filter((l) => l.via === 'air').length;
     let alarm: { osc: OscillatorNode; lfo: OscillatorNode } | null = null;
     async function alarmOn() {
@@ -844,6 +846,15 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     function checkRansomProgress() {
       const r = store.ransom;
       if (!r) return;
+      if (Date.now() - r.at >= RANSOM_TTL) {
+        store.ransom = null;
+        save();
+        alarmOff();
+        $('net-ransom').hidden = true;
+        renderRansom();
+        log('Ransomware expired (4 h). QR fallback restored. Try talking to people next time.', 'ok');
+        return;
+      }
       if (airLinks() - r.airAtStart >= RANSOM_AIR) {
         store.ransom = null;
         save();
@@ -866,8 +877,9 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       if (!$('net-ransom').hidden && !alarm) void alarmOn();
     });
     setInterval(() => {
+      if (store.ransom && Date.now() - store.ransom.at >= RANSOM_TTL) checkRansomProgress();
       if ($('net-ransom').hidden) return;
-      const left = Math.max(0, 86_399_000 - (Date.now() - (store.ransom?.at ?? Date.now())));
+      const left = Math.max(0, RANSOM_TTL - (Date.now() - (store.ransom?.at ?? Date.now())));
       const h = Math.floor(left / 3_600_000);
       const m = Math.floor((left % 3_600_000) / 60_000);
       const sec = Math.floor((left % 60_000) / 1000);
