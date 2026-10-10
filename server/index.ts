@@ -18,6 +18,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS prizes (id TEXT PRIMARY KEY, item TEXT NOT NULL, tier TEXT NOT NULL DEFAULT '', count INTEGER NOT NULL DEFAULT 1, cost REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', pos INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE IF NOT EXISTS awards (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, place INTEGER NOT NULL DEFAULT 0, mac TEXT NOT NULL DEFAULT '', nick TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', prize_id TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 0, ord INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS votes (device TEXT PRIMARY KEY, target TEXT NOT NULL, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS projects (device TEXT PRIMARY KEY, team TEXT NOT NULL, members TEXT NOT NULL DEFAULT '', project TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', needs TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, first_at INTEGER NOT NULL);
@@ -35,7 +37,67 @@ const pauseState = () => ({
   updateMsg: qSetting.get('update.msg')?.v ?? '',
   voteUrl: qSetting.get('vote.url')?.v ?? '', // Uddy's popular-voting app (https://github.com/WasinUddy/shtx-voting), set by staff from the NOC
   dp: deadPixel(),
+  awards: awardsState(), // phones re-fetch their prize when `revealed` changes
 });
+
+/* ---- Prizes (synced from Grist) and awards: places 1-3 by vote, everyone else by lucky draw ---- */
+type Prize = { id: string; item: string; tier: string; count: number; cost: number; note: string; pos: number };
+type Award = { id: number; kind: string; place: number; mac: string; nick: string; team: string; prize_id: string; item: string; qty: number; weight: number; ord: number; at: number; revealed: number; claimed: number };
+const POOL_TIER = 'ของแจกกลางทาง';
+const qPrizes = db.query<Prize, []>('SELECT * FROM prizes ORDER BY pos');
+const insertPrize = db.query('INSERT INTO prizes (id, item, tier, count, cost, note, pos) VALUES (?, ?, ?, ?, ?, ?, ?)');
+const qAwards = db.query<Award, []>('SELECT * FROM awards ORDER BY ord');
+const qAwardsMine = db.query<Award, [string]>('SELECT * FROM awards WHERE mac = ? AND revealed = 1 ORDER BY ord');
+const insertAward = db.query('INSERT INTO awards (kind, place, mac, nick, team, prize_id, item, qty, weight, ord, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+const qHuntCounts = db.query<{ device: string; c: number }, []>('SELECT device, COUNT(*) c FROM hunt GROUP BY device');
+const qBingoLines = db.query<{ device: string; lines: number }, []>('SELECT device, lines FROM bingo');
+function awardsState() {
+  const a = qAwards.all();
+  return { total: a.length, revealed: a.filter((x) => x.revealed).length, claimed: a.filter((x) => x.claimed).length };
+}
+const pubAward = (a: Award) => ({ id: a.id, kind: a.kind, place: a.place, mac: a.mac, nick: a.nick, team: a.team, prize_id: a.prize_id, item: a.item, qty: a.qty, claimed: !!a.claimed });
+const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function weightedPick(items: { w: number }[]): number {
+  let r = rnd() * items.reduce((s, x) => s + x.w, 0);
+  for (let i = 0; i < items.length; i++) {
+    r -= items[i].w;
+    if (r <= 0) return i;
+  }
+  return items.length - 1;
+}
+/* Everyone registered on SHTX-NET with at least minLinks links, one entry per person (duplicate nicks keep the best-linked device), test nodes dropped */
+function drawParticipants(minLinks: number, exclude: string[]) {
+  const deg = new Map<string, number>();
+  const air = new Map<string, number>();
+  for (const l of qLinks.all()) {
+    deg.set(l.a, (deg.get(l.a) ?? 0) + 1);
+    deg.set(l.b, (deg.get(l.b) ?? 0) + 1);
+    if (l.via === 'air') {
+      air.set(l.a, (air.get(l.a) ?? 0) + 1);
+      air.set(l.b, (air.get(l.b) ?? 0) + 1);
+    }
+  }
+  const hunt = new Map(qHuntCounts.all().map((h) => [h.device, h.c]));
+  const bingo = new Map(qBingoLines.all().map((b) => [b.device, b.lines]));
+  const ex = new Set(exclude.map((m) => m.toUpperCase()));
+  const byNick = new Map<string, { mac: string; nick: string; deg: number; w: number }>();
+  for (const n of qNodes.all()) {
+    const d = deg.get(n.mac) ?? 0;
+    if (d < minLinks || ex.has(n.mac.toUpperCase()) || /^(ทดสอบ|test)/i.test(n.nick.trim())) continue;
+    const key = n.nick.trim().toLowerCase() || n.mac;
+    const w = 1 + (air.get(n.mac) ?? 0) + ((hunt.get(n.mac) ?? 0) >= 6 ? 3 : 0) + 2 * (bingo.get(n.mac) ?? 0); // bonus-round lottery weight
+    const prev = byNick.get(key);
+    if (!prev || d > prev.deg) byNick.set(key, { mac: n.mac, nick: n.nick, deg: d, w });
+  }
+  return Array.from(byNick.values());
+}
 type DeadPixel = { round: number; at: number; deadline: number; macs: string[] };
 function deadPixel(): DeadPixel | null {
   try {
@@ -489,6 +551,150 @@ const app = new Elysia()
     db.query('DELETE FROM settings WHERE k = ?').run('deadpixel');
     broadcast({ type: 'deadpixel' });
     return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .get('/api/prizes', () => {
+    const prizes = qPrizes.all();
+    const tickets: Record<string, number> = {};
+    for (const x of prizes) tickets[x.tier || '(none)'] = (tickets[x.tier || '(none)'] ?? 0) + x.count;
+    return { prizes, tickets, poolTier: POOL_TIER };
+  })
+  .post(
+    '/api/prizes',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      db.transaction(() => {
+        db.query('DELETE FROM prizes').run();
+        body.prizes.forEach((p, i) => insertPrize.run(clip(p.id, 20) || `X${i}`, clip(p.item, 120), clip(p.tier, 40), Math.max(0, p.count ?? 1), Number(p.cost) || 0, clip(p.note, 200), i));
+      })();
+      const tickets = body.prizes.filter((p) => p.tier === POOL_TIER).reduce((s, p) => s + Math.max(0, p.count ?? 1), 0);
+      insertEvent.run('note', '', `prize list synced: ${body.prizes.length} items, ${tickets} lucky-draw tickets`, Date.now());
+      broadcast({ type: 'prizes' });
+      return { ok: true, items: body.prizes.length, tickets };
+    },
+    { body: t.Object({ prizes: t.Array(t.Object({ id: t.String(), item: t.String(), tier: t.Optional(t.String()), count: t.Optional(t.Integer()), cost: t.Optional(t.Number()), note: t.Optional(t.String()) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .get('/api/awards', () => ({ ...awardsState(), awards: qAwards.all().filter((a) => a.revealed).map(pubAward) }))
+  .get('/api/awards/mine', ({ query }) => ({ awards: qAwardsMine.all(clip(query.mac, 40)).map(pubAward) }), { query: t.Object({ mac: t.String({ maxLength: 64 }) }) })
+  .get('/api/awards/all', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    return { ...awardsState(), awards: qAwards.all().map((a) => ({ ...pubAward(a), revealed: !!a.revealed, weight: a.weight })), participants: drawParticipants(Number(query.minLinks ?? 1), []).length };
+  }, { query: t.Object({ token: t.Optional(t.String()), minLinks: t.Optional(t.Numeric()) }) })
+  .post(
+    '/api/awards/places',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const prizes = qPrizes.all();
+      const done: { place: number; team: string; items: string[] }[] = [];
+      for (const { place, device } of body.places) {
+        if (!device) continue;
+        const proj = qProject.get(clip(device, 40));
+        if (!proj) return { ok: false, error: `unknown team device ${device}` };
+        const items = prizes.filter((p) => p.tier === `T${place}`);
+        if (!items.length) return { ok: false, error: `no prize with tier T${place} in the prize list` };
+        db.query('DELETE FROM awards WHERE kind = ? AND place = ?').run('place', place);
+        for (const it of items) insertAward.run('place', place, proj.device, proj.team, proj.team, it.id, it.item, it.count, 0, 1_000_000 + (10 - place), Date.now());
+        done.push({ place, team: proj.team, items: items.map((i) => i.item) });
+      }
+      insertEvent.run('note', '', `places awarded: ${done.map((d) => `#${d.place} ${d.team}`).join(', ')}`, Date.now());
+      broadcast({ type: 'awards' });
+      return { ok: true, done, ...awardsState() };
+    },
+    { body: t.Object({ places: t.Array(t.Object({ place: t.Integer({ minimum: 0, maximum: 3 }), device: t.String({ maxLength: 64 }) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .post(
+    '/api/awards/draw',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const participants = shuffle(drawParticipants(body.minLinks ?? 1, body.exclude ?? []));
+      const tickets = shuffle(qPrizes.all().filter((p) => p.tier === POOL_TIER).flatMap((p) => Array.from({ length: p.count }, () => p)));
+      if (!participants.length) return { ok: false, error: 'no participants' };
+      if (tickets.length < participants.length && !body.force) return { ok: false, error: 'short', participants: participants.length, tickets: tickets.length, short: participants.length - tickets.length };
+      const now = Date.now();
+      db.transaction(() => {
+        db.query("DELETE FROM awards WHERE kind IN ('draw', 'bonus')").run();
+        const n = Math.min(participants.length, tickets.length);
+        for (let i = 0; i < n; i++) insertAward.run('draw', 0, participants[i].mac, participants[i].nick, '', tickets[i].id, tickets[i].item, 1, participants[i].w, Math.floor(rnd() * 900_000), now);
+        // leftover tickets: weighted lottery (air links, finished Logo Hunting, bingo lines) — a person can win a second prize here
+        const pool = participants.map((p) => ({ ...p }));
+        for (let i = n; i < tickets.length && pool.length; i++) {
+          const k = weightedPick(pool);
+          insertAward.run('bonus', 0, pool[k].mac, pool[k].nick, '', tickets[i].id, tickets[i].item, 1, pool[k].w, 900_000 + i, now);
+          pool.splice(k, 1);
+        }
+      })();
+      const bonus = Math.max(0, tickets.length - participants.length);
+      insertEvent.run('note', '', `lucky draw: ${participants.length} people, ${tickets.length} tickets, ${bonus} bonus`, now);
+      broadcast({ type: 'awards' });
+      return { ok: true, participants: participants.length, tickets: tickets.length, bonus, unlucky: Math.max(0, participants.length - tickets.length), ...awardsState() };
+    },
+    { body: t.Object({ minLinks: t.Optional(t.Integer()), exclude: t.Optional(t.Array(t.String())), force: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .post(
+    '/api/awards/reveal',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const pending = qAwards.all().filter((a) => !a.revealed);
+      const batch = body.all ? pending : pending.slice(0, Math.max(1, body.n ?? 1));
+      for (const a of batch) {
+        db.query('UPDATE awards SET revealed = 1 WHERE id = ?').run(a.id);
+        broadcast({ type: 'award', award: pubAward(a) });
+        insertEvent.run('note', a.mac, a.kind === 'place' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, Date.now());
+      }
+      broadcast({ type: 'awards' });
+      return { ok: true, items: batch.map(pubAward), ...awardsState() };
+    },
+    { body: t.Object({ n: t.Optional(t.Integer()), all: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .post(
+    '/api/awards/claim',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const q = clip(body.who, 40).toLowerCase();
+      const hits = qAwards.all().filter((a) => a.revealed && (String(a.id) === q || a.mac.toLowerCase() === q || a.nick.trim().toLowerCase() === q || a.team.trim().toLowerCase() === q));
+      for (const a of hits) db.query('UPDATE awards SET claimed = ? WHERE id = ?').run(body.claimed === false ? 0 : 1, a.id);
+      broadcast({ type: 'awards' });
+      return { ok: true, matched: hits.map(pubAward), ...awardsState() };
+    },
+    { body: t.Object({ who: t.String({ maxLength: 64 }), claimed: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .delete('/api/awards', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM awards').run();
+    insertEvent.run('note', '', 'awards cleared', Date.now());
+    broadcast({ type: 'awards' });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .get('/api/awards.csv', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename="shtx-awards.csv"';
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = qAwards.all().map((a) => [a.id, a.kind, a.place || '', a.nick, a.team, a.mac, a.prize_id, a.item, a.qty, a.revealed ? 'yes' : '', a.claimed ? 'yes' : '', new Date(a.at).toISOString()].map(esc).join(','));
+    return '\ufeff' + ['id,kind,place,nick,team,mac,prize_id,item,qty,revealed,claimed,at', ...rows].join('\n');
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())
   .post(

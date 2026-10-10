@@ -87,7 +87,27 @@ export const api = {
   bingo: (device: string, nick: string, lines: number, cells: number) => call<{ ok: boolean }>('/api/bingo', { method: 'POST', body: JSON.stringify({ device, nick, lines, cells }) }),
   bingoBoard: () => call<BingoBoard>('/api/bingo'),
   deadPixel: () => call<DeadPixelState | null>('/api/deadpixel'),
+  awardsMine: (mac: string) => call<{ awards: Award[] }>(`/api/awards/mine?mac=${encodeURIComponent(mac)}`),
+  awards: () => call<AwardsState & { awards: Award[] }>('/api/awards'),
 };
+
+export interface Award {
+  id: number;
+  kind: 'place' | 'draw' | 'bonus';
+  place: number;
+  mac: string;
+  nick: string;
+  team: string;
+  prize_id: string;
+  item: string;
+  qty: number;
+  claimed: boolean;
+}
+export interface AwardsState {
+  total: number;
+  revealed: number;
+  claimed: number;
+}
 
 export interface BingoBoard {
   players: number;
@@ -134,6 +154,7 @@ export interface PauseState {
   updateMsg?: string;
   voteUrl?: string; // Uddy's popular-voting app, when staff have set it
   dp?: DeadPixel | null; // current Dead Pixel round, if any
+  awards?: AwardsState; // prize reveal progress; phones fetch their own prize when `revealed` changes
 }
 
 export interface HuntState {

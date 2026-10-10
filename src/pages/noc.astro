@@ -60,6 +60,20 @@ import Icons from '../components/Icons.astro';
       .noc-dead i { color: #8ef5a3; font-style: normal; }
       .noc-dead[hidden] { display: none; }
       .panel.bingo li .deg { min-width: 54px; text-align: center; }
+      .noc-award { position: absolute; inset: 0; z-index: 14; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 40%, rgba(255, 211, 77, 0.25), rgba(3, 26, 61, 0.75) 70%); }
+      .noc-award[hidden] { display: none; }
+      .noc-award-card { min-width: min(80%, 760px); padding: 28px 40px 32px; border-radius: 18px; background: linear-gradient(180deg, #fffdf3, #f3e7bd); border: 6px double #b8860b; color: #3b2400; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); animation: noc-award-in 0.4s ease-out; }
+      .noc-award-card.place { background: linear-gradient(135deg, #fff8d6, #ffe9a8 40%, #f6d87a); border-color: #c9a227; }
+      .noc-award-kicker { font-size: 16px; letter-spacing: 6px; color: #8a6a12; }
+      .noc-award-name { margin-top: 10px; font-size: clamp(40px, 6vw, 84px); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .noc-award-name.spin { color: #8a6a12; }
+      .noc-award-arrow { font-size: 26px; color: #b8860b; margin: 4px 0; }
+      .noc-award-item { font-size: clamp(28px, 4vw, 56px); font-weight: 700; }
+      .noc-award-sub { margin-top: 8px; font-size: 18px; color: #6b5a2a; }
+      @keyframes noc-award-in { from { transform: scale(0.85); opacity: 0; } }
+      .adm-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); }
+      .adm-group select { padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.9); color: #06264f; font: inherit; max-width: 140px; }
+      .panel.awards li b.c { text-decoration: line-through; opacity: 0.6; }
       .panel.votelink { display: flex; flex-direction: column; align-items: center; flex: none; }
       .panel.votelink canvas { background: #fff; padding: 6px; border-radius: 8px; width: 180px; height: 180px; }
       .votelink-url { margin-top: 6px; font: 11px 'Lucida Console', monospace; color: #d4f1ff; word-break: break-all; text-align: center; }
@@ -136,6 +150,15 @@ import Icons from '../components/Icons.astro';
           <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
           <div class="noc-ransom" id="noc-ransom" hidden><b>RANSOMWARE</b><span id="noc-ransom-text"></span></div>
           <div class="noc-dead" id="noc-dead" hidden><b>DEAD PIXEL</b><span id="noc-dead-text"></span></div>
+          <div class="noc-award" id="noc-award" hidden>
+            <div class="noc-award-card" id="noc-award-card">
+              <div class="noc-award-kicker" id="noc-award-kicker">LUCKY DRAW</div>
+              <div class="noc-award-name" id="noc-award-name">…</div>
+              <div class="noc-award-arrow">▼</div>
+              <div class="noc-award-item" id="noc-award-item">…</div>
+              <div class="noc-award-sub" id="noc-award-sub"></div>
+            </div>
+          </div>
           <form class="noc-hints glass" id="noc-hints" hidden>
             <b>คำใบ้ Logo Hunting (แก้แล้วมือถือทุกเครื่องอัปเดตภายใน 1 นาที)</b>
             <div id="noc-hints-rows"></div>
@@ -152,6 +175,18 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
             <button type="button" class="noc-btn" id="adm-submit" title="เปิด/ปิดรับโปรเจกต์">Close submissions</button>
             <button type="button" class="noc-btn" id="adm-vote" title="เปิด/ปิดโหวต Most Stupid Project">Open voting</button>
+            <span class="adm-group">
+              <select id="adm-p1" title="ที่ 1"><option value="">ที่ 1…</option></select>
+              <select id="adm-p2" title="ที่ 2"><option value="">ที่ 2…</option></select>
+              <select id="adm-p3" title="ที่ 3"><option value="">ที่ 3…</option></select>
+              <button type="button" class="noc-btn" id="adm-places" title="บันทึกที่ 1-2-3 จากผลโหวต (รางวัล tier T1/T2/T3)">Award 1-2-3</button>
+              <button type="button" class="noc-btn" id="adm-draw" title="สุ่มของแจกกลางทางให้ทุกคน 1 ชิ้น ที่เหลือสุ่มรอบโบนัส">Lucky draw</button>
+              <button type="button" class="noc-btn" id="adm-reveal" title="เปิดเผยรางวัลถัดไปบนจอ">Reveal next</button>
+              <button type="button" class="noc-btn" id="adm-reveal-all" title="เปิดเผยทีละคนต่อเนื่องจนครบ (กดอีกครั้งเพื่อหยุด)">Reveal all</button>
+              <input id="adm-claim" placeholder="จ่ายของแล้ว: ชื่อเล่น / ทีม / MAC" autocomplete="off" />
+              <button type="button" class="noc-btn" id="adm-claim-btn">Claimed</button>
+              <button type="button" class="noc-btn" id="adm-awards-reset" title="ล้างรางวัลทั้งหมด">Reset awards…</button>
+            </span>
             <button type="button" class="noc-btn" id="adm-dead" title="สุ่ม 5 node ให้ตาย ต้อง air link ใหม่ใน 10 นาที">Dead Pixel round</button>
             <button type="button" class="noc-btn" id="adm-dead-end" title="จบรอบ Dead Pixel">End round</button>
             <button type="button" class="noc-btn" id="adm-bingo-reset" title="ล้างกระดาน Bingo">Reset bingo…</button>
@@ -173,6 +208,7 @@ import Icons from '../components/Icons.astro';
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
           <div class="panel glass vote"><h3>Most Stupid Project <span id="noc-vote-state"></span></h3><ol id="noc-vote"></ol></div>
           <div class="panel glass bingo"><h3>Packet Loss Bingo <span id="noc-bingo-stats"></span></h3><ol id="noc-bingo"></ol></div>
+          <div class="panel glass awards" id="noc-awards-panel" hidden><h3>Prizes <span id="noc-awards-stats"></span></h3><ol id="noc-awards"></ol></div>
           <div class="panel glass hunt"><h3>Drawdy Logo Hunting</h3><div class="hunt-keys" id="hunt-keys"></div><div class="hunt-done" id="hunt-done">ยังไม่มีใคร activate</div></div>
           <div class="panel glass idea"><h3>Dumb idea of the moment</h3><blockquote id="noc-idea">…</blockquote><cite id="noc-idea-by"></cite></div>
         </aside>

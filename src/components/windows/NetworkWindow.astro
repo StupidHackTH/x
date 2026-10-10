@@ -112,6 +112,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         <div class="net-contacts-head">
           <h3>Contacts <span id="net-count">(0)</span></h3>
           <button type="button" class="xp-btn" id="net-cert-btn" disabled title={`ครบ ${CERT_LINKS} คนรับใบรับรอง`}>Certificate</button>
+          <button type="button" class="xp-btn net-prize-btn" id="net-prize-btn" hidden>🎁 My prize</button>
         </div>
         <ul class="net-contacts" id="net-contacts"></ul>
         <p class="net-empty" id="net-empty">ยังไม่มีใครในเครือข่าย ลองเดินไปหาคนที่ยังไม่รู้จัก แล้วเอามือถือมาชนกัน</p>
@@ -198,6 +199,18 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         <p class="net-dead-text th" id="net-dead-th">node ของคุณถูกสุ่มให้ตาย ไปจ่อมือถือกับคนใหม่ 1 คนแล้วกด Connect ทางเสียงก่อนหมดเวลา ไม่งั้นใบ cert ถูกถอน (คืนได้เมื่อ air link เพิ่มอีก 2)</p>
         <div class="net-dead-timer" id="net-dead-timer">10:00</div>
         <button type="button" class="net-dead-btn" id="net-dead-ok">OK · ไปหาคน</button>
+      </div>
+    </div>
+    <div class="net-prize" id="net-prize" hidden role="dialog" aria-label="Prize">
+      <div class="net-prize-dlg">
+        <div class="net-prize-title"><span>🎁</span> Prize Notification · SHTX-NET Rewards Service</div>
+        <div class="net-prize-body">
+          <p class="net-prize-lead" id="net-prize-lead">You have received a prize.</p>
+          <ul class="net-prize-list" id="net-prize-list"></ul>
+          <p class="net-prize-how">แสดงหน้านี้ที่โต๊ะ staff เพื่อรับของ · host <b id="net-prize-mac">—</b></p>
+          <p class="net-prize-fine">This offer is non-transferable, non-refundable and 100 % stupid. Kernel-signed by SHTX-NET NOC.</p>
+        </div>
+        <div class="net-prize-actions"><button type="button" class="xp-btn primary" id="net-prize-ok">OK</button></div>
       </div>
     </div>
     <div class="net-overlay" id="net-cert" hidden>
@@ -396,6 +409,24 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   @keyframes net-dead-glitch { 0%, 96% { transform: none; filter: none; } 97% { transform: translateX(3px); filter: hue-rotate(90deg); } 98% { transform: translateX(-3px); } 99% { transform: none; filter: invert(0.05); } }
   .net-certificate.dead { filter: grayscale(1) contrast(0.9); background: #f2f2f2; border-color: #555; }
   .net-certificate.dead .net-cert-seal { background: radial-gradient(circle, #777, #222 60%, #000); color: #fff; }
+  /* prize notification: XP dialog over the whole screen (moved to <body> when shown) */
+  .net-prize { position: fixed; inset: 0; z-index: 2147482600; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.55); }
+  .net-prize[hidden] { display: none; }
+  .net-prize-dlg { width: min(100%, 440px); background: #ece9d8; border: 1px solid #0a246a; box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35); font-size: 13px; animation: net-prize-pop 0.35s ease-out; }
+  .net-prize-title { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: linear-gradient(90deg, #0a246a, #3a6ea5 60%, #0a246a); color: #fff; font-weight: bold; }
+  .net-prize-body { padding: 12px 14px; }
+  .net-prize-lead { margin: 0 0 8px; font-weight: bold; font-size: 14px; }
+  .net-prize-list { margin: 0 0 10px; padding: 8px 10px; list-style: none; background: #fff; border: 1px solid #7f9db9; display: flex; flex-direction: column; gap: 6px; }
+  .net-prize-list li { display: flex; gap: 8px; align-items: flex-start; }
+  .net-prize-list li .k { flex: none; font-size: 18px; }
+  .net-prize-list li b { display: block; font-size: 14px; }
+  .net-prize-list li small { color: #555; }
+  .net-prize-list li.place b { color: #8a6a12; }
+  .net-prize-how { margin: 0 0 6px; }
+  .net-prize-fine { margin: 0; font-size: 10px; color: #777; }
+  .net-prize-actions { display: flex; justify-content: center; padding: 0 14px 12px; }
+  .net-prize-btn { background: linear-gradient(180deg, #fff4c2, #f3d36b) !important; font-weight: bold; }
+  @keyframes net-prize-pop { from { transform: scale(0.9); opacity: 0; } }
   .net[data-ransom='1'] #net-qr, .net[data-ransom='1'] #net-manual-btn { background: #000 !important; color: #ff3b3b !important; border-color: #ff3b3b !important; }
   @media (max-width: 767px) {
     .net-wizard-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
@@ -412,7 +443,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   import { AudioModem, encodePcm, buildFrame } from '../../scripts/fsk';
   import { NetNode, encodeFrame, decodeFrame, type Established, type PeerCard, type NodeState, type LogKind } from '../../scripts/netproto';
   import { questions, packMac, formatMac, parseMac, icqFor, hostnameFor, vendorFor, traitsFor, LIMITS, CERT_LINKS, clampBytes, type Card, type Link } from '../../data/network';
-  import { api, hasApi } from '../../scripts/netapi';
+  import { api, hasApi, type Award } from '../../scripts/netapi';
   import QRCode from 'qrcode';
 
   interface Me extends Card {
@@ -424,6 +455,8 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     links: Link[];
     ransom?: { at: number; airAtStart: number; qr: number } | null; // the QR-abuser penalty: 3 real air links to decrypt
     dp?: { round: number; at: number; deadline: number; airAtStart: number; status: 'dead' | 'revived' | 'demoted' | 'restored'; airAtDeadline?: number } | null; // Dead Pixel round
+    awards?: Award[]; // prizes this phone has won (places by vote, lucky draw)
+    awardsSeen?: number; // the reveal counter we last fetched at
   }
 
   const KEY = 'shtx-net-v1';
@@ -445,7 +478,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     function load(): Store {
       try {
         const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [], ransom: s.ransom ?? null, dp: s.dp ?? null };
+        if (s && typeof s === 'object') return { me: s.me ?? null, links: Array.isArray(s.links) ? s.links : [], ransom: s.ransom ?? null, dp: s.dp ?? null, awards: Array.isArray(s.awards) ? s.awards : [], awardsSeen: s.awardsSeen ?? -1 };
       } catch {
         /* ignore */
       }
@@ -708,6 +741,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       netPaused = p.net;
       root.dataset.paused = netPaused ? '1' : '';
       handleDeadPixel(p.dp ?? null);
+      void checkAwards(p.awards?.revealed ?? 0);
       if (netPaused) {
         statusEl.textContent = 'Paused by staff';
         subEl.textContent = 'ทีมงานหยุดเกมชั่วคราว รอประกาศ';
@@ -1064,6 +1098,53 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     $('net-dead-ok').addEventListener('click', () => {
       $('net-dead').hidden = true;
     });
+
+    /* ---------- prizes: places by vote + lucky draw, revealed from the NOC ---------- */
+    function renderPrizeBtn() {
+      $('net-prize-btn').hidden = !store.awards?.length;
+    }
+    function showPrize(fresh: Award[]) {
+      const el = $('net-prize');
+      if (el.parentElement !== document.body) document.body.appendChild(el);
+      const all = store.awards ?? [];
+      const places = all.filter((a) => a.kind === 'place');
+      $('net-prize-lead').textContent = places.length ? `Congratulations! ทีม ${places[0].team} ได้ที่ ${places[0].place} จากผลโหวต` : fresh.length ? 'Congratulations! The lucky draw has selected this host.' : 'Your prizes';
+      const ul = $('net-prize-list');
+      ul.innerHTML = '';
+      for (const a of all) {
+        const li = document.createElement('li');
+        li.className = a.kind;
+        li.innerHTML = `<span class="k"></span><div><b></b><small></small></div>`;
+        li.querySelector('.k')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'bonus' ? '✨' : '🎁';
+        li.querySelector('b')!.textContent = `${a.item}${a.qty > 1 ? ` ×${a.qty}` : ''}`;
+        li.querySelector('small')!.textContent = `${a.kind === 'place' ? `รางวัลที่ ${a.place}` : a.kind === 'bonus' ? 'รอบโบนัส (ทำภารกิจเยอะ)' : 'สุ่มได้'} · ${a.prize_id}${a.claimed ? ' · รับแล้ว ✔' : ''}`;
+        ul.appendChild(li);
+      }
+      $('net-prize-mac').textContent = store.me?.mac ?? '—';
+      el.hidden = false;
+      if (fresh.length) navigator.vibrate?.([120, 60, 120, 60, 400]);
+    }
+    async function checkAwards(revealed: number) {
+      if (!store.me || !online()) return;
+      if (revealed === store.awardsSeen) return;
+      const r = await api.awardsMine(store.me.mac);
+      if (!r) return;
+      const known = new Set((store.awards ?? []).map((a) => a.id));
+      const fresh = r.awards.filter((a) => !known.has(a.id));
+      store.awards = r.awards;
+      store.awardsSeen = revealed;
+      save();
+      renderPrizeBtn();
+      if (fresh.length) {
+        for (const a of fresh) log(a.kind === 'place' ? `🏆 PRIZE: team ${a.team} placed #${a.place} — ${a.item}` : `🎁 PRIZE: lucky draw — ${a.item} (${a.prize_id})`, 'ok');
+        showPrize(fresh);
+      }
+    }
+    $('net-prize-ok').addEventListener('click', () => {
+      $('net-prize').hidden = true;
+    });
+    $('net-prize-btn').addEventListener('click', () => showPrize([]));
+    renderPrizeBtn();
     setInterval(checkDeadPixel, 1000);
     if (store.dp?.status === 'dead') showDead('dead');
 

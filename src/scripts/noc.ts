@@ -1,6 +1,6 @@
 // NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
 // leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
-import { apiBase, api, type ServerState, type HuntState, type PauseState, type DeadPixelState } from './netapi';
+import { apiBase, api, type ServerState, type HuntState, type PauseState, type DeadPixelState, type Award } from './netapi';
 import QRCode from 'qrcode';
 import { icqFor, vendorFor } from '../data/network';
 import { encodePcm, buildFrame } from './fsk';
@@ -137,6 +137,73 @@ async function loadRansom() {
   if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
 }
 
+/* ---------- prizes: places by vote + lucky draw, revealed one by one on the stage ---------- */
+let awardsNow: { total: number; revealed: number; claimed: number; awards: Award[] } = { total: 0, revealed: 0, claimed: 0, awards: [] };
+const revealQueue: Award[] = [];
+let revealing = false;
+async function loadAwards() {
+  if (demo) return;
+  const r = await api.awards();
+  if (!r) return;
+  awardsNow = r;
+  const panel = $('noc-awards-panel');
+  panel.hidden = r.total === 0;
+  $('noc-awards-stats').textContent = r.total ? `(${r.revealed}/${r.total} เปิดแล้ว · รับไป ${r.claimed})` : '';
+  const ol = $('noc-awards');
+  ol.innerHTML = '';
+  for (const a of r.awards.slice(-8).reverse()) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="n"></span><b></b><span class="mac"></span>`;
+    li.querySelector('.n')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'bonus' ? '✨' : '🎁';
+    const b = li.querySelector('b')!;
+    b.textContent = `${a.kind === 'place' ? `#${a.place} ${a.team}` : a.nick} ← ${a.item}`;
+    if (a.claimed) b.classList.add('c');
+    li.querySelector('.mac')!.textContent = a.prize_id;
+    ol.appendChild(li);
+  }
+}
+function pumpReveal() {
+  if (revealing) return;
+  const a = revealQueue.shift();
+  if (!a) return;
+  revealing = true;
+  const el = $('noc-award');
+  const card = $('noc-award-card');
+  card.classList.toggle('place', a.kind === 'place');
+  $('noc-award-kicker').textContent = a.kind === 'place' ? `🏆 รางวัลที่ ${a.place} · ผลโหวต` : a.kind === 'bonus' ? '✨ BONUS ROUND' : '🎁 LUCKY DRAW';
+  const name = $('noc-award-name');
+  const finalName = a.kind === 'place' ? a.team : a.nick || a.mac;
+  $('noc-award-item').textContent = '…';
+  $('noc-award-sub').textContent = '';
+  el.hidden = false;
+  name.classList.add('spin');
+  const pool = Array.from(hosts.values()).map((h) => h.nick).filter(Boolean);
+  let ticks = 0;
+  const spin = setInterval(() => {
+    name.textContent = pool.length ? pool[Math.floor(Math.random() * pool.length)] : '…';
+    if (++ticks >= 14) {
+      clearInterval(spin);
+      name.classList.remove('spin');
+      name.textContent = finalName;
+      setTimeout(() => {
+        $('noc-award-item').textContent = `${a.item}${a.qty > 1 ? ` ×${a.qty}` : ''}`;
+        $('noc-award-sub').textContent = `${a.prize_id} · รับได้ที่โต๊ะ staff`;
+        if (sound) chirp();
+      }, 500);
+      setTimeout(() => {
+        revealing = false;
+        if (revealQueue.length) pumpReveal();
+        else setTimeout(() => { if (!revealing && !revealQueue.length) el.hidden = true; }, 2500);
+      }, 4200);
+    }
+  }, 90);
+}
+function onAwardRevealed(a: Award) {
+  revealQueue.push(a);
+  pumpReveal();
+  pushEvent({ type: 'note', mac: a.mac, detail: a.kind === 'place' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, at: Date.now() });
+}
+
 /* ---------- popular-vote link (Uddy's app): QR on the stage screen ---------- */
 let voteLinkNow: string | null = null;
 function renderVoteLink(url: string) {
@@ -243,6 +310,13 @@ async function loadProjects() {
     ol.appendChild(li);
   }
   $('noc-proj-count').textContent = `(${r.projects.length})`;
+  for (const id of ['adm-p1', 'adm-p2', 'adm-p3']) {
+    const sel = document.getElementById(id) as HTMLSelectElement | null;
+    if (!sel) continue;
+    const keep = sel.value;
+    sel.innerHTML = `<option value="">${id.replace('adm-p', 'ที่ ')}…</option>` + r.projects.map((p) => `<option value="${p.device}">${p.order}. ${p.team.replace(/</g, '')}</option>`).join('');
+    sel.value = keep;
+  }
 }
 
 /* ---------- Drawdy Logo Hunting ---------- */
@@ -296,6 +370,8 @@ function connect() {
         else if (msg.type === 'vote') void loadVotes();
         else if (msg.type === 'bingo') void loadBingo();
         else if (msg.type === 'deadpixel') void loadDeadPixel();
+        else if (msg.type === 'award') onAwardRevealed(msg.award);
+        else if (msg.type === 'awards' || msg.type === 'prizes') void loadAwards();
       } catch {
         /* ignore */
       }
@@ -313,6 +389,8 @@ function connect() {
   void loadVotes();
   void loadBingo();
   void loadDeadPixel();
+  void loadAwards();
+  setInterval(() => void loadAwards(), 30_000);
   setInterval(() => void loadBingo(), 30_000);
   setInterval(() => void loadDeadPixel(), 10_000);
   setInterval(() => void loadProjects(), 30_000);
@@ -706,6 +784,81 @@ function setupAdmin() {
     voteReset.textContent = 'Reset votes…';
     voteReset.classList.remove('danger');
     if (await call('/api/votes', { method: 'DELETE' })) say('ล้างคะแนนโหวตแล้ว');
+  });
+  $('adm-places').addEventListener('click', async () => {
+    const places = [1, 2, 3].map((n) => ({ place: n, device: ($(`adm-p${n}`) as HTMLSelectElement).value })).filter((p) => p.device);
+    if (!places.length) return say('เลือกทีมอย่างน้อย 1 อันดับก่อน');
+    const r = await call<{ ok: boolean; error?: string; done?: { place: number; team: string; items: string[] }[] }>('/api/awards/places', { method: 'POST', body: JSON.stringify({ places }) });
+    if (!r) return;
+    if (!r.ok) return say(`ไม่สำเร็จ: ${r.error}`);
+    say(`บันทึกแล้ว: ${r.done!.map((d) => `ที่ ${d.place} ${d.team} → ${d.items.join(' + ')}`).join(' | ')} (ยังไม่เปิดเผย กด Reveal)`);
+  });
+  $('adm-draw').addEventListener('click', async () => {
+    const r = await call<{ ok: boolean; error?: string; participants?: number; tickets?: number; bonus?: number; short?: number }>('/api/awards/draw', { method: 'POST', body: JSON.stringify({ minLinks: 1 }) });
+    if (!r) return;
+    if (!r.ok) return say(r.error === 'short' ? `ของไม่พอ: คน ${r.participants} แต่ตั๋ว ${r.tickets} (ขาด ${r.short}) เพิ่ม Reward amount ใน Grist แล้ว sync ใหม่ หรือกด Shift+Lucky draw เพื่อสุ่มเท่าที่มี` : `ไม่สำเร็จ: ${r.error}`);
+    say(`สุ่มแล้ว: ${r.participants} คน · ${r.tickets} ตั๋ว · โบนัส ${r.bonus} ชิ้น (ยังไม่เปิดเผย กด Reveal)`);
+  });
+  $('adm-draw').addEventListener('click', async (e) => {
+    if (!(e as MouseEvent).shiftKey) return;
+    const r = await call<{ ok: boolean; participants?: number; tickets?: number; unlucky?: number }>('/api/awards/draw', { method: 'POST', body: JSON.stringify({ minLinks: 1, force: true }) });
+    if (r?.ok) say(`สุ่มแบบของไม่พอ: ${r.participants} คน · ${r.tickets} ตั๋ว · ไม่ได้ของ ${r.unlucky} คน`);
+  }, true);
+  $('adm-reveal').addEventListener('click', async () => {
+    const r = await call<{ ok: boolean; items: Award[]; total: number }>('/api/awards/reveal', { method: 'POST', body: JSON.stringify({ n: 1 }) });
+    if (r && !r.items.length) say('เปิดครบแล้ว');
+  });
+  let revealAllTimer: ReturnType<typeof setInterval> | null = null;
+  $('adm-reveal-all').addEventListener('click', () => {
+    if (revealAllTimer) {
+      clearInterval(revealAllTimer);
+      revealAllTimer = null;
+      $('adm-reveal-all').textContent = 'Reveal all';
+      return say('หยุดแล้ว');
+    }
+    $('adm-reveal-all').textContent = 'Stop';
+    const step = async () => {
+      if (revealQueue.length > 1) return; // let the stage catch up
+      const r = await call<{ ok: boolean; items: Award[] }>('/api/awards/reveal', { method: 'POST', body: JSON.stringify({ n: 1 }) });
+      if (!r || !r.items.length) {
+        if (revealAllTimer) clearInterval(revealAllTimer);
+        revealAllTimer = null;
+        $('adm-reveal-all').textContent = 'Reveal all';
+        say('เปิดครบทุกรางวัลแล้ว');
+      }
+    };
+    void step();
+    revealAllTimer = setInterval(() => void step(), 5500);
+  });
+  $('adm-claim-btn').addEventListener('click', async () => {
+    const who = ($('adm-claim') as HTMLInputElement).value.trim();
+    if (!who) return;
+    const r = await call<{ ok: boolean; matched: Award[] }>('/api/awards/claim', { method: 'POST', body: JSON.stringify({ who }) });
+    if (!r) return;
+    ($('adm-claim') as HTMLInputElement).value = '';
+    say(r.matched.length ? `จ่ายแล้ว: ${r.matched.map((a) => `${a.nick || a.team} ← ${a.item}`).join(', ')}` : `ไม่พบ "${who}" ในรายการที่เปิดเผยแล้ว`);
+  });
+  $('adm-claim').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('adm-claim-btn').click();
+  });
+  const awardsReset = $('adm-awards-reset') as HTMLButtonElement;
+  let awardsArmed: ReturnType<typeof setTimeout> | null = null;
+  awardsReset.addEventListener('click', async () => {
+    if (!awardsArmed) {
+      awardsReset.textContent = 'กดอีกครั้งเพื่อล้างรางวัล';
+      awardsReset.classList.add('danger');
+      awardsArmed = setTimeout(() => {
+        awardsArmed = null;
+        awardsReset.textContent = 'Reset awards…';
+        awardsReset.classList.remove('danger');
+      }, 5000);
+      return;
+    }
+    clearTimeout(awardsArmed);
+    awardsArmed = null;
+    awardsReset.textContent = 'Reset awards…';
+    awardsReset.classList.remove('danger');
+    if (await call('/api/awards', { method: 'DELETE' })) say('ล้างรางวัลแล้ว');
   });
   $('adm-dead').addEventListener('click', async () => {
     const r = await call<{ macs: string[] }>('/api/deadpixel', { method: 'POST', body: JSON.stringify({ count: 5, minutes: 10 }) });
