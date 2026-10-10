@@ -139,6 +139,12 @@ async function loadRansom() {
 
 /* ---------- prizes: places by vote + lucky draw, revealed one by one on the stage ---------- */
 let awardsNow: { total: number; revealed: number; claimed: number; awards: Award[] } = { total: 0, revealed: 0, claimed: 0, awards: [] };
+let prizeNames: string[] = []; // for the gacha item spin
+async function loadPrizeNames() {
+  if (demo) return;
+  const r = await api.prizes();
+  if (r) prizeNames = r.prizes.filter((p) => /^T[12]$/.test(p.tier)).map((p) => p.item);
+}
 const revealQueue: Award[] = [];
 let revealing = false;
 async function loadAwards() {
@@ -154,9 +160,9 @@ async function loadAwards() {
   for (const a of r.awards.slice(-8).reverse()) {
     const li = document.createElement('li');
     li.innerHTML = `<span class="n"></span><b></b><span class="mac"></span>`;
-    li.querySelector('.n')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'bonus' ? '✨' : '🎁';
+    li.querySelector('.n')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'gacha' ? '🎰' : a.kind === 'bonus' ? '✨' : '🎁';
     const b = li.querySelector('b')!;
-    b.textContent = `${a.kind === 'place' ? `#${a.place} ${a.team}` : a.nick} ← ${a.item}`;
+    b.textContent = `${a.kind === 'place' || a.kind === 'gacha' ? `#${a.place} ${a.team}` : a.nick} ← ${a.item}`;
     if (a.claimed) b.classList.add('c');
     li.querySelector('.mac')!.textContent = a.prize_id;
     ol.appendChild(li);
@@ -169,27 +175,33 @@ function pumpReveal() {
   revealing = true;
   const el = $('noc-award');
   const card = $('noc-award-card');
-  card.classList.toggle('place', a.kind === 'place');
-  $('noc-award-kicker').textContent = a.kind === 'place' ? `🏆 รางวัลที่ ${a.place} · ผลโหวต` : a.kind === 'bonus' ? '✨ BONUS ROUND' : '🎁 LUCKY DRAW';
+  const placed = a.kind === 'place' || a.kind === 'gacha';
+  card.classList.toggle('place', placed);
+  $('noc-award-kicker').textContent = a.kind === 'place' ? `🏆 รางวัลที่ ${a.place} · ผลโหวต` : a.kind === 'gacha' ? `🎰 GACHA · รางวัลที่ ${a.place} · ดวงล้วน` : a.kind === 'bonus' ? '✨ BONUS ROUND' : '🎁 LUCKY DRAW';
   const name = $('noc-award-name');
-  const finalName = a.kind === 'place' ? a.team : a.nick || a.mac;
-  $('noc-award-item').textContent = '…';
+  const item = $('noc-award-item');
+  const finalName = placed ? a.team : a.nick || a.mac;
+  const finalItem = `${a.item}${a.qty > 1 ? ` ×${a.qty}` : ''}`;
+  item.textContent = '…';
   $('noc-award-sub').textContent = '';
   el.hidden = false;
-  name.classList.add('spin');
-  const pool = Array.from(hosts.values()).map((h) => h.nick).filter(Boolean);
+  // gacha: the team is known, so the PRIZE spins; otherwise the NAME spins
+  const spinEl = a.kind === 'gacha' ? item : name;
+  const pool = a.kind === 'gacha' ? prizeNames : Array.from(hosts.values()).map((h) => h.nick).filter(Boolean);
+  if (a.kind === 'gacha') name.textContent = finalName;
+  spinEl.classList.add('spin');
   let ticks = 0;
   const spin = setInterval(() => {
-    name.textContent = pool.length ? pool[Math.floor(Math.random() * pool.length)] : '…';
-    if (++ticks >= 14) {
+    spinEl.textContent = pool.length ? pool[Math.floor(Math.random() * pool.length)] : '…';
+    if (++ticks >= (a.kind === 'gacha' ? 22 : 14)) {
       clearInterval(spin);
-      name.classList.remove('spin');
+      spinEl.classList.remove('spin');
       name.textContent = finalName;
       setTimeout(() => {
-        $('noc-award-item').textContent = `${a.item}${a.qty > 1 ? ` ×${a.qty}` : ''}`;
+        item.textContent = finalItem;
         $('noc-award-sub').textContent = `${a.prize_id} · รับได้ที่โต๊ะ staff`;
         if (sound) chirp();
-      }, 500);
+      }, a.kind === 'gacha' ? 0 : 500);
       setTimeout(() => {
         revealing = false;
         if (revealQueue.length) pumpReveal();
@@ -201,7 +213,7 @@ function pumpReveal() {
 function onAwardRevealed(a: Award) {
   revealQueue.push(a);
   pumpReveal();
-  pushEvent({ type: 'note', mac: a.mac, detail: a.kind === 'place' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, at: Date.now() });
+  pushEvent({ type: 'note', mac: a.mac, detail: a.kind === 'place' || a.kind === 'gacha' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, at: Date.now() });
 }
 
 /* ---------- popular-vote link (Uddy's app): QR on the stage screen ---------- */
@@ -371,7 +383,11 @@ function connect() {
         else if (msg.type === 'bingo') void loadBingo();
         else if (msg.type === 'deadpixel') void loadDeadPixel();
         else if (msg.type === 'award') onAwardRevealed(msg.award);
-        else if (msg.type === 'awards' || msg.type === 'prizes') void loadAwards();
+        else if (msg.type === 'awards') void loadAwards();
+        else if (msg.type === 'prizes') {
+          void loadAwards();
+          void loadPrizeNames();
+        }
       } catch {
         /* ignore */
       }
@@ -390,6 +406,7 @@ function connect() {
   void loadBingo();
   void loadDeadPixel();
   void loadAwards();
+  void loadPrizeNames();
   setInterval(() => void loadAwards(), 30_000);
   setInterval(() => void loadBingo(), 30_000);
   setInterval(() => void loadDeadPixel(), 10_000);
@@ -792,6 +809,14 @@ function setupAdmin() {
     if (!r) return;
     if (!r.ok) return say(`ไม่สำเร็จ: ${r.error}`);
     say(`บันทึกแล้ว: ${r.done!.map((d) => `ที่ ${d.place} ${d.team} → ${d.items.join(' + ')}`).join(' | ')} (ยังไม่เปิดเผย กด Reveal)`);
+  });
+  $('adm-gacha').addEventListener('click', async () => {
+    const places = [1, 2, 3].map((n) => ({ place: n, device: ($(`adm-p${n}`) as HTMLSelectElement).value })).filter((p) => p.device);
+    if (!places.length) return say('เลือกทีมอย่างน้อย 1 อันดับก่อน');
+    const r = await call<{ ok: boolean; error?: string; done?: { place: number; team: string; items: string[] }[] }>('/api/awards/places', { method: 'POST', body: JSON.stringify({ places, mode: 'gacha' }) });
+    if (!r) return;
+    if (!r.ok) return say(`ไม่สำเร็จ: ${r.error}`);
+    say(`กาชาแล้ว: ${r.done!.map((d) => `ที่ ${d.place} ${d.team} → ${d.items.join(' + ')}`).join(' | ')} (ยังไม่เปิดเผย กด Reveal)`);
   });
   $('adm-draw').addEventListener('click', async () => {
     const r = await call<{ ok: boolean; error?: string; participants?: number; tickets?: number; bonus?: number; short?: number }>('/api/awards/draw', { method: 'POST', body: JSON.stringify({ minLinks: 1 }) });

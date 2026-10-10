@@ -89,11 +89,12 @@ export const api = {
   deadPixel: () => call<DeadPixelState | null>('/api/deadpixel'),
   awardsMine: (mac: string) => call<{ awards: Award[] }>(`/api/awards/mine?mac=${encodeURIComponent(mac)}`),
   awards: () => call<AwardsState & { awards: Award[] }>('/api/awards'),
+  prizes: () => call<{ prizes: { id: string; item: string; tier: string; count: number }[]; tickets: Record<string, number> }>('/api/prizes'),
 };
 
 export interface Award {
   id: number;
-  kind: 'place' | 'draw' | 'bonus';
+  kind: 'place' | 'gacha' | 'draw' | 'bonus';
   place: number;
   mac: string;
   nick: string;

@@ -594,21 +594,34 @@ const app = new Elysia()
       }
       const prizes = qPrizes.all();
       const done: { place: number; team: string; items: string[] }[] = [];
-      for (const { place, device } of body.places) {
-        if (!device) continue;
-        const proj = qProject.get(clip(device, 40));
-        if (!proj) return { ok: false, error: `unknown team device ${device}` };
-        const items = prizes.filter((p) => p.tier === `T${place}`);
-        if (!items.length) return { ok: false, error: `no prize with tier T${place} in the prize list` };
-        db.query('DELETE FROM awards WHERE kind = ? AND place = ?').run('place', place);
-        for (const it of items) insertAward.run('place', place, proj.device, proj.team, proj.team, it.id, it.item, it.count, 0, 1_000_000 + (10 - place), Date.now());
-        done.push({ place, team: proj.team, items: items.map((i) => i.item) });
+      const places = [...body.places].filter((p) => p.device).sort((a, b) => a.place - b.place);
+      const teams = places.map(({ place, device }) => ({ place, proj: qProject.get(clip(device, 40)) }));
+      const bad = teams.find((t) => !t.proj);
+      if (bad) return { ok: false, error: `unknown team device for place ${bad.place}` };
+      db.query("DELETE FROM awards WHERE kind IN ('place', 'gacha')").run();
+      if (body.mode === 'gacha') {
+        // gacha: every placed team pulls from the combined T1+T2 pool, 1st place pulls first; luck decides who gets the fish tank
+        const pool = shuffle(prizes.filter((p) => /^T[12]$/.test(p.tier)).flatMap((p) => Array.from({ length: p.count }, () => p)));
+        const pulls = Math.max(1, Math.min(5, body.pulls ?? 1));
+        if (pool.length < teams.length * pulls) return { ok: false, error: `gacha pool too small: ${pool.length} tickets in T1+T2 for ${teams.length * pulls} pulls` };
+        for (const { place, proj } of teams) {
+          const got = pool.splice(0, pulls);
+          for (const it of got) insertAward.run('gacha', place, proj!.device, proj!.team, proj!.team, it.id, it.item, 1, 0, 1_000_000 + (10 - place), Date.now());
+          done.push({ place, team: proj!.team, items: got.map((i) => i.item) });
+        }
+      } else {
+        for (const { place, proj } of teams) {
+          const items = prizes.filter((p) => p.tier === `T${place}`);
+          if (!items.length) return { ok: false, error: `no prize with tier T${place} in the prize list` };
+          for (const it of items) insertAward.run('place', place, proj!.device, proj!.team, proj!.team, it.id, it.item, it.count, 0, 1_000_000 + (10 - place), Date.now());
+          done.push({ place, team: proj!.team, items: items.map((i) => i.item) });
+        }
       }
-      insertEvent.run('note', '', `places awarded: ${done.map((d) => `#${d.place} ${d.team}`).join(', ')}`, Date.now());
+      insertEvent.run('note', '', `places awarded (${body.mode === 'gacha' ? 'gacha' : 'by tier'}): ${done.map((d) => `#${d.place} ${d.team} → ${d.items.join(' + ')}`).join(', ')}`, Date.now());
       broadcast({ type: 'awards' });
       return { ok: true, done, ...awardsState() };
     },
-    { body: t.Object({ places: t.Array(t.Object({ place: t.Integer({ minimum: 0, maximum: 3 }), device: t.String({ maxLength: 64 }) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+    { body: t.Object({ places: t.Array(t.Object({ place: t.Integer({ minimum: 0, maximum: 3 }), device: t.String({ maxLength: 64 }) })), mode: t.Optional(t.String()), pulls: t.Optional(t.Integer()) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   .post(
     '/api/awards/draw',
@@ -618,7 +631,12 @@ const app = new Elysia()
         return { error: 'admin only' };
       }
       const participants = shuffle(drawParticipants(body.minLinks ?? 1, body.exclude ?? []));
-      const tickets = shuffle(qPrizes.all().filter((p) => p.tier === POOL_TIER).flatMap((p) => Array.from({ length: p.count }, () => p)));
+      const prizes = qPrizes.all();
+      const tickets = shuffle(prizes.filter((p) => p.tier === POOL_TIER).flatMap((p) => Array.from({ length: p.count }, () => p)));
+      // T1/T2 items the placed teams did not take (gacha leftovers) become the first bonus-round prizes
+      const used = new Map<string, number>();
+      for (const a of qAwards.all()) if (a.kind === 'place' || a.kind === 'gacha') used.set(a.prize_id, (used.get(a.prize_id) ?? 0) + a.qty);
+      const highLeft = shuffle(prizes.filter((p) => /^T[12]$/.test(p.tier)).flatMap((p) => Array.from({ length: Math.max(0, p.count - (used.get(p.id) ?? 0)) }, () => p)));
       if (!participants.length) return { ok: false, error: 'no participants' };
       if (tickets.length < participants.length && !body.force) return { ok: false, error: 'short', participants: participants.length, tickets: tickets.length, short: participants.length - tickets.length };
       const now = Date.now();
@@ -628,13 +646,14 @@ const app = new Elysia()
         for (let i = 0; i < n; i++) insertAward.run('draw', 0, participants[i].mac, participants[i].nick, '', tickets[i].id, tickets[i].item, 1, participants[i].w, Math.floor(rnd() * 900_000), now);
         // leftover tickets: weighted lottery (air links, finished Logo Hunting, bingo lines) — a person can win a second prize here
         const pool = participants.map((p) => ({ ...p }));
-        for (let i = n; i < tickets.length && pool.length; i++) {
+        const bonusTickets = [...highLeft, ...tickets.slice(n)];
+        for (let i = 0; i < bonusTickets.length && pool.length; i++) {
           const k = weightedPick(pool);
-          insertAward.run('bonus', 0, pool[k].mac, pool[k].nick, '', tickets[i].id, tickets[i].item, 1, pool[k].w, 900_000 + i, now);
+          insertAward.run('bonus', 0, pool[k].mac, pool[k].nick, '', bonusTickets[i].id, bonusTickets[i].item, 1, pool[k].w, 900_000 + i, now);
           pool.splice(k, 1);
         }
       })();
-      const bonus = Math.max(0, tickets.length - participants.length);
+      const bonus = highLeft.length + Math.max(0, tickets.length - participants.length);
       insertEvent.run('note', '', `lucky draw: ${participants.length} people, ${tickets.length} tickets, ${bonus} bonus`, now);
       broadcast({ type: 'awards' });
       return { ok: true, participants: participants.length, tickets: tickets.length, bonus, unlucky: Math.max(0, participants.length - tickets.length), ...awardsState() };
@@ -653,7 +672,7 @@ const app = new Elysia()
       for (const a of batch) {
         db.query('UPDATE awards SET revealed = 1 WHERE id = ?').run(a.id);
         broadcast({ type: 'award', award: pubAward(a) });
-        insertEvent.run('note', a.mac, a.kind === 'place' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, Date.now());
+        insertEvent.run('note', a.mac, a.kind === 'place' || a.kind === 'gacha' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, Date.now());
       }
       broadcast({ type: 'awards' });
       return { ok: true, items: batch.map(pubAward), ...awardsState() };

@@ -1107,7 +1107,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       const el = $('net-prize');
       if (el.parentElement !== document.body) document.body.appendChild(el);
       const all = store.awards ?? [];
-      const places = all.filter((a) => a.kind === 'place');
+      const places = all.filter((a) => a.kind === 'place' || a.kind === 'gacha');
       $('net-prize-lead').textContent = places.length ? `Congratulations! ทีม ${places[0].team} ได้ที่ ${places[0].place} จากผลโหวต` : fresh.length ? 'Congratulations! The lucky draw has selected this host.' : 'Your prizes';
       const ul = $('net-prize-list');
       ul.innerHTML = '';
@@ -1115,9 +1115,9 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         const li = document.createElement('li');
         li.className = a.kind;
         li.innerHTML = `<span class="k"></span><div><b></b><small></small></div>`;
-        li.querySelector('.k')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'bonus' ? '✨' : '🎁';
+        li.querySelector('.k')!.textContent = a.kind === 'place' ? '🏆' : a.kind === 'gacha' ? '🎰' : a.kind === 'bonus' ? '✨' : '🎁';
         li.querySelector('b')!.textContent = `${a.item}${a.qty > 1 ? ` ×${a.qty}` : ''}`;
-        li.querySelector('small')!.textContent = `${a.kind === 'place' ? `รางวัลที่ ${a.place}` : a.kind === 'bonus' ? 'รอบโบนัส (ทำภารกิจเยอะ)' : 'สุ่มได้'} · ${a.prize_id}${a.claimed ? ' · รับแล้ว ✔' : ''}`;
+        li.querySelector('small')!.textContent = `${a.kind === 'place' ? `รางวัลที่ ${a.place}` : a.kind === 'gacha' ? `กาชาของที่ ${a.place} (ดวงล้วน)` : a.kind === 'bonus' ? 'รอบโบนัส (ทำภารกิจเยอะ)' : 'สุ่มได้'} · ${a.prize_id}${a.claimed ? ' · รับแล้ว ✔' : ''}`;
         ul.appendChild(li);
       }
       $('net-prize-mac').textContent = store.me?.mac ?? '—';
@@ -1136,7 +1136,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       save();
       renderPrizeBtn();
       if (fresh.length) {
-        for (const a of fresh) log(a.kind === 'place' ? `🏆 PRIZE: team ${a.team} placed #${a.place} — ${a.item}` : `🎁 PRIZE: lucky draw — ${a.item} (${a.prize_id})`, 'ok');
+        for (const a of fresh) log(a.kind === 'place' || a.kind === 'gacha' ? `🏆 PRIZE: team ${a.team} placed #${a.place} — ${a.item}` : `🎁 PRIZE: lucky draw — ${a.item} (${a.prize_id})`, 'ok');
         showPrize(fresh);
       }
     }
