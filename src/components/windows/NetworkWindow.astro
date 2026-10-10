@@ -164,7 +164,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         <div class="net-certificate" id="net-certificate">
           <div class="net-cert-inner">
             <p class="net-cert-pre">Stupid Hackathon X · SHTX-NET Certification Authority</p>
-            <p class="net-cert-gold-tag">★ GOLD EDITION · 50+ HOSTS ★</p>
+            <p class="net-cert-gold-tag">★ GOLD EDITION · 40+ HOSTS ★</p>
             <h2>Proof of Friendship</h2>
             <p class="net-cert-pre">This is to certify that</p>
             <p class="net-cert-name" id="net-cert-name">—</p>
@@ -711,7 +711,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         li.querySelector('.mac')!.textContent = `${l.mac} · ICQ ${icqFor(l.mac)}`;
         ul.appendChild(li);
       }
-      $('net-count').textContent = `(${store.links.length})${store.links.length >= 50 ? ' · GOLD' : ''}`;
+      $('net-count').textContent = `(${store.links.length})${store.links.length >= GOLD_LINKS ? ' · GOLD' : ''}`;
       $('net-empty').hidden = store.links.length > 0;
       ($('net-cert-btn') as HTMLButtonElement).disabled = store.links.length < CERT_LINKS;
     }
@@ -831,13 +831,12 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       showPeer(s, 'เชื่อมผ่าน NOC (ไม่มีเสียงโมเด็ม เสียดายนะ)');
     });
 
-    const GOLD_LINKS = 50;
     $('net-cert-btn').addEventListener('click', () => {
       const me = store.me!;
       const gold = store.links.length >= GOLD_LINKS;
       $('net-certificate').classList.toggle('gold', gold);
       $('net-cert-rank').textContent = gold ? 'Gold Core Switch' : 'Fully Routable Host';
-      $('net-cert-seal').innerHTML = gold ? 'GOLD<br />50+' : 'CSMA/CA<br />APPROVED';
+      $('net-cert-seal').innerHTML = gold ? 'GOLD<br />40+' : 'CSMA/CA<br />APPROVED';
       $('net-cert-name').textContent = me.nick;
       $('net-cert-mac').textContent = me.mac;
       $('net-cert-count').textContent = String(store.links.length);
