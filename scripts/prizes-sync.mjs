@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Push the Grist "Prize" table to the NOC server as the prize list for the awards.
 //   GRIST_API_KEY=… NET_ADMIN_TOKEN=… node scripts/prizes-sync.mjs
-// Optional: GRIST_DOC (default 7yVM8dphLdTD), GRIST_HOST, NET_API.
+// Required: GRIST_DOC (the Grist doc id; never commit it, the repo is public). Optional: GRIST_HOST, NET_API.
 const GRIST_HOST = process.env.GRIST_HOST ?? 'https://grist.creatorsgarten.org';
-const DOC = process.env.GRIST_DOC ?? '7yVM8dphLdTD';
+const DOC = process.env.GRIST_DOC;
 const NET_API = (process.env.NET_API ?? 'https://82-26-104-114.sslip.io:8443').replace(/\/$/, '');
 const key = process.env.GRIST_API_KEY;
 const token = process.env.NET_ADMIN_TOKEN;
-if (!key || !token) {
-  console.error('need GRIST_API_KEY and NET_ADMIN_TOKEN');
+if (!key || !token || !DOC) {
+  console.error('need GRIST_API_KEY, NET_ADMIN_TOKEN and GRIST_DOC');
   process.exit(2);
 }
 const r = await fetch(`${GRIST_HOST}/api/docs/${DOC}/tables/Prize/records`, { headers: { authorization: `Bearer ${key}` } });
