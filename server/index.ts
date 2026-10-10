@@ -340,9 +340,12 @@ const app = new Elysia()
         set.status = 400;
         return { error: 'no device' };
       }
+      const vals = { team: clip(body.team, 40), members: clip(body.members, 200), project: clip(body.project, 60), description: clip(body.description, 300), link: clip(body.link, 200), needs: clip(body.needs, 120) };
+      const missing = Object.entries(vals).filter(([, v]) => !v).map(([k]) => k);
+      if (missing.length) return { ok: false, error: 'missing', missing }; // every field is required
       const now = Date.now();
       const first = qProject.get(device)?.first_at ?? now;
-      upsertProject.run(device, clip(body.team, 40), clip(body.members, 200), clip(body.project, 60), clip(body.description, 300), clip(body.link, 200), clip(body.needs, 120), now, first);
+      upsertProject.run(device, vals.team, vals.members, vals.project, vals.description, vals.link, vals.needs, now, first);
       const list = projectList();
       const mine = list.find((p) => p.device === device)!;
       insertEvent.run('note', '', `project ${first === now ? 'submitted' : 'updated'}: ${mine.team} — ${mine.project}`, now);

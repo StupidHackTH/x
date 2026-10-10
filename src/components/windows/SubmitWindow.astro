@@ -17,11 +17,11 @@ import Icon from '../Icon.astro';
     </header>
     <form class="sub-form" id="sub-form" novalidate>
       <label>ชื่อทีม <input id="sub-team" maxlength="40" required placeholder="เช่น ทีมไม่มีประโยชน์" /></label>
-      <label>สมาชิก (ชื่อเล่น คั่นด้วยจุลภาค) <input id="sub-members" maxlength="200" placeholder="โขง, ไท, มีมี่" /></label>
+      <label>สมาชิก (ชื่อเล่น คั่นด้วยจุลภาค) <input id="sub-members" maxlength="200" required placeholder="โขง, ไท, มีมี่" /></label>
       <label>ชื่อโปรเจกต์ <input id="sub-project" maxlength="60" required placeholder="เช่น เว็บที่โหลดช้าลงทุกครั้งที่กด" /></label>
       <label>มันทำอะไร (สั้น ๆ 1–2 ประโยค) <textarea id="sub-desc" maxlength="300" rows="3" required placeholder="อธิบายความโง่ของมัน"></textarea></label>
-      <label>ลิงก์ (demo / repo / slide ถ้ามี) <input id="sub-link" maxlength="200" inputmode="url" placeholder="https://" /></label>
-      <label>ต้องการอะไรบนเวที <input id="sub-needs" maxlength="120" placeholder="เช่น HDMI, เสียง, ให้คนในห้องยกมือ" /></label>
+      <label>ลิงก์ (demo / repo / slide อย่างน้อย 1 อัน) <input id="sub-link" maxlength="200" required inputmode="url" placeholder="https://" /></label>
+      <label>ต้องการอะไรบนเวที (ไม่ต้องการก็พิมพ์ว่าไม่มี) <input id="sub-needs" maxlength="120" required placeholder="เช่น HDMI, เสียง, ให้คนในห้องยกมือ หรือ ไม่มี" /></label>
       <div class="sub-actions">
         <button type="submit" class="xp-btn primary" id="sub-send">Submit</button>
         <span class="sub-msg" id="sub-msg"></span>
@@ -108,7 +108,12 @@ import Icon from '../Icon.astro';
     $('sub-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       for (const f of fields) draft[f] = $<HTMLInputElement>(`sub-${f}`).value.trim();
-      if (!draft.team || !draft.project || !draft.desc) return say('ใส่ชื่อทีม ชื่อโปรเจกต์ และคำอธิบายก่อน');
+      const labels: Record<(typeof fields)[number], string> = { team: 'ชื่อทีม', members: 'สมาชิก', project: 'ชื่อโปรเจกต์', desc: 'มันทำอะไร', link: 'ลิงก์', needs: 'ต้องการอะไรบนเวที' };
+      const missing = fields.filter((f) => !draft[f]);
+      if (missing.length) {
+        $(`sub-${missing[0]}`).focus();
+        return say(`กรอกให้ครบทุกช่องก่อน ยังขาด: ${missing.map((f) => labels[f]).join(', ')}`);
+      }
       if (draft.link && !/^https?:\/\//i.test(draft.link)) draft.link = `https://${draft.link}`;
       if (!hasApi() || !navigator.onLine) return say('ไม่มีเน็ต ส่งไม่ได้ ลองใหม่เมื่อออนไลน์ (ข้อมูลยังอยู่ในเครื่อง)');
       say('กำลังส่ง…');
@@ -119,6 +124,7 @@ import Icon from '../Icon.astro';
         renderStatus();
         return say('ปิดรับแล้ว');
       }
+      if ((r as { error?: string }).error === 'missing') return say('กรอกให้ครบทุกช่องก่อน');
       draft.sentAt = Date.now();
       try {
         localStorage.setItem(KEY, JSON.stringify(draft));
