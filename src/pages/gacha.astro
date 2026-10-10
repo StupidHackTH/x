@@ -1,0 +1,232 @@
+---
+// Prize gacha POC (temporary stage page): pick a team's pull count, play the pull video, flip each card.
+// Logic in src/scripts/gacha.ts; notes in .context/prize-system.md.
+import { asset } from '../lib/asset';
+import Icons from '../components/Icons.astro';
+import { tiers } from '../data/prizes';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>shtX Prize Gacha</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body { font: 15px/1.4 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #0b2a5b; overflow: hidden; user-select: none;
+        background: linear-gradient(180deg, #2a6be0 0%, #5aa2f5 38%, #bfe3ff 62%, #5fbf3a 63%, #3c9a1e 80%, #2a7a12 100%) fixed; }
+      .icon { width: 1em; height: 1em; }
+      [hidden] { display: none !important; }
+
+      #setup, .lock { position: fixed; inset: 0; overflow: auto; background: var(--bg) center / cover; }
+      .lock-msg { min-height: 1.4em; color: #c00; }
+      /* XP Luna window */
+      .xpwin { width: min(560px, 94vw); margin: 8vh auto 0; border-radius: 8px 8px 4px 4px; background: #ece9d8; border: 1px solid #0831d9;
+        box-shadow: 0 0 0 1px #3a6ff0 inset, 0 18px 50px rgba(0, 20, 60, 0.45); overflow: hidden; }
+      .xpwin-title { display: flex; align-items: center; gap: 8px; padding: 6px 8px; color: #fff; font: bold 14px 'Trebuchet MS', Tahoma, sans-serif; text-shadow: 1px 1px #0a1f6e;
+        background: linear-gradient(180deg, #0997ff 0%, #0053ee 8%, #0050ee 40%, #06f 88%, #0053ee 94%, #0039c6 100%); }
+      .xpwin-title img { width: 20px; height: 20px; }
+      .xpwin-title .x { margin-left: auto; width: 22px; height: 21px; border-radius: 3px; border: 1px solid #fff; background: linear-gradient(180deg, #e97a5a, #c8401a); display: grid; place-items: center; font-size: 12px; }
+      .xpwin-body { display: grid; grid-template-columns: 150px 1fr; min-height: 300px; }
+      .wiz-side { background: linear-gradient(180deg, #7ba2e7, #2a5dc6); display: grid; place-items: center; padding: 12px; }
+      .wiz-side img { width: 120px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35)); }
+      .wiz-main { padding: 18px 22px 14px; background: #fff; display: flex; flex-direction: column; gap: 12px; }
+      .wiz-main h1 { margin: 0; font: bold 20px 'Trebuchet MS', Tahoma, sans-serif; color: #0b2a5b; }
+      .wiz-main p { margin: 0; color: #444; font-size: 13px; }
+      .field { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; font-size: 13px; }
+      .field input { padding: 4px 6px; border: 1px solid #7f9db9; font: inherit; }
+      .stepper { display: flex; align-items: center; gap: 6px; }
+      .stepper output { min-width: 44px; text-align: center; font: bold 26px 'Trebuchet MS', sans-serif; color: #0053ee; }
+      .xpbtn { padding: 4px 14px; min-width: 32px; border: 1px solid #003c74; border-radius: 3px; font: inherit; font-size: 13px; color: #000; cursor: pointer;
+        background: linear-gradient(180deg, #fff 0%, #ecebe6 86%, #d6d0c5 100%); box-shadow: inset 0 -1px #c5c1b3; }
+      .xpbtn:hover { box-shadow: inset 0 0 0 2px #f8b636; }
+      .rates { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+      .rate { padding: 2px 8px; border-radius: 10px; color: #fff; font-weight: bold; }
+      .rate.T1 { background: linear-gradient(90deg, #f7b500, #ff5ea8, #5ec8ff); }
+      .rate.T2 { background: #8a3df0; }
+      .rate.T3 { background: #2b7bf0; }
+      .stock { font-size: 12px; color: #555; max-height: 92px; overflow: auto; border: 1px solid #c8c8c8; padding: 4px 8px; background: #fafafa; }
+      .stock b { color: #0b2a5b; }
+      .wiz-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #c8c8c8; background: #ece9d8; font-size: 12px; }
+      .wiz-foot label { display: flex; align-items: center; gap: 4px; }
+      .pull-btn { padding: 8px 26px; border-radius: 20px; border: 1px solid #1b6b00; color: #fff; font: bold 17px 'Trebuchet MS', sans-serif; cursor: pointer; text-shadow: 0 1px 1px #145000;
+        background: linear-gradient(180deg, #8fe36b 0%, #3fb31b 48%, #2d9a0f 52%, #47c11f 100%); box-shadow: 0 2px 6px rgba(0, 60, 0, 0.4), inset 0 1px #d8ffc6; }
+      .pull-btn:hover { filter: brightness(1.08); }
+      .pull-btn:disabled { filter: grayscale(1); cursor: not-allowed; }
+
+      /* pull: video or CSS fallback */
+      .stage { position: fixed; inset: 0; background: #000; display: grid; place-items: center; z-index: 10; }
+      .stage { transition: opacity 0.7s ease; }
+      .stage.fading { opacity: 0; pointer-events: none; }
+      .stage video { width: 100%; height: 100%; object-fit: cover; }
+      .skip { position: absolute; right: 22px; bottom: 22px; padding: 6px 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.35); color: #fff; font: inherit; cursor: pointer; }
+      .fallback { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 50% 60%, #9fe3ff, #2b8fe6 40%, #031a3d 100%); }
+      .fallback .disc { width: 220px; height: 220px; border-radius: 50%; animation: spin 0.5s linear infinite, drop 2.6s ease-in forwards;
+        background: radial-gradient(circle, #ddd 0 12%, transparent 12.5%), conic-gradient(#f9f, #9ff, #ff9, #9f9, #99f, #f9f); box-shadow: 0 0 40px #fff; }
+      .fallback .beam { position: absolute; left: 50%; bottom: 0; width: 120px; height: 0; transform: translateX(-50%); background: linear-gradient(0deg, var(--c), transparent); filter: blur(6px); animation: beam 1s 2.2s ease-out forwards; }
+      @keyframes spin { to { rotate: 360deg; } }
+      @keyframes drop { 0% { scale: 0.2; translate: 0 -40vh; } 60% { scale: 1; translate: 0 0; } 100% { scale: 0.05; translate: 0 30vh; opacity: 0.4; } }
+      @keyframes beam { to { height: 120vh; width: 60vw; } }
+
+      /* results */
+      .results { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: 20px;
+        background: radial-gradient(ellipse at 50% 30%, #bfe9ff 0%, #2b8fe6 40%, #0a3f8f 75%, #031a3d 100%); }
+      /* keyframe of the pull video behind the cards when the media folder has it */
+      .results::before { content: ''; position: absolute; inset: -20px; z-index: -1; background: var(--bg) center / cover; filter: blur(14px) brightness(0.55) saturate(1.2); }
+      .results { isolation: isolate; }
+      .bg-loop { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; z-index: -1; opacity: 0; transition: opacity 0.6s;
+        filter: blur(5px) brightness(0.6) saturate(1.15); }
+      .bg-loop.on { opacity: 1; }
+      .results h2 { margin: 0; color: #fff; font: bold 28px 'Trebuchet MS', sans-serif; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); letter-spacing: 1px; }
+      .results h2 small { display: block; font-size: 14px; font-weight: normal; opacity: 0.85; text-align: center; }
+      .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; max-width: 1200px; perspective: 1200px; }
+      .card { width: 190px; height: 270px; position: relative; cursor: pointer; transform-style: preserve-3d; will-change: transform;
+        transition: transform 0.75s cubic-bezier(0.34, 1.4, 0.5, 1), filter 0.3s; border: 0; padding: 0; background: none; font: inherit; opacity: 0; }
+      .results.dealt .card { animation: deal 0.75s cubic-bezier(0.22, 1.2, 0.36, 1) backwards; opacity: 1; }
+      .results h2, .res-actions { opacity: 0; transition: opacity 0.5s 0.3s; }
+      .results.dealt h2, .results.dealt .res-actions { opacity: 1; }
+      .card:not(.open):not(.charging):hover { transform: translateY(-8px) rotate(-1deg); }
+      .card.charging { transform: translateY(-14px) scale(1.08); filter: brightness(1.25) drop-shadow(0 0 18px var(--glow)); transition-duration: 0.25s; }
+      .card.T1.charging .back { animation: shake 0.12s infinite; }
+      .card.open { transform: rotateY(180deg); cursor: default; }
+      .card.T1.open { transition-duration: 1s; }
+      .card.instant { transition: none; }
+      @keyframes deal { from { transform: translateY(70vh) rotate(18deg) scale(0.7); opacity: 0; } 60% { opacity: 1; } }
+      .face { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+      /* back = glossy jewel case with the disc; the rim glow hints the rarity before the flip */
+      .back { background: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.05)), #1d5fd1;
+        border: 2px solid rgba(255, 255, 255, 0.7); box-shadow: 0 0 22px 4px var(--glow), inset 0 1px #fff; }
+      .back .disc { width: 130px; height: 130px; border-radius: 50%; animation: spin 6s linear infinite;
+        background: radial-gradient(circle, #1d5fd1 0 13%, #eee 13.5% 17%, transparent 17.5%), conic-gradient(from 20deg, #cfe9ff, #ffd6f5, #fff6c9, #d6ffe0, #cfe9ff); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+      .back img { position: absolute; width: 54px; top: 108px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4)); }
+      .back span { color: #fff; font-size: 12px; letter-spacing: 2px; text-shadow: 0 1px 2px #000; }
+      .front { transform: rotateY(180deg); padding: 16px 12px; text-align: center; color: #fff; border: 3px solid #fff; }
+      .front .tier { font: 900 30px 'Trebuchet MS', sans-serif; letter-spacing: 3px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45); }
+      .front .icon { width: 74px; height: 74px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4)); }
+      .front b { font-size: 16px; line-height: 1.25; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+      .card.T3 { --glow: rgba(94, 200, 255, 0.55); }
+      .card.T2 { --glow: rgba(170, 90, 255, 0.85); }
+      .card.T1 { --glow: rgba(255, 200, 40, 1); }
+      .card.T1 .back { animation: shake 1.2s infinite; }
+      @keyframes shake { 0%, 80%, 100% { translate: 0; } 85% { translate: -3px 0; } 90% { translate: 3px 0; } 95% { translate: -2px 0; } }
+      .T3 .front { background: linear-gradient(160deg, #8fd0ff, #2b7bf0 60%, #134ca8); }
+      .T2 .front { background: linear-gradient(160deg, #e2b8ff, #8a3df0 55%, #4b1599); box-shadow: 0 0 30px rgba(170, 90, 255, 0.9); }
+      .T1 .front { background: linear-gradient(160deg, #fff3b0, #f7b500 45%, #d9480f); box-shadow: 0 0 50px rgba(255, 200, 40, 1); }
+      .T1 .front::after { content: ''; position: absolute; inset: -50%; mix-blend-mode: overlay; animation: holo 2.4s linear infinite;
+        background: linear-gradient(115deg, transparent 30%, rgba(255, 0, 180, 0.7) 40%, rgba(0, 220, 255, 0.7) 50%, rgba(255, 255, 0, 0.7) 60%, transparent 70%); }
+      @keyframes holo { from { translate: -40% -40%; } to { translate: 40% 40%; } }
+      .flash { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle, #fff, rgba(255, 220, 80, 0.6) 40%, transparent 70%); animation: flash 0.9s ease-out forwards; z-index: 20; }
+      @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+      .spark { position: fixed; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; z-index: 21; animation: spark 1.1s ease-out forwards; }
+      @keyframes spark { to { translate: var(--dx) var(--dy); scale: 0.2; opacity: 0; } }
+      .res-actions { display: flex; gap: 10px; }
+      .res-actions .xpbtn { font-size: 15px; padding: 6px 20px; }
+      .front .photo { width: 120px; height: 120px; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); }
+      .wiz-foot select { font: inherit; font-size: 12px; max-width: 190px; }
+      .wiz-foot .xpbtn { white-space: nowrap; }
+
+      /* special reveal (T1/T2 items with reveal assets): boss-song style, 8 s / 15 s animation + 10 s showcase */
+      .special { position: fixed; inset: 0; z-index: 30; background: #000; overflow: hidden; transition: opacity 0.6s; }
+      .special.out { opacity: 0; pointer-events: none; }
+      .special video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.25s; }
+      .special .skip { z-index: 5; }
+      .special.T1 { --tc: #ffd34d; --tc2: #ff9500; }
+      .special.T2 { --tc: #c77dff; --tc2: #7a2be0; }
+      .whiteout { position: absolute; inset: 0; z-index: 4; background: #fff; opacity: 0; pointer-events: none; }
+      .whiteout.go { animation: whiteout 0.9s ease-out; }
+      @keyframes whiteout { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+      .showcase { position: absolute; left: 4%; right: 4%; max-width: 980px; bottom: 6%; z-index: 4; display: flex; align-items: center; gap: 28px; padding: 18px 26px; border-radius: 18px; opacity: 0;
+        background: linear-gradient(180deg, rgba(20, 30, 60, 0.55), rgba(5, 10, 30, 0.7)); border: 1px solid rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px); box-shadow: 0 0 40px var(--tc), inset 0 1px rgba(255, 255, 255, 0.7); }
+      .special.showing .showcase { opacity: 1; animation: rise 0.7s cubic-bezier(0.2, 1.3, 0.4, 1); }
+      @keyframes rise { from { translate: 0 60px; opacity: 0; } }
+      .jacket { width: 170px; height: 170px; flex: none; border-radius: 14px; background: #fff; padding: 10px; border: 4px solid var(--tc); box-shadow: 0 0 30px var(--tc); object-fit: contain; }
+      .special.showing .jacket { animation: slam 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) 0.15s backwards; }
+      @keyframes slam { from { scale: 2.2; rotate: -12deg; opacity: 0; } }
+      .sc-text { min-width: 0; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
+      .sc-text .tierbig { font: 900 64px/1 'Trebuchet MS', sans-serif; letter-spacing: 6px; background: linear-gradient(180deg, #fff 20%, var(--tc) 60%, var(--tc2)); -webkit-background-clip: text; text-shadow: none; background-clip: text; color: transparent; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)); }
+      .special.T1 .sc-text .tierbig { background-image: linear-gradient(90deg, #ffe680, #fff 25%, #ffc400 50%, #fff6c9 75%, #ffe680); background-size: 200% 100%; animation: shine 2s linear infinite; }
+      @keyframes shine { to { background-position: -200% 0; } }
+      .sc-text .name { font: bold 42px/1.15 'Trebuchet MS', Tahoma, sans-serif; margin-top: 6px; }
+      .special.showing .sc-text .name { animation: slam 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.45s backwards; }
+      .sc-text small { display: block; margin-top: 6px; font-size: 15px; opacity: 0.85; letter-spacing: 1px; }
+    </style>
+  </head>
+  <body>
+    <Icons />
+    <section id="lock" class="lock">
+      <form class="xpwin" id="lock-form">
+        <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />Prize Gacha Wizard · Staff only<span class="x">✕</span></div>
+        <div class="xpwin-body">
+          <div class="wiz-side"><img src={asset('logo-transparent.png')} alt="Stupid Hackathon" /></div>
+          <div class="wiz-main">
+            <h1>Log on to Prize Gacha</h1>
+            <p>ใช้รหัสผ่านทีมงานเดียวกับหน้า NOC (ปุ่ม Staff)</p>
+            <label class="field">Password <input id="lock-pass" type="password" autocomplete="current-password" required /></label>
+            <p id="lock-msg" class="lock-msg"></p>
+          </div>
+        </div>
+        <div class="wiz-foot"><span></span><button class="pull-btn" type="submit">Log on</button></div>
+      </form>
+    </section>
+
+    <section id="setup" hidden>
+      <div class="xpwin">
+        <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />Prize Gacha Wizard<span class="x">✕</span></div>
+        <div class="xpwin-body">
+          <div class="wiz-side"><img src={asset('logo-transparent.png')} alt="Stupid Hackathon" /></div>
+          <div class="wiz-main">
+            <h1>Insert prize disc</h1>
+            <p>แต่ละทีมได้สุ่มเท่ากับจำนวนสมาชิก กด Pull แล้วเปิดการ์ดทีละใบ</p>
+            <label class="field">Team <input id="team" placeholder="ชื่อทีม" /></label>
+            <div class="field">Pulls
+              <div class="stepper"><button class="xpbtn" id="minus" type="button">−</button><output id="count">3</output><button class="xpbtn" id="plus" type="button">+</button></div>
+            </div>
+            <div class="rates">
+              {Object.entries(tiers).map(([t, v]) => <span class={`rate ${t}`}>{t} {v.label} {Math.round(v.rate * 100)}%</span>)}
+            </div>
+            <div class="stock" id="stock"></div>
+          </div>
+        </div>
+        <div class="wiz-foot">
+          <label><input type="checkbox" id="novideo" /> Skip video</label>
+          <select id="demo" title="Guarantee an item in the first pull (POC demo)">
+            <option value="">Demo: random</option>
+          </select>
+          <button class="xpbtn" id="reset" type="button">Reset stock</button>
+          <button class="xpbtn" id="logout" type="button">Log off</button>
+          <button class="pull-btn" id="pull" type="button">Pull ×3</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="stage" id="stage" hidden>
+      <video id="video" playsinline preload="auto"></video>
+      <div class="fallback" id="fallback" hidden><div class="disc"></div><div class="beam"></div></div>
+      <button class="skip" id="skip" type="button">Skip ▸▸</button>
+    </section>
+
+    <section class="results" id="results" hidden>
+      <video class="bg-loop" id="bgloop" muted loop playsinline preload="auto"></video>
+      <h2 id="res-title"></h2>
+      <div class="cards" id="cards"></div>
+      <div class="res-actions">
+        <button class="xpbtn" id="reveal-all" type="button">Reveal all</button>
+        <button class="xpbtn" id="next" type="button" hidden>Next team ▸</button>
+      </div>
+    </section>
+
+    <section class="special" id="special" hidden>
+      <video id="sp-reveal" muted playsinline preload="auto"></video>
+      <video id="sp-show" muted loop playsinline preload="auto"></video>
+      <div class="whiteout" id="sp-white"></div>
+      <div class="showcase"><img class="jacket" id="sp-jacket" alt="" /><div class="sc-text"><div class="tierbig" id="sp-tier"></div><div class="name" id="sp-name"></div><small id="sp-team"></small></div></div>
+      <button class="skip" id="sp-skip" type="button">Skip ▸▸</button>
+    </section>
+
+    <script src="../scripts/gacha.ts"></script>
+  </body>
+</html>

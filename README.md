@@ -171,6 +171,12 @@ finds per spot, first finders and who has activated; the Staff bar has *Reset hu
 Print the cards: `HUNT_KEYS="k1,k2,k3,k4,k5,k6" node --experimental-strip-types scripts/hunt-cards.mjs out/` → A6 PDF with
 QR + key per spot, XP "Found New Hardware" look.
 
+## Prize gacha (`/gacha`, POC)
+
+Temporary, staff-only stage page for awarding prizes: pick a team's pull count, play the pull video for the best rarity, flip the cards. T1 (SSR) and T2 (Rare) prizes with a media folder play a full-screen reveal (an 8 s / 15 s animation, then a 10 s showcase) with their own music. Logic: `src/pages/gacha.astro`, `src/scripts/gacha.ts`; types in `src/data/prizes.ts`.
+
+It asks for the NOC staff password, then loads the reward list (the Grist Prize table, through a password-checking proxy) and all media from the media server `https://82-26-104-114.sslip.io:8445/`. Grist is the source of truth; adding a prize needs no code change. Draws and stock are kept in the browser's localStorage for now. Setup and the add-a-prize workflow: `AGENTS.md` → Prize gacha.
+
 ## Screenshots
 
 `node scripts/screenshots.mjs <outDir> [baseUrl]` drives headless Chrome (with a fake camera device, so the camera runs without a permission prompt) through every screen of all four shells and prints a captioned gallery to `<outDir>/shtX-screens-<date>-<time>.pdf`. Capture from a preview of the production build, not the dev server (dev toolbar, possibly stale CSS):
