@@ -50,7 +50,7 @@ import Icon from '../Icon.astro';
 </style>
 
 <script>
-  import { api, hasApi } from '../../scripts/netapi';
+  import { api, hasApi, deviceId } from '../../scripts/netapi';
 
   const KEY = 'shtx-submit-v1';
   const DEADLINE = new Date('2026-10-11T11:50:00+07:00').getTime();
@@ -62,23 +62,7 @@ import Icon from '../Icon.astro';
     const fields = ['team', 'members', 'project', 'desc', 'link', 'needs'] as const;
     type Draft = Record<(typeof fields)[number], string> & { device: string; sentAt?: number };
 
-    function device(): string {
-      try {
-        const net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
-        if (net.me?.mac) return net.me.mac;
-        const hunt = JSON.parse(localStorage.getItem('shtx-hunt-v1') || '{}');
-        if (hunt.device) return hunt.device;
-      } catch {
-        /* ignore */
-      }
-      const id = `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
-      try {
-        localStorage.setItem('shtx-hunt-v1', JSON.stringify({ device: id }));
-      } catch {
-        /* ignore */
-      }
-      return id;
-    }
+    const device = deviceId;
     function load(): Draft {
       try {
         const s = JSON.parse(localStorage.getItem(KEY) || '{}');

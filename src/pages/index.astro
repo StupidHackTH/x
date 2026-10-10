@@ -17,6 +17,8 @@ import CameraWindow from '../components/windows/CameraWindow.astro';
 import NetworkWindow from '../components/windows/NetworkWindow.astro';
 import HuntWindow from '../components/windows/HuntWindow.astro';
 import SubmitWindow from '../components/windows/SubmitWindow.astro';
+import VoteWindow from '../components/windows/VoteWindow.astro';
+import UpdateOverlay from '../components/UpdateOverlay.astro';
 import ConductWindow from '../components/windows/ConductWindow.astro';
 import ErrorDialog from '../components/windows/ErrorDialog.astro';
 import IosShell from '../components/IosShell.astro';
@@ -45,6 +47,7 @@ import Icons from '../components/Icons.astro';
       <NetworkWindow />
       <HuntWindow />
       <SubmitWindow />
+      <VoteWindow />
       <ConductWindow />
       <RecycleWindow />
       <ErrorDialog />
@@ -57,5 +60,6 @@ import Icons from '../components/Icons.astro';
     <AndroidShell />
   </main>
 
+  <UpdateOverlay />
   <script src="../scripts/desktop.ts"></script>
 </Layout>

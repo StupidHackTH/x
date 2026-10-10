@@ -24,6 +24,7 @@ export const windows: WindowDef[] = [
   { id: 'shtxnet', title: 'Network Connections - SHTX-NET', label: 'SHTX-NET', x: 170, y: 30, w: 940, h: 700 },
   { id: 'activate', title: 'Windows Product Activation', label: 'Activate Windows', x: 300, y: 60, w: 640, h: 660 },
   { id: 'submit', title: 'Project Submission - Pitching', label: 'Submit Project', x: 320, y: 50, w: 560, h: 640 },
+  { id: 'vote', title: 'Most Stupid Project - Vote', label: 'Stupid Vote', x: 340, y: 70, w: 560, h: 620 },
   { id: 'recycle', title: 'Recycle Bin', label: 'Recycle Bin', x: 340, y: 140, w: 460, h: 360 },
   { id: 'error', title: 'Stupid Hackathon X', label: 'Error', x: 420, y: 220, w: 380, h: 160 },
 ];

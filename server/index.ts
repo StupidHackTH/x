@@ -18,13 +18,23 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS votes (device TEXT PRIMARY KEY, target TEXT NOT NULL, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS projects (device TEXT PRIMARY KEY, team TEXT NOT NULL, members TEXT NOT NULL DEFAULT '', project TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', needs TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, first_at INTEGER NOT NULL);
 `);
 
 /* Pause switches (survive restarts): while paused the server refuses new links / finds and every screen shows it */
 const qSetting = db.query<{ v: string }, [string]>('SELECT v FROM settings WHERE k = ?');
 const setSetting = db.query('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v');
-const pauseState = () => ({ hunt: qSetting.get('pause.hunt')?.v === '1', net: qSetting.get('pause.net')?.v === '1', submit: qSetting.get('pause.submit')?.v === '1' });
+const pauseState = () => ({
+  hunt: qSetting.get('pause.hunt')?.v === '1',
+  net: qSetting.get('pause.net')?.v === '1',
+  submit: qSetting.get('pause.submit')?.v === '1',
+  vote: qSetting.get('vote.open')?.v === '1',
+  update: Number(qSetting.get('update.at')?.v ?? 0),
+  updateMsg: qSetting.get('update.msg')?.v ?? '',
+});
+const qVotes = db.query<{ device: string; target: string; at: number }, []>('SELECT device, target, at FROM votes ORDER BY at');
+const upsertVote = db.query('INSERT INTO votes (device, target, at) VALUES (?, ?, ?) ON CONFLICT(device) DO UPDATE SET target = excluded.target, at = excluded.at');
 type Project = { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; first_at: number };
 const qProjects = db.query<Project, []>('SELECT * FROM projects ORDER BY first_at');
 const qProject = db.query<Project, [string]>('SELECT * FROM projects WHERE device = ?');
@@ -257,12 +267,18 @@ const app = new Elysia()
       if (body.hunt !== undefined) setSetting.run('pause.hunt', body.hunt ? '1' : '0');
       if (body.net !== undefined) setSetting.run('pause.net', body.net ? '1' : '0');
       if (body.submit !== undefined) setSetting.run('pause.submit', body.submit ? '1' : '0');
+      if (body.vote !== undefined) setSetting.run('vote.open', body.vote ? '1' : '0');
+      if (body.update) {
+        setSetting.run('update.at', String(Date.now()));
+        setSetting.run('update.msg', clip(body.updateMsg, 140));
+        insertEvent.run('note', '', `Windows Update pushed to every phone: ${clip(body.updateMsg, 140) || '(default message)'}`, Date.now());
+      }
       const pause = pauseState();
       insertEvent.run('note', '', `pause: hunt=${pause.hunt ? 'on' : 'off'} net=${pause.net ? 'on' : 'off'}`, Date.now());
       broadcast({ type: 'pause', pause });
       return pause;
     },
-    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()), submit: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()), submit: t.Optional(t.Boolean()), vote: t.Optional(t.Boolean()), update: t.Optional(t.Boolean()), updateMsg: t.Optional(t.String({ maxLength: 200 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   /* The host with the most QR links (and at least 10) gets "ransomwared": the phone must do real air handshakes to recover */
   .get('/api/ransom', () => {
@@ -313,6 +329,52 @@ const app = new Elysia()
     }
     db.query('DELETE FROM projects WHERE device = ?').run(params.device);
     broadcast({ type: 'project', removed: params.device });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  /* Most Stupid Project vote: one vote per device for a submitted project, changeable while voting is open */
+  .get('/api/votes', () => {
+    const counts = new Map<string, number>();
+    for (const v of qVotes.all()) counts.set(v.target, (counts.get(v.target) ?? 0) + 1);
+    const results = projectList()
+      .map((p) => ({ device: p.device, team: p.team, project: p.project, votes: counts.get(p.device) ?? 0 }))
+      .sort((a, b) => b.votes - a.votes);
+    return { open: pauseState().vote, total: qVotes.all().length, results };
+  })
+  .post(
+    '/api/vote',
+    ({ body }) => {
+      if (!pauseState().vote) return { ok: false, error: 'closed' };
+      const device = clip(body.device, 40);
+      const target = clip(body.target, 40);
+      if (!device || !target) return { ok: false, error: 'bad' };
+      if (device === target) return { ok: false, error: 'self' };
+      const p = qProject.get(target);
+      if (!p) return { ok: false, error: 'unknown' };
+      upsertVote.run(device, target, Date.now());
+      broadcast({ type: 'vote' });
+      return { ok: true };
+    },
+    { body: t.Object({ device: t.String({ maxLength: 64 }), target: t.String({ maxLength: 64 }) }) },
+  )
+  .get('/api/votes.csv', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename="shtx-votes.csv"';
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = qVotes.all().map((v) => [v.device, qNode.get(v.device)?.nick ?? '', v.target, qProject.get(v.target)?.team ?? '', new Date(v.at).toISOString()].map(esc).join(','));
+    return '\ufeff' + ['voter_device,voter_nick,target_device,target_team,at', ...rows].join('\n');
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .delete('/api/votes', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM votes').run();
+    insertEvent.run('note', '', 'votes cleared', Date.now());
+    broadcast({ type: 'vote' });
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())

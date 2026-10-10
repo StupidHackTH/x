@@ -1,0 +1,120 @@
+---
+// "Windows Update" takeover: a full-screen XP shutdown-style update screen that staff push from the NOC (any time, with
+// a message) and that also fires by itself on Sunday morning at 08:30 for the breakfast announcement. Each push is
+// shown once per phone.
+---
+
+<div class="wu" id="wu" hidden role="dialog" aria-label="Windows Update">
+  <div class="wu-box">
+    <div class="wu-logo"><span class="r"></span><span class="g"></span><span class="b"></span><span class="y"></span></div>
+    <h2 id="wu-title">Installing update 1 of 7...</h2>
+    <p class="wu-kb" id="wu-kb">KB300BAUD Security Update for SHTX-NET</p>
+    <div class="wu-bar"><i id="wu-fill"></i></div>
+    <p class="wu-warn">Do not turn off or unplug your phone. It will turn off automatically.<br />ห้ามปิดเครื่องหรือวางโทรศัพท์ ระบบจะดำเนินการต่อเอง</p>
+    <p class="wu-done" id="wu-done" hidden></p>
+    <button type="button" class="wu-btn" id="wu-ok" hidden>Restart now</button>
+    <button type="button" class="wu-skip" id="wu-skip" hidden>ข้าม (ไม่แนะนำ)</button>
+  </div>
+</div>
+
+<style is:global>
+  .wu { position: fixed; inset: 0; z-index: 2147482000; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(180deg, #245edb 0%, #3f7be0 45%, #245edb 100%); color: #fff; font: 15px/1.5 Tahoma, 'Inter Thai Looped', sans-serif; text-align: center; }
+  .wu[hidden] { display: none; }
+  .wu-box { max-width: 560px; width: 100%; }
+  .wu-logo { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 56px; height: 56px; margin-bottom: 18px; transform: skewY(-6deg); }
+  .wu-logo span { border-radius: 4px 10px 4px 10px; }
+  .wu-logo .r { background: #f35325; } .wu-logo .g { background: #81bc06; } .wu-logo .b { background: #05a6f0; } .wu-logo .y { background: #ffba08; }
+  .wu h2 { margin: 0 0 4px; font-size: clamp(20px, 4vw, 30px); font-weight: normal; }
+  .wu-kb { margin: 0 0 16px; font-size: 13px; color: #d8e6ff; }
+  .wu-bar { height: 18px; border: 1px solid #fff; border-radius: 3px; padding: 2px; background: rgba(0, 0, 0, 0.25); }
+  .wu-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #7fd14b 0 9px, transparent 9px 11px); transition: width 0.4s; }
+  .wu-warn { margin: 14px 0 0; font-size: 13px; color: #e6eefc; }
+  .wu-done { margin: 18px 0 0; font-size: clamp(18px, 3.4vw, 26px); font-weight: bold; }
+  .wu-done[hidden], .wu-btn[hidden], .wu-skip[hidden] { display: none; }
+  .wu-btn { margin-top: 18px; padding: 8px 26px; background: #fff; color: #1a3f8f; border: 1px solid #003c74; border-radius: 3px; font: bold 14px Tahoma, sans-serif; cursor: pointer; }
+  .wu-skip { display: block; margin: 18px auto 0; background: none; border: 0; color: #c9d8f5; font: 11px Tahoma, sans-serif; text-decoration: underline; cursor: pointer; }
+</style>
+
+<script>
+  import { api, hasApi } from '../scripts/netapi';
+
+  const SEEN = 'shtx-update-seen';
+  const SCHED = Date.parse('2026-10-11T08:30:00+07:00'); // breakfast on day 2
+  const SCHED_WINDOW = 60 * 60 * 1000;
+  const SCHED_MSG = 'อาหารเช้ามาแล้ว ไปกินก่อนแล้วค่อยกลับมาโง่ต่อ ☕';
+  const KBS = ['KB300BAUD Security Update for SHTX-NET', 'KB4040404 Sleep Deprivation Hotfix', 'KB0000001 Coffee Driver (WHQL)', 'KB7777777 Cumulative Update for Stupid Ideas', 'KB1337 Rickroll Protection Rollup', 'KB2026 Pitching Anxiety Compatibility Pack', 'KB404 Breakfast Locator Service'];
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function setupUpdate() {
+    const el = $('wu');
+    if (!el) return;
+    let showing = false;
+    const seen = () => {
+      try {
+        return Number(localStorage.getItem(SEEN) || 0);
+      } catch {
+        return 0;
+      }
+    };
+    const markSeen = (id: number) => {
+      try {
+        localStorage.setItem(SEEN, String(Math.max(seen(), id)));
+      } catch {
+        /* ignore */
+      }
+    };
+    function show(id: number, message: string) {
+      markSeen(id); // a push that arrives while one is already on screen is swallowed, not queued
+      if (showing) return;
+      showing = true;
+      if (el.parentElement !== document.body) document.body.appendChild(el);
+      el.hidden = false;
+      $('wu-done').hidden = true;
+      $('wu-ok').hidden = true;
+      $('wu-skip').hidden = true;
+      navigator.vibrate?.([300, 100, 300]);
+      let step = 0;
+      const total = KBS.length;
+      const tick = () => {
+        if (step >= total) {
+          $('wu-title').textContent = 'Update complete.';
+          $('wu-kb').textContent = `${total} of ${total} updates installed · 0 errors (surprisingly)`;
+          $('wu-fill').style.width = '100%';
+          $('wu-done').textContent = message || SCHED_MSG;
+          $('wu-done').hidden = false;
+          $('wu-ok').hidden = false;
+          $('wu-skip').hidden = true;
+          return;
+        }
+        $('wu-title').textContent = `Installing update ${step + 1} of ${total}...`;
+        $('wu-kb').textContent = KBS[step];
+        $('wu-fill').style.width = `${Math.round(((step + 0.5) / total) * 100)}%`;
+        step++;
+        setTimeout(tick, 2600 + Math.random() * 1800);
+      };
+      tick();
+      setTimeout(() => {
+        if (!$('wu-ok').hidden) return;
+        $('wu-skip').hidden = false;
+      }, 9000);
+    }
+    const hide = () => {
+      el.hidden = true;
+      showing = false;
+    };
+    $('wu-ok').addEventListener('click', hide);
+    $('wu-skip').addEventListener('click', hide);
+
+    async function check() {
+      const now = Date.now();
+      if (now >= SCHED && now < SCHED + SCHED_WINDOW && seen() < SCHED) return show(SCHED, SCHED_MSG);
+      if (!hasApi() || !navigator.onLine) return;
+      const p = await api.pause();
+      if (p?.update && p.update > seen() && now - p.update < 20 * 60 * 1000) show(p.update, p.updateMsg || '');
+    }
+    void check();
+    setInterval(() => void check(), 30_000);
+    (window as unknown as { __shtxupdate: (m?: string) => void }).__shtxupdate = (m = '') => show(Date.now(), m);
+  }
+  setupUpdate();
+</script>

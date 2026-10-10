@@ -70,6 +70,12 @@ import Icons from '../components/Icons.astro';
       .panel li b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .panel li .deg { padding: 0 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.3); font-variant-numeric: tabular-nums; }
       .panel li .mac { font: 10px 'Lucida Console', monospace; color: #bfe6ff; }
+      .panel.vote li { display: grid; grid-template-columns: 18px 1fr 34px; gap: 8px; align-items: center; }
+      .panel.vote li b { position: relative; padding: 3px 8px; border-radius: 6px; overflow: hidden; }
+      .panel.vote li b i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(255, 211, 77, 0.55), rgba(255, 140, 0, 0.35)); border-radius: 6px; z-index: 0; transition: width 0.6s; }
+      .panel.vote li b span { position: relative; z-index: 1; }
+      .panel.vote li .deg { text-align: center; }
+      .panel.vote li.win b { box-shadow: 0 0 0 2px #ffd34d inset; }
       .hunt-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
       .hunt-key { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.35); font-size: 11px; line-height: 1.25; }
       .hunt-key b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -134,6 +140,10 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-pause-net" title="หยุด/เปิด SHTX-NET">Pause SHTX-NET</button>
             <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
             <button type="button" class="noc-btn" id="adm-submit" title="เปิด/ปิดรับโปรเจกต์">Close submissions</button>
+            <button type="button" class="noc-btn" id="adm-vote" title="เปิด/ปิดโหวต Most Stupid Project">Open voting</button>
+            <button type="button" class="noc-btn" id="adm-vote-reset" title="ล้างคะแนนโหวต">Reset votes…</button>
+            <input id="adm-update-msg" placeholder="Windows Update: ข้อความท้ายอัปเดต" autocomplete="off" />
+            <button type="button" class="noc-btn" id="adm-update" title="ส่งหน้า Windows Update ไปทุกเครื่องที่เปิดเว็บอยู่">Push update</button>
             <button type="button" class="noc-btn" id="adm-hints" title="แก้คำใบ้ Logo Hunting">Hints…</button>
             <button type="button" class="noc-btn" id="adm-hunt-reset" title="ล้างผล Logo Hunting">Reset hunt…</button>
             <button type="button" class="noc-btn" id="adm-logout" title="ลืม token ในเครื่องนี้">Log out</button>
@@ -144,6 +154,7 @@ import Icons from '../components/Icons.astro';
           <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
+          <div class="panel glass vote"><h3>Most Stupid Project <span id="noc-vote-state"></span></h3><ol id="noc-vote"></ol></div>
           <div class="panel glass hunt"><h3>Drawdy Logo Hunting</h3><div class="hunt-keys" id="hunt-keys"></div><div class="hunt-done" id="hunt-done">ยังไม่มีใคร activate</div></div>
           <div class="panel glass idea"><h3>Dumb idea of the moment</h3><blockquote id="noc-idea">…</blockquote><cite id="noc-idea-by"></cite></div>
         </aside>

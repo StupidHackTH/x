@@ -1,0 +1,193 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+
+// Most Stupid Project vote. Staff open voting from the NOC after the pitches; one vote per phone, changeable while
+// open; the phone that submitted a project cannot vote for it. Live tally shows only on the NOC; phones see the result
+// once voting closes.
+---
+
+<Window id="vote" menu={['File', 'View', 'Help']} status="Most Stupid Project · 1 เครื่อง 1 เสียง" beige>
+  <div class="vote" id="vote" data-state="wait">
+    <header class="vote-banner">
+      <div>
+        <h2>Most Stupid Project</h2>
+        <p id="vote-sub">รอ pitching จบก่อน ทีมงานจะเปิดโหวตจากจอ NOC</p>
+      </div>
+      <Icon name="vote" class="vote-banner-icon" />
+    </header>
+    <div class="vote-list" id="vote-list"></div>
+    <ol class="vote-results" id="vote-results" hidden></ol>
+    <div class="vote-actions">
+      <button type="button" class="xp-btn primary" id="vote-send" disabled>Vote</button>
+      <span class="vote-msg" id="vote-msg"></span>
+    </div>
+  </div>
+</Window>
+
+<style is:global>
+  .vote { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; }
+  .vote-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .vote-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
+  .vote-banner p { margin: 0; color: #333; }
+  .vote-banner-icon { width: 44px; height: 44px; flex: none; }
+  .vote-list { flex: 1; min-height: 0; overflow: auto; margin: 10px 18px 0; background: #fff; border: 1px solid #7f9db9; }
+  .vote-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+  .vote-row:hover { background: #f3f7fd; }
+  .vote-row.on { background: #316ac5; color: #fff; }
+  .vote-row.mine { opacity: 0.55; cursor: not-allowed; }
+  .vote-row input { margin: 3px 0 0; }
+  .vote-row .n { width: 20px; flex: none; text-align: right; color: #777; }
+  .vote-row.on .n, .vote-row.on small { color: #e6eefc; }
+  .vote-row .body { flex: 1; min-width: 0; }
+  .vote-row .body b { display: block; }
+  .vote-row small { display: block; color: #555; }
+  .vote-empty { padding: 22px; text-align: center; color: #666; }
+  .vote[data-state='wait'] .vote-row, .vote[data-state='closed'] .vote-row { cursor: default; }
+  .vote[data-state='wait'] .vote-row input, .vote[data-state='closed'] .vote-row input { visibility: hidden; }
+  .vote-results { margin: 10px 18px 0; padding: 10px 14px; list-style: none; background: #fffdf3; border: 4px double #8b6b2b; }
+  .vote-results[hidden] { display: none; }
+  .vote-results li { display: flex; gap: 8px; padding: 3px 0; }
+  .vote-results li:first-child { font-size: 15px; font-weight: bold; }
+  .vote-results li .n { width: 28px; flex: none; }
+  .vote-results li b { flex: 1; min-width: 0; }
+  .vote-actions { display: flex; align-items: center; gap: 10px; padding: 10px 18px 14px; }
+  .vote-actions .xp-btn.primary { font-weight: bold; }
+  .vote-msg { font-size: 11px; color: #b00; }
+  .vote-msg.ok { color: #0b7a2a; }
+</style>
+
+<script>
+  import { api, hasApi, deviceId, type Project, type VoteState } from '../../scripts/netapi';
+
+  const KEY = 'shtx-vote-v1';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function setupVote() {
+    const root = $('vote');
+    if (!root) return;
+    const device = deviceId();
+    let open = false;
+    let projects: Project[] = [];
+    let picked = '';
+    let mine: { target: string; at: number } | null = null;
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (s?.target) mine = s;
+    } catch {
+      /* ignore */
+    }
+    picked = mine?.target ?? '';
+    const msg = $('vote-msg');
+    const say = (t: string, ok = false) => {
+      msg.textContent = t;
+      msg.classList.toggle('ok', ok);
+    };
+    const nameOf = (dev: string) => projects.find((p) => p.device === dev)?.team ?? '?';
+
+    function renderList() {
+      const list = $('vote-list');
+      list.innerHTML = '';
+      if (!projects.length) {
+        list.innerHTML = '<div class="vote-empty">ยังไม่มีทีมส่งโปรเจกต์</div>';
+        return;
+      }
+      for (const p of projects) {
+        const row = document.createElement('label');
+        const own = p.device === device;
+        row.className = `vote-row${picked === p.device ? ' on' : ''}${own ? ' mine' : ''}`;
+        row.innerHTML = `<input type="radio" name="vote" /><span class="n"></span><span class="body"><b></b><small></small></span>`;
+        (row.querySelector('input') as HTMLInputElement).checked = picked === p.device;
+        (row.querySelector('input') as HTMLInputElement).disabled = !open || own;
+        row.querySelector('.n')!.textContent = String(p.order);
+        row.querySelector('b')!.textContent = `${p.team} — ${p.project}`;
+        row.querySelector('small')!.textContent = own ? 'ทีมคุณเอง โหวตตัวเองไม่ได้' : p.description;
+        row.addEventListener('click', (e) => {
+          if (!open || own) {
+            e.preventDefault();
+            return;
+          }
+          picked = p.device;
+          renderList();
+          $<HTMLButtonElement>('vote-send').disabled = false;
+        });
+        list.appendChild(row);
+      }
+    }
+    function renderState() {
+      root.dataset.state = open ? 'open' : mine ? 'closed' : 'wait';
+      $<HTMLButtonElement>('vote-send').disabled = !open || !picked;
+      $('vote-send').textContent = mine && open ? 'Change vote' : 'Vote';
+      $('vote-sub').textContent = open
+        ? mine
+          ? `โหวตให้ทีม ${nameOf(mine.target)} แล้ว เปลี่ยนใจได้จนกว่าจะปิดโหวต`
+          : 'เปิดโหวตแล้ว เลือกทีมที่โง่ที่สุด 1 ทีม แล้วกด Vote'
+        : mine
+          ? `ปิดโหวตแล้ว คุณโหวตให้ทีม ${nameOf(mine.target)}`
+          : 'รอ pitching จบก่อน ทีมงานจะเปิดโหวตจากจอ NOC';
+    }
+    async function renderResults() {
+      const box = $('vote-results');
+      if (open) {
+        box.hidden = true;
+        return;
+      }
+      const r = (await api.votes()) as VoteState | null;
+      if (!r || r.open || !r.total) {
+        box.hidden = true;
+        return;
+      }
+      box.innerHTML = '';
+      const medals = ['🥇', '🥈', '🥉'];
+      r.results
+        .filter((x) => x.votes > 0)
+        .slice(0, 5)
+        .forEach((x, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="n"></span><b></b><span></span>`;
+          li.querySelector('.n')!.textContent = medals[i] ?? `${i + 1}.`;
+          li.querySelector('b')!.textContent = `${x.team} — ${x.project}`;
+          li.querySelector('span:last-child')!.textContent = `${x.votes} เสียง`;
+          box.appendChild(li);
+        });
+      box.hidden = false;
+    }
+    async function refresh() {
+      if (!hasApi() || !navigator.onLine) return;
+      const [p, pr] = await Promise.all([api.pause(), api.projects()]);
+      if (pr) projects = pr.projects;
+      if (p) open = !!p.vote;
+      renderList();
+      renderState();
+      void renderResults();
+    }
+    $('vote-send').addEventListener('click', async () => {
+      if (!picked || !open) return;
+      say('กำลังส่ง…');
+      const r = await api.vote(device, picked);
+      if (!r) return say('ส่งไม่สำเร็จ ลองใหม่');
+      if (!r.ok) {
+        if (r.error === 'closed') {
+          open = false;
+          renderState();
+          return say('ปิดโหวตแล้ว');
+        }
+        if (r.error === 'self') return say('โหวตทีมตัวเองไม่ได้');
+        return say('โหวตไม่สำเร็จ ลองรีเฟรชรายชื่อทีม');
+      }
+      mine = { target: picked, at: Date.now() };
+      try {
+        localStorage.setItem(KEY, JSON.stringify(mine));
+      } catch {
+        /* ignore */
+      }
+      renderState();
+      say(`โหวตให้ทีม ${nameOf(picked)} แล้ว`, true);
+    });
+    renderList();
+    renderState();
+    void refresh();
+    setInterval(() => void refresh(), 15_000);
+  }
+  setupVote();
+</script>

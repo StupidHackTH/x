@@ -1,6 +1,6 @@
 // NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
 // leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
-import { apiBase, api, type ServerState, type HuntState } from './netapi';
+import { apiBase, api, type ServerState, type HuntState, type PauseState } from './netapi';
 import { icqFor, vendorFor } from '../data/network';
 import { encodePcm, buildFrame } from './fsk';
 
@@ -66,14 +66,21 @@ function pushEvent(e: Ev) {
   renderTicker();
 }
 
-let pauseNow: { hunt: boolean; net: boolean; submit?: boolean } = { hunt: false, net: false };
-function renderPause(p: { hunt: boolean; net: boolean; submit?: boolean }) {
+let pauseNow: PauseState = { hunt: false, net: false };
+function renderPause(p: PauseState) {
+  const voteChanged = pauseNow.vote !== p.vote;
   pauseNow = p;
   const bs = document.getElementById('adm-submit');
   if (bs) {
     bs.setAttribute('aria-pressed', String(!!p.submit));
     bs.textContent = p.submit ? 'Open submissions' : 'Close submissions';
   }
+  const bv = document.getElementById('adm-vote');
+  if (bv) {
+    bv.setAttribute('aria-pressed', String(!!p.vote));
+    bv.textContent = p.vote ? 'Close voting' : 'Open voting';
+  }
+  if (voteChanged) void loadVotes();
   const el = $('noc-paused');
   const what = [p.net ? 'SHTX-NET' : '', p.hunt ? 'Logo Hunting' : ''].filter(Boolean).join(' · ');
   el.hidden = !what;
@@ -126,6 +133,27 @@ async function loadRansom() {
   el.hidden = !ransomMac;
   if (ransomInfo) $('noc-ransom-text').textContent = `${ransomInfo.nick || ransomMac} · QR ${ransomInfo.qr} ครั้ง · AIR connection required`;
   if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
+}
+
+/* ---------- Most Stupid Project vote ---------- */
+async function loadVotes() {
+  if (demo) return;
+  const r = await api.votes();
+  if (!r) return;
+  const ol = $('noc-vote');
+  ol.innerHTML = '';
+  const max = Math.max(1, ...r.results.map((x) => x.votes));
+  r.results.slice(0, 8).forEach((x, i) => {
+    const li = document.createElement('li');
+    if (!r.open && r.total > 0 && i === 0 && x.votes > 0) li.className = 'win';
+    li.innerHTML = `<span class="n"></span><b><i></i><span></span></b><span class="deg"></span>`;
+    li.querySelector('.n')!.textContent = String(i + 1);
+    (li.querySelector('i') as HTMLElement).style.width = `${Math.round((x.votes / max) * 100)}%`;
+    li.querySelector('b span')!.textContent = `${!r.open && r.total > 0 && i === 0 && x.votes > 0 ? '👑 ' : ''}${x.team} — ${x.project}`;
+    li.querySelector('.deg')!.textContent = String(x.votes);
+    ol.appendChild(li);
+  });
+  $('noc-vote-state').textContent = r.open ? `(เปิดโหวต · ${r.total} เสียง)` : r.total ? `(ปิดแล้ว · ${r.total} เสียง)` : '(ยังไม่เปิด)';
 }
 
 /* ---------- pitching queue ---------- */
@@ -207,7 +235,9 @@ function connect() {
   void loadHunt();
   void loadRansom();
   void loadProjects();
+  void loadVotes();
   setInterval(() => void loadProjects(), 30_000);
+  setInterval(() => void loadVotes(), 15_000);
   setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
   setInterval(() => void loadHunt(), 30_000);
   setInterval(() => void loadRansom(), 30_000);
@@ -571,6 +601,32 @@ function setupAdmin() {
   });
   $('adm-submit').addEventListener('click', async () => {
     await call('/api/pause', { method: 'POST', body: JSON.stringify({ submit: !pauseNow.submit }) });
+  });
+  $('adm-vote').addEventListener('click', async () => {
+    await call('/api/pause', { method: 'POST', body: JSON.stringify({ vote: !pauseNow.vote }) });
+  });
+  const voteReset = $('adm-vote-reset') as HTMLButtonElement;
+  let voteArmed: ReturnType<typeof setTimeout> | null = null;
+  voteReset.addEventListener('click', async () => {
+    if (!voteArmed) {
+      voteReset.textContent = 'กดอีกครั้งเพื่อล้างคะแนน';
+      voteReset.classList.add('danger');
+      voteArmed = setTimeout(() => {
+        voteArmed = null;
+        voteReset.textContent = 'Reset votes…';
+        voteReset.classList.remove('danger');
+      }, 5000);
+      return;
+    }
+    clearTimeout(voteArmed);
+    voteArmed = null;
+    voteReset.textContent = 'Reset votes…';
+    voteReset.classList.remove('danger');
+    if (await call('/api/votes', { method: 'DELETE' })) say('ล้างคะแนนโหวตแล้ว');
+  });
+  $('adm-update').addEventListener('click', async () => {
+    const updateMsg = ($('adm-update-msg') as HTMLInputElement).value.trim();
+    if (await call('/api/pause', { method: 'POST', body: JSON.stringify({ update: true, updateMsg }) })) say('ส่ง Windows Update ไปทุกเครื่องแล้ว (ขึ้นภายใน 30 วิ)');
   });
   $('adm-pause-hunt').addEventListener('click', async () => {
     await call('/api/pause', { method: 'POST', body: JSON.stringify({ hunt: !pauseNow.hunt }) });

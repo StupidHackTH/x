@@ -22,6 +22,21 @@ export function apiBase(): string {
 
 export const hasApi = () => apiBase() !== '';
 
+/** Stable per-phone id shared by the games: the SHTX-NET MAC if the phone has one, else the Logo Hunting device id (created here if needed). */
+export function deviceId(): string {
+  try {
+    const net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
+    if (net?.me?.mac) return String(net.me.mac);
+    const hunt = JSON.parse(localStorage.getItem('shtx-hunt-v1') || '{}');
+    if (hunt?.device) return String(hunt.device);
+    const id = `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+    localStorage.setItem('shtx-hunt-v1', JSON.stringify({ ...(hunt && typeof hunt === 'object' ? hunt : {}), device: id }));
+    return id;
+  } catch {
+    return 'dev-private';
+  }
+}
+
 export interface ServerLink {
   mac: string;
   nick: string;
@@ -67,7 +82,15 @@ export const api = {
   ransom: () => call<{ macs: string[]; top: { mac: string; nick: string; qr: number } | null }>('/api/ransom'),
   submitProject: (p: { device: string; team: string; members: string; project: string; description: string; link: string; needs: string }) => call<{ ok: boolean; order?: number; error?: string }>('/api/projects', { method: 'POST', body: JSON.stringify(p) }),
   projects: () => call<{ projects: Project[] }>('/api/projects'),
+  vote: (device: string, target: string) => call<{ ok: boolean; error?: string }>('/api/vote', { method: 'POST', body: JSON.stringify({ device, target }) }),
+  votes: () => call<VoteState>('/api/votes'),
 };
+
+export interface VoteState {
+  open: boolean;
+  total: number;
+  results: { device: string; team: string; project: string; votes: number }[];
+}
 
 export interface Project {
   device: string;
@@ -85,6 +108,9 @@ export interface PauseState {
   hunt: boolean;
   net: boolean;
   submit?: boolean; // submissions closed by staff
+  vote?: boolean; // voting open
+  update?: number; // timestamp of the last staff "Windows Update" push (0 = never)
+  updateMsg?: string;
 }
 
 export interface HuntState {
