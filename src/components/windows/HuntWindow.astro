@@ -30,7 +30,7 @@ import { asset } from '../../lib/asset';
             <span class="act-check" aria-hidden="true"><Icon name="check" class="mono" /></span>
             <span class="act-name"><Icon name="folder" class="mono" /> {s.name}</span>
             <span class="act-hint">{s.hint}</span>
-            <span class="act-locked">ยังไม่มีคำใบ้ กด "สุ่มคำใบ้" ด้านล่าง</span>
+            <button type="button" class="act-ask" data-ask={s.id}>ขอคำใบ้</button>
             <span class="act-when" data-when></span>
           </li>
         ))}
@@ -42,10 +42,7 @@ import { asset } from '../../lib/asset';
         <button type="submit" class="xp-btn primary" id="act-submit">Activate</button>
         <p class="act-msg" id="act-msg" hidden></p>
       </form>
-      <div class="act-hintbar">
-        <button type="button" class="xp-btn" id="act-hint">สุ่มคำใบ้</button>
-        <span id="act-hint-info"></span>
-      </div>
+      <div class="act-hintbar"><span id="act-hint-info"></span></div>
       <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
     </div>
 
@@ -87,9 +84,10 @@ import { asset } from '../../lib/asset';
   .act-name { font-weight: bold; display: flex; align-items: center; gap: 4px; }
   .act-name .icon { width: 14px; height: 14px; color: #c9a227; }
   .act-hint { color: #444; font-size: 11px; }
-  .act-locked { color: #999; font-size: 11px; font-style: italic; }
-  .act-keys li:not(.locked) .act-locked, .act-keys li.locked .act-hint { display: none; }
-  .act-keys li.found .act-hint, .act-keys li.found .act-locked { display: none; }
+  .act-ask { justify-self: start; padding: 2px 8px; font: 11px Tahoma, sans-serif; background: linear-gradient(180deg, #fff, #ece9d8); border: 1px solid #7f9db9; border-radius: 3px; cursor: pointer; }
+  .act-ask[disabled] { color: #999; cursor: default; }
+  .act-keys li:not(.locked) .act-ask, .act-keys li.locked .act-hint { display: none; }
+  .act-keys li.found .act-hint, .act-keys li.found .act-ask { display: none; }
   .act-when { color: #0b7a2a; font-size: 11px; }
   .act-keys li:not(.found) .act-when { display: none; }
   .act-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px 10px; align-items: end; padding: 10px 12px; background: #fff; border: 1px solid #a0a0a0; }
@@ -129,8 +127,9 @@ import { asset } from '../../lib/asset';
     device: string;
     nick: string;
     found: Record<string, number>;
-    hints: Record<string, number>; // spot id → when the player drew its hint
+    hints: Record<string, number>; // spot id → when the player asked for its hint
     lastHintAt: number;
+    order: string[]; // this phone's shuffled order of the six slots
     cert?: string;
   }
   const HINT_COOLDOWN = 2 * 60 * 1000; // one random hint every 2 minutes
@@ -161,7 +160,9 @@ import { asset } from '../../lib/asset';
         /* ignore */
       }
       const device = s.device || net.me?.mac || `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
-      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, hints: s.hints || {}, lastHintAt: s.lastHintAt || 0, cert: s.cert };
+      const ids = huntSpots.map((sp) => sp.id);
+      const order = Array.isArray(s.order) && s.order.length === ids.length ? s.order : ids.sort(() => Math.random() - 0.5);
+      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, hints: s.hints || {}, lastHintAt: s.lastHintAt || 0, order, cert: s.cert };
     }
     function save() {
       try {
@@ -171,40 +172,53 @@ import { asset } from '../../lib/asset';
       }
     }
 
-    /* Hints are drawn by the player: "สุ่มคำใบ้" reveals one random hint for a spot not found yet, with a cooldown */
-    function hintCandidates() {
-      return huntSpots.filter((sp) => !store.found[sp.id] && !store.hints[sp.id]);
-    }
+    /* Hints: tap "ขอคำใบ้" on a slot to reveal that spot's hint; one hint every 2 minutes per phone; slot order is shuffled per phone */
     function hintWait() {
       return Math.max(0, store.lastHintAt + HINT_COOLDOWN - Date.now());
     }
     function renderHintBar() {
-      const btn = $<HTMLButtonElement>('act-hint');
-      const left = hintCandidates().length;
       const wait = hintWait();
-      btn.disabled = left === 0 || wait > 0;
-      btn.textContent = wait > 0 ? `สุ่มคำใบ้ (อีก ${Math.ceil(wait / 1000)} วิ)` : 'สุ่มคำใบ้';
-      $('act-hint-info').textContent = left === 0 ? 'คำใบ้ออกครบแล้ว' : `เหลือคำใบ้ที่ยังไม่ได้สุ่ม ${left} ใบ · สุ่มได้ทุก ${HINT_COOLDOWN / 60000} นาที`;
+      const left = huntSpots.filter((sp) => !store.found[sp.id] && !store.hints[sp.id]).length;
+      for (const b of root.querySelectorAll<HTMLButtonElement>('.act-ask')) {
+        b.disabled = wait > 0;
+        b.textContent = wait > 0 ? `รออีก ${Math.ceil(wait / 1000)} วิ` : 'ขอคำใบ้';
+      }
+      $('act-hint-info').textContent = left === 0 ? 'คำใบ้ออกครบแล้ว' : `กด "ขอคำใบ้" ที่ช่องไหนก็ได้ · ขอได้ทุก ${HINT_COOLDOWN / 60000} นาที · เหลือ ${left} ใบ`;
     }
-    function drawHint() {
-      const pool = hintCandidates();
-      if (!pool.length || hintWait() > 0) return;
-      const spot = pool[Math.floor(Math.random() * pool.length)];
-      store.hints[spot.id] = Date.now();
+    function askHint(id: string) {
+      const spot = huntSpots.find((sp) => sp.id === id);
+      if (!spot || store.found[id] || store.hints[id]) return;
+      if (hintWait() > 0) {
+        say(`ขอคำใบ้ได้อีกครั้งใน ${Math.ceil(hintWait() / 1000)} วินาที`);
+        return;
+      }
+      store.hints[id] = Date.now();
       store.lastHintAt = Date.now();
       save();
       render();
-      say(`คำใบ้ใหม่: ${spot.name} — ${spot.hint}`, true);
+      say(`คำใบ้ ${spot.name}: ${spot.hint}`, true);
     }
-    $('act-hint').addEventListener('click', drawHint);
+    root.querySelector('#act-keys')!.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ask]');
+      if (b) askHint(b.dataset.ask!);
+    });
     setInterval(renderHintBar, 1000);
+    {
+      // apply this phone's shuffled order once
+      const list = $('act-keys');
+      for (const id of store.order) {
+        const li = list.querySelector<HTMLLIElement>(`li[data-key="${id}"]`);
+        if (li) list.appendChild(li);
+      }
+      save();
+    }
 
     const total = huntSpots.length;
     const items = Array.from(root.querySelectorAll<HTMLLIElement>('#act-keys li'));
     const msg = $('act-msg');
 
     function render() {
-      $('act-mode').textContent = 'คำใบ้ได้จากการกดสุ่มเท่านั้น';
+      $('act-mode').textContent = 'ลำดับช่องสุ่มต่างกันแต่ละเครื่อง';
       let n = 0;
       for (const li of items) {
         const id = li.dataset.key!;
