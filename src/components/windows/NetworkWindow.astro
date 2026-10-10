@@ -164,14 +164,15 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         <div class="net-certificate" id="net-certificate">
           <div class="net-cert-inner">
             <p class="net-cert-pre">Stupid Hackathon X · SHTX-NET Certification Authority</p>
+            <p class="net-cert-gold-tag">★ GOLD EDITION · 50+ HOSTS ★</p>
             <h2>Proof of Friendship</h2>
             <p class="net-cert-pre">This is to certify that</p>
             <p class="net-cert-name" id="net-cert-name">—</p>
-            <p class="net-cert-text">MAC <span id="net-cert-mac">—</span> has successfully completed <b id="net-cert-count">0</b> three-way handshakes with real humans over a 300-baud acoustic link, and is hereby recognised as a <b>Fully Routable Host</b> on SHTX-NET.</p>
+            <p class="net-cert-text">MAC <span id="net-cert-mac">—</span> has successfully completed <b id="net-cert-count">0</b> three-way handshakes with real humans over a 300-baud acoustic link, and is hereby recognised as a <b id="net-cert-rank">Fully Routable Host</b> on SHTX-NET.</p>
             <p class="net-cert-peers" id="net-cert-peers"></p>
             <div class="net-cert-sig">
               <span>Issued <time id="net-cert-date">—</time></span>
-              <span class="net-cert-seal">CSMA/CA<br />APPROVED</span>
+              <span class="net-cert-seal" id="net-cert-seal">CSMA/CA<br />APPROVED</span>
               <span>Signed: root@shtx-net</span>
             </div>
           </div>
@@ -260,7 +261,8 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   .net-contacts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .net-contacts-head h3 { margin: 0; font-size: 13px; }
   .net-contacts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .net-contact { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 8px; background: #fff; border: 1px solid #c8c8c8; }
+  .net-contact { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 8px; background: #fff; border: 1px solid #c8c8c8; cursor: pointer; }
+  .net-contact:hover, .net-contact:focus-visible { border-color: #316ac5; background: #eef4ff; outline: none; }
   .net-contact b { font-size: 13px; }
   .net-contact .via { font-size: 9px; text-transform: uppercase; color: #fff; background: #6a6a6a; padding: 1px 5px; border-radius: 2px; align-self: start; }
   .net-contact .via.air { background: #1e78d8; }
@@ -292,6 +294,13 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   .net-cert-text span { font-family: 'Lucida Console', monospace; font-size: 11px; }
   .net-cert-peers { font-size: 11px; color: #555; margin: 4px 0 10px; }
   .net-cert-sig { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; margin-top: 10px; }
+  .net-certificate.gold { background: linear-gradient(135deg, #fff8d6 0%, #ffe9a8 35%, #fff4cc 55%, #f6d87a 100%); border-color: #c9a227; box-shadow: 0 0 0 3px #f1d980 inset, 0 8px 24px rgba(201, 162, 39, 0.35); }
+  .net-certificate.gold .net-cert-inner { border-color: #b8860b; }
+  .net-certificate.gold h2 { color: #8a6a12; text-shadow: 0 1px 0 #fff6cf, 0 2px 6px rgba(184, 134, 11, 0.45); }
+  .net-certificate.gold .net-cert-pre { color: #8a6a12; }
+  .net-certificate.gold .net-cert-seal { background: radial-gradient(circle, #ffe27a, #d4a017 60%, #9a6b00); color: #3b2400; box-shadow: 0 0 0 3px #fff3c4, 0 2px 6px rgba(0, 0, 0, 0.35); }
+  .net-cert-gold-tag { display: none; font: 700 11px Tahoma, sans-serif; letter-spacing: 3px; color: #8a6a12; margin: 0 0 4px; }
+  .net-certificate.gold .net-cert-gold-tag { display: block; }
   .net-cert-seal { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, #d94c4c, #8a1b1b); color: #fff; font: bold 9px/1.2 Arial, sans-serif; letter-spacing: 1px; transform: rotate(-12deg); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
 
   @media (max-width: 767px) {
@@ -687,6 +696,14 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         const when = new Date(l.at);
         const hhmm = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
         li.innerHTML = `<b></b><span class="via ${l.via}">${l.via}</span><span class="skill"></span><span class="t"></span><span class="idea"></span><span class="mac"></span>`;
+        li.tabIndex = 0;
+        li.setAttribute('role', 'button');
+        li.title = 'ดูรายละเอียด';
+        const open = () => showPeer(l.mac, `เชื่อมผ่าน ${l.via} · ${new Date(l.at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`);
+        li.addEventListener('click', open);
+        li.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') open();
+        });
         li.querySelector('b')!.textContent = l.nick || '(ไม่ทราบชื่อ)';
         li.querySelector('.skill')!.textContent = l.skill || '—';
         li.querySelector('.t')!.textContent = hhmm;
@@ -694,7 +711,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
         li.querySelector('.mac')!.textContent = `${l.mac} · ICQ ${icqFor(l.mac)}`;
         ul.appendChild(li);
       }
-      $('net-count').textContent = `(${store.links.length})`;
+      $('net-count').textContent = `(${store.links.length})${store.links.length >= 50 ? ' · GOLD' : ''}`;
       $('net-empty').hidden = store.links.length > 0;
       ($('net-cert-btn') as HTMLButtonElement).disabled = store.links.length < CERT_LINKS;
     }
@@ -750,7 +767,7 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       $('net-peer-skill').textContent = l.skill || '…';
       $('net-peer-idea').textContent = l.idea ? `“${l.idea}”` : '…';
       $('net-peer-icq').textContent = icqFor(mac);
-      $('net-peer-mac').textContent = mac;
+      $('net-peer-mac').textContent = `${mac} · ${vendorFor(mac)}`;
       const traits = $('net-peer-traits');
       traits.innerHTML = '';
       traitsFor(mac).forEach((t, i) => {
@@ -814,8 +831,13 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       showPeer(s, 'เชื่อมผ่าน NOC (ไม่มีเสียงโมเด็ม เสียดายนะ)');
     });
 
+    const GOLD_LINKS = 50;
     $('net-cert-btn').addEventListener('click', () => {
       const me = store.me!;
+      const gold = store.links.length >= GOLD_LINKS;
+      $('net-certificate').classList.toggle('gold', gold);
+      $('net-cert-rank').textContent = gold ? 'Gold Core Switch' : 'Fully Routable Host';
+      $('net-cert-seal').innerHTML = gold ? 'GOLD<br />50+' : 'CSMA/CA<br />APPROVED';
       $('net-cert-name').textContent = me.nick;
       $('net-cert-mac').textContent = me.mac;
       $('net-cert-count').textContent = String(store.links.length);

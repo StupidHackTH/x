@@ -106,7 +106,7 @@ no Bluetooth or Wi-Fi involved: phones talk to each other **through the speaker 
 - **Fallbacks**: *QR fallback* renders a link (`?open=shtxnet&peer=<mac>&n=…`) that the other phone scans with its normal
   camera; *Enter MAC…* looks a host up on the server. Both count as links (tagged `qr` / `manual`).
 - **Contacts & certificate**: cards are kept in `localStorage` (`shtx-net-v1`); after 5 handshakes the *Proof of Friendship*
-  certificate unlocks (printable).
+  certificate unlocks (printable); 50 or more contacts turn it into the Gold Edition ("Gold Core Switch").
 - **Debug hook**: `window.__shtxnet` exposes the modem, the node and frame helpers (used by `node scripts/net-e2e.mjs`, an
   end-to-end test in headless Chrome that injects a SYN and an ACK straight into the live decoder).
 
