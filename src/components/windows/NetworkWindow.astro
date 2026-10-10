@@ -159,19 +159,34 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       </div>
     </div>
 
-    <div class="net-ransom" id="net-ransom" hidden>
-      <pre class="net-ransom-skull" aria-hidden="true">      _____
+    <div class="net-ransom" id="net-ransom" hidden role="alertdialog" aria-label="Emergency Alert">
+      <div class="net-eas-crawl" aria-hidden="true"><span>▲ EMERGENCY ALERT SYSTEM ▲ THIS IS NOT A TEST ▲ SHTX-NET CIVIL NETWORK AUTHORITY HAS ISSUED A RANSOMWARE WARNING FOR THIS DEVICE ▲ QR ABUSE DETECTED ▲ SEEK HUMAN CONTACT IMMEDIATELY ▲ ประกาศภาวะฉุกเฉิน ▲ เครื่องนี้ติด RANSOMWARE เพราะสแกน QR มากเกินไป ▲ กรุณาเชื่อมต่อด้วยเสียงกับมนุษย์จริง ▲ </span></div>
+      <div class="net-eas-body">
+        <div class="net-eas-head"><span class="net-eas-tri">⚠</span> EMERGENCY ALERT <span class="net-eas-tri">⚠</span></div>
+        <p class="net-eas-sub">THIS IS NOT A TEST · นี่ไม่ใช่การซ้อม</p>
+        <div class="net-eas-main">
+          <pre class="net-ransom-skull" aria-hidden="true">      _____
      /     \
     | () () |
      \  ^  /
       |||||
       |||||</pre>
-      <h3>CONGRATULATIONS!</h3>
-      <p class="net-ransom-big">YOU ARE SO RANSOMWARE</p>
-      <p>Your QR fallback has been encrypted with military-grade 300-baud FSK. You have connected via QR <b id="net-ransom-count">?</b> times. That is not networking. That is scanning.</p>
-      <p>To decrypt, connect via <b>AIR connection</b> (real acoustic handshake) with <b id="net-ransom-left">3</b> more humans before the deadline. No Bitcoin accepted.</p>
-      <p class="net-ransom-timer">DEADLINE: <span id="net-ransom-timer">03:59:59</span> · WALLET: 1QRsp4mm3rXXXXXXXXXXXXXXXXXXX</p>
-      <button type="button" class="net-ransom-btn" id="net-ransom-ok">I UNDERSTAND (ปิดเสียงเตือน)</button>
+          <div>
+            <h3>CONGRATULATIONS!</h3>
+            <p class="net-ransom-big">YOU ARE SO RANSOMWARE</p>
+            <p class="net-eas-text">The SHTX-NET Civil Network Authority has detected <b id="net-ransom-count">?</b> QR connections from this host. That is not networking. That is scanning. Your QR fallback and MAC entry have been encrypted with military-grade 300-baud FSK.</p>
+            <p class="net-eas-text">To decrypt, complete <b id="net-ransom-left">3</b> more <b>AIR connections</b> (real acoustic handshakes with real humans) before the deadline. No Bitcoin accepted.</p>
+            <p class="net-eas-text th">ให้เอาโทรศัพท์ไปจ่อกับคนจริง ๆ อีก <b id="net-ransom-left-th">3</b> คน แล้วกด Connect ทางเสียง ระบบจะปลดล็อกเอง</p>
+          </div>
+        </div>
+        <div class="net-eas-meta">
+          <div><small>TIME REMAINING</small><span class="net-ransom-timer" id="net-ransom-timer">03:59:59</span></div>
+          <div><small>WALLET</small><span>1QRsp4mm3rXXXXXXXXXXXXXXXXXXX</span></div>
+          <div><small>ISSUED BY</small><span>SHTX-NET NOC · 300 BAUD</span></div>
+        </div>
+        <button type="button" class="net-ransom-btn" id="net-ransom-ok">I UNDERSTAND · ปิดเสียงเตือน</button>
+      </div>
+      <div class="net-eas-crawl bottom" aria-hidden="true"><span>▲ EMERGENCY ALERT SYSTEM ▲ THIS IS NOT A TEST ▲ SHTX-NET CIVIL NETWORK AUTHORITY HAS ISSUED A RANSOMWARE WARNING FOR THIS DEVICE ▲ QR ABUSE DETECTED ▲ SEEK HUMAN CONTACT IMMEDIATELY ▲ ประกาศภาวะฉุกเฉิน ▲ เครื่องนี้ติด RANSOMWARE เพราะสแกน QR มากเกินไป ▲ กรุณาเชื่อมต่อด้วยเสียงกับมนุษย์จริง ▲ </span></div>
     </div>
     <div class="net-overlay" id="net-cert" hidden>
       <div class="net-dialog wide">
@@ -317,15 +332,38 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
   .net-certificate.gold .net-cert-gold-tag { display: block; }
   .net-cert-seal { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, #d94c4c, #8a1b1b); color: #fff; font: bold 9px/1.2 Arial, sans-serif; letter-spacing: 1px; transform: rotate(-12deg); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
 
-  .net-ransom { position: absolute; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; text-align: center; background: #000; color: #ff3b3b; font: 13px/1.45 'Lucida Console', 'Courier New', monospace; overflow: auto; }
+  /* Emergency Alert System takeover: fixed to the viewport (the element is moved to <body> when shown) */
+  .net-ransom { position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; background: repeating-linear-gradient(0deg, #1a0000 0 2px, #260000 2px 4px); color: #fff; font: 15px/1.45 'Lucida Console', 'Courier New', monospace; overflow: hidden; animation: net-eas-flicker 0.12s steps(2) infinite; }
   .net-ransom[hidden] { display: none; }
-  .net-ransom-skull { margin: 0; font-size: 12px; line-height: 1.1; color: #ff6b6b; }
-  .net-ransom h3 { margin: 4px 0 0; font-size: 26px; letter-spacing: 3px; animation: net-ransom-blink 0.7s steps(2) infinite; }
-  .net-ransom-big { margin: 0; font-size: 20px; font-weight: bold; color: #fff; background: #c00; padding: 4px 12px; }
-  .net-ransom p { margin: 0; max-width: 520px; }
-  .net-ransom-timer { color: #ffd34d; }
-  .net-ransom-btn { margin-top: 8px; padding: 8px 16px; background: #c00; color: #fff; border: 2px solid #ff6b6b; font: bold 13px 'Lucida Console', monospace; cursor: pointer; }
-  @keyframes net-ransom-blink { 50% { opacity: 0.2; } }
+  .net-ransom::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+  .net-eas-crawl { flex: none; display: flex; align-items: center; height: 46px; background: #d40000; color: #fff; font-weight: bold; font-size: 20px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; border-top: 4px solid #ffd200; border-bottom: 4px solid #ffd200; box-shadow: 0 0 24px #ff0000; }
+  .net-eas-crawl span { display: inline-block; padding-left: 100vw; animation: net-eas-crawl 32s linear infinite; }
+  .net-eas-crawl.bottom span { animation-duration: 38s; }
+  .net-eas-body { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px clamp(12px, 4vw, 48px); text-align: center; overflow: auto; }
+  .net-eas-body > :first-child { margin-top: auto; } /* safe centering: centred when it fits, scrollable from the top when it does not */
+  .net-eas-body > :last-child { margin-bottom: auto; }
+  .net-eas-head { font-size: clamp(30px, 8vw, 72px); font-weight: 900; letter-spacing: 4px; color: #fff; text-shadow: 0 0 18px #ff2020, 0 0 2px #fff; animation: net-ransom-blink 0.8s steps(2) infinite; }
+  .net-eas-tri { color: #ffd200; }
+  .net-eas-sub { margin: -6px 0 0; font-size: clamp(14px, 3vw, 22px); letter-spacing: 3px; color: #ffd200; }
+  .net-eas-main { display: flex; align-items: center; gap: clamp(10px, 3vw, 36px); max-width: 980px; text-align: left; }
+  .net-ransom-skull { margin: 0; flex: none; font-size: clamp(12px, 2.4vw, 22px); line-height: 1.05; color: #ff5a5a; text-shadow: 0 0 14px #f00; animation: net-ransom-blink 1.6s steps(2) infinite; }
+  .net-ransom h3 { margin: 0; font-size: clamp(24px, 5vw, 46px); letter-spacing: 3px; color: #ff3b3b; }
+  .net-ransom-big { display: inline-block; margin: 4px 0 10px; font-size: clamp(18px, 4vw, 34px); font-weight: bold; color: #000; background: #ffd200; padding: 4px 14px; }
+  .net-eas-text { margin: 0 0 8px; font-size: clamp(13px, 1.9vw, 17px); max-width: 720px; }
+  .net-eas-text.th { color: #ffd9d9; }
+  .net-eas-text b { color: #ffd200; }
+  .net-eas-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; margin-top: 4px; }
+  .net-eas-meta div { display: flex; flex-direction: column; align-items: center; }
+  .net-eas-meta small { font-size: 10px; letter-spacing: 2px; color: #ff9b9b; }
+  .net-eas-meta span { font-size: clamp(13px, 2vw, 18px); color: #fff; }
+  .net-ransom-timer { font-size: clamp(28px, 6vw, 54px) !important; font-weight: bold; color: #ffd200 !important; text-shadow: 0 0 16px #ff9900; }
+  .net-ransom-btn { margin-top: 10px; padding: 12px 26px; background: #000; color: #fff; border: 3px solid #ffd200; font: bold clamp(14px, 2.2vw, 18px) 'Lucida Console', monospace; letter-spacing: 1px; cursor: pointer; }
+  .net-ransom-btn:hover { background: #d40000; }
+  @keyframes net-ransom-blink { 50% { opacity: 0.15; } }
+  @keyframes net-eas-crawl { to { transform: translateX(-100%); } }
+  @keyframes net-eas-flicker { 50% { filter: brightness(0.93); } }
+  @media (max-width: 640px) { .net-eas-main { flex-direction: column; text-align: center; } .net-eas-crawl { height: 36px; font-size: 15px; } }
+  @media (max-height: 760px) and (min-width: 641px) { .net-eas-head { font-size: clamp(26px, 5vw, 44px); } .net-eas-body { gap: 6px; } .net-ransom-skull { font-size: 13px; } .net-ransom h3 { font-size: 26px; } .net-ransom-big { font-size: 20px; margin-bottom: 6px; } .net-eas-text { font-size: 13px; margin-bottom: 4px; } .net-ransom-timer { font-size: 30px !important; } .net-ransom-btn { padding: 8px 20px; margin-top: 6px; } }
   .net[data-ransom='1'] #net-qr, .net[data-ransom='1'] #net-manual-btn { background: #000 !important; color: #ff3b3b !important; border-color: #ff3b3b !important; }
   @media (max-width: 767px) {
     .net-wizard-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
@@ -788,38 +826,64 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
     const RANSOM_AIR = 3;
     const RANSOM_TTL = 4 * 3600 * 1000; // the penalty expires by itself after 4 hours
     const airLinks = () => store.links.filter((l) => l.via === 'air').length;
-    let alarm: { osc: OscillatorNode; lfo: OscillatorNode } | null = null;
+    // Emergency Alert System audio: the two-tone attention signal (853 Hz + 960 Hz, like the real EAS) for 8 s, then a siren.
+    let alarm: { nodes: AudioScheduledSourceNode[]; timer: number } | null = null;
     async function alarmOn() {
       if (alarm) return;
       try {
         const ctx = modem.ctx ?? (modem.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)());
         if (ctx.state !== 'running') await ctx.resume();
+        const t0 = ctx.currentTime;
+        const attention = 8;
+        const nodes: AudioScheduledSourceNode[] = [];
+        const master = ctx.createGain();
+        master.gain.value = 0.4;
+        master.connect(ctx.destination);
+        for (const f of [853, 960]) {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0.5, t0);
+          g.gain.setValueAtTime(0, t0 + attention);
+          o.connect(g).connect(master);
+          o.start(t0);
+          o.stop(t0 + attention + 0.05);
+          nodes.push(o);
+        }
         const osc = ctx.createOscillator();
         const lfo = ctx.createOscillator();
         const lfoGain = ctx.createGain();
-        const gain = ctx.createGain();
+        const sirenGain = ctx.createGain();
         osc.type = 'square';
         osc.frequency.value = 900;
         lfo.type = 'triangle';
         lfo.frequency.value = 2.5;
         lfoGain.gain.value = 350;
         lfo.connect(lfoGain).connect(osc.frequency);
-        gain.gain.value = 0.35;
-        osc.connect(gain).connect(ctx.destination);
-        osc.start();
-        lfo.start();
-        alarm = { osc, lfo };
+        sirenGain.gain.setValueAtTime(0, t0);
+        sirenGain.gain.setValueAtTime(0.8, t0 + attention);
+        osc.connect(sirenGain).connect(master);
+        osc.start(t0 + attention);
+        lfo.start(t0);
+        nodes.push(osc, lfo);
+        const timer = window.setInterval(() => navigator.vibrate?.([600, 200, 600, 200, 600]), 2600);
+        navigator.vibrate?.([600, 200, 600, 200, 600]);
+        alarm = { nodes, timer };
       } catch {
         /* no audio */
       }
     }
     function alarmOff() {
       if (!alarm) return;
-      try {
-        alarm.osc.stop();
-        alarm.lfo.stop();
-      } catch {
-        /* ignore */
+      clearInterval(alarm.timer);
+      navigator.vibrate?.(0);
+      for (const n of alarm.nodes) {
+        try {
+          n.stop();
+        } catch {
+          /* already stopped */
+        }
       }
       alarm = null;
     }
@@ -830,11 +894,15 @@ const steps = ['Identity', ...questions.map((q) => q.id.toUpperCase()), 'MAC add
       ($('net-manual-btn') as HTMLButtonElement).disabled = !!r;
       if (!r) return;
       $('net-ransom-count').textContent = String(r.qr);
-      $('net-ransom-left').textContent = String(Math.max(0, RANSOM_AIR - (airLinks() - r.airAtStart)));
+      const left = String(Math.max(0, RANSOM_AIR - (airLinks() - r.airAtStart)));
+      $('net-ransom-left').textContent = left;
+      $('net-ransom-left-th').textContent = left;
     }
     function showRansom() {
       renderRansom();
-      $('net-ransom').hidden = false;
+      const el = $('net-ransom');
+      if (el.parentElement !== document.body) document.body.appendChild(el); // escape the window so it covers the whole screen
+      el.hidden = false;
       void alarmOn();
       log('!!! RANSOMWARE DETECTED: QR fallback encrypted. Connect via AIR to decrypt. !!!', 'err');
     }
