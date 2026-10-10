@@ -1,6 +1,7 @@
 // NOC screen logic: live state over WebSocket (+ polling fallback) from the SHTX-NET server, force-directed mesh,
 // leaderboards, event ticker, periodic BSOD. With no server it runs a 60-host demo (what a full room looks like).
 import { apiBase, api, type ServerState, type HuntState, type PauseState, type DeadPixelState } from './netapi';
+import QRCode from 'qrcode';
 import { icqFor, vendorFor } from '../data/network';
 import { encodePcm, buildFrame } from './fsk';
 
@@ -81,6 +82,7 @@ function renderPause(p: PauseState) {
     bv.textContent = p.vote ? 'Close voting' : 'Open voting';
   }
   if (voteChanged) void loadVotes();
+  renderVoteLink(p.voteUrl ?? '');
   const el = $('noc-paused');
   const what = [p.net ? 'SHTX-NET' : '', p.hunt ? 'Logo Hunting' : ''].filter(Boolean).join(' · ');
   el.hidden = !what;
@@ -133,6 +135,20 @@ async function loadRansom() {
   el.hidden = !ransomMac;
   if (ransomInfo) $('noc-ransom-text').textContent = `${ransomInfo.nick || ransomMac} · QR ${ransomInfo.qr} ครั้ง · AIR connection required`;
   if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
+}
+
+/* ---------- popular-vote link (Uddy's app): QR on the stage screen ---------- */
+let voteLinkNow: string | null = null;
+function renderVoteLink(url: string) {
+  if (url === voteLinkNow) return;
+  voteLinkNow = url;
+  const panel = $('noc-votelink');
+  panel.hidden = !url;
+  const input = document.getElementById('adm-vote-url') as HTMLInputElement | null;
+  if (input && document.activeElement !== input) input.value = url;
+  if (!url) return;
+  $('noc-vote-url').textContent = url.replace(/^https?:\/\//, '');
+  void QRCode.toCanvas($('noc-vote-qr') as HTMLCanvasElement, url, { width: 180, margin: 1, errorCorrectionLevel: 'M' }).catch(() => undefined);
 }
 
 /* ---------- Dead Pixel round: banner + dying nodes on the mesh ---------- */
@@ -716,6 +732,11 @@ function setupAdmin() {
     bingoReset.textContent = 'Reset bingo…';
     bingoReset.classList.remove('danger');
     if (await call('/api/bingo', { method: 'DELETE' })) say('ล้างกระดาน bingo แล้ว');
+  });
+  $('adm-vote-url-set').addEventListener('click', async () => {
+    const voteUrl = ($('adm-vote-url') as HTMLInputElement).value.trim();
+    const r = await call<PauseState>('/api/pause', { method: 'POST', body: JSON.stringify({ voteUrl }) });
+    if (r) say(voteUrl ? 'ตั้งลิงก์โหวตแล้ว ขึ้นในหน้าต่าง Stupid Vote ทุกเครื่องภายใน 15 วิ' : 'ล้างลิงก์โหวตแล้ว');
   });
   $('adm-update').addEventListener('click', async () => {
     const updateMsg = ($('adm-update-msg') as HTMLInputElement).value.trim();

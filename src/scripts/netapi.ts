@@ -132,6 +132,7 @@ export interface PauseState {
   vote?: boolean; // voting open
   update?: number; // timestamp of the last staff "Windows Update" push (0 = never)
   updateMsg?: string;
+  voteUrl?: string; // Uddy's popular-voting app, when staff have set it
   dp?: DeadPixel | null; // current Dead Pixel round, if any
 }
 

@@ -60,6 +60,9 @@ import Icons from '../components/Icons.astro';
       .noc-dead i { color: #8ef5a3; font-style: normal; }
       .noc-dead[hidden] { display: none; }
       .panel.bingo li .deg { min-width: 54px; text-align: center; }
+      .panel.votelink { display: flex; flex-direction: column; align-items: center; flex: none; }
+      .panel.votelink canvas { background: #fff; padding: 6px; border-radius: 8px; width: 180px; height: 180px; }
+      .votelink-url { margin-top: 6px; font: 11px 'Lucida Console', monospace; color: #d4f1ff; word-break: break-all; text-align: center; }
       @keyframes noc-blink { 50% { opacity: 0.25; } }
       .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
       .noc-admin[hidden] { display: none; }
@@ -153,6 +156,8 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-dead-end" title="จบรอบ Dead Pixel">End round</button>
             <button type="button" class="noc-btn" id="adm-bingo-reset" title="ล้างกระดาน Bingo">Reset bingo…</button>
             <button type="button" class="noc-btn" id="adm-vote-reset" title="ล้างคะแนนโหวต">Reset votes…</button>
+            <input id="adm-vote-url" placeholder="Popular vote URL (ระบบ Uddy) ว่าง = ซ่อน" autocomplete="off" />
+            <button type="button" class="noc-btn" id="adm-vote-url-set" title="ตั้ง/ล้างลิงก์โหวตสด ขึ้นในหน้าต่าง Stupid Vote ทุกเครื่องและ QR บนจอนี้">Set vote link</button>
             <input id="adm-update-msg" placeholder="Windows Update: ข้อความท้ายอัปเดต" autocomplete="off" />
             <button type="button" class="noc-btn" id="adm-update" title="ส่งหน้า Windows Update ไปทุกเครื่องที่เปิดเว็บอยู่">Push update</button>
             <button type="button" class="noc-btn" id="adm-hints" title="แก้คำใบ้ Logo Hunting">Hints…</button>
@@ -162,6 +167,7 @@ import Icons from '../components/Icons.astro';
           </div>
         </section>
         <aside class="noc-side">
+          <div class="panel glass votelink" id="noc-votelink" hidden><h3>Popular vote · สแกนเพื่อโหวต</h3><canvas id="noc-vote-qr" width="180" height="180"></canvas><div class="votelink-url" id="noc-vote-url"></div></div>
           <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>

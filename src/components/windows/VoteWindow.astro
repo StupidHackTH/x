@@ -16,12 +16,21 @@ import Icon from '../Icon.astro';
       </div>
       <Icon name="vote" class="vote-banner-icon" />
     </header>
-    <div class="vote-list" id="vote-list"></div>
-    <ol class="vote-results" id="vote-results" hidden></ol>
-    <div class="vote-actions">
-      <button type="button" class="xp-btn primary" id="vote-send" disabled>Vote</button>
-      <span class="vote-msg" id="vote-msg"></span>
-    </div>
+    <section class="vote-live" id="vote-live">
+      <div class="vote-sec-head"><b>Popular Vote · โหวตสดระหว่าง pitch</b><span>ให้คะแนนทีมที่อยู่บนเวที −3 ถึง +3 เปลี่ยนได้จนกว่าจะเปลี่ยนทีม (ระบบของ Uddy)</span></div>
+      <p class="vote-live-wait" id="vote-live-wait">ทีมงานจะเปิดลิงก์โหวตตอนเริ่ม pitching</p>
+      <div class="vote-live-frame" id="vote-live-frame" hidden><iframe id="vote-live-iframe" title="Popular vote" referrerpolicy="no-referrer" allow="fullscreen"></iframe></div>
+      <div class="vote-live-actions" id="vote-live-actions" hidden><a class="xp-btn primary" id="vote-live-open" target="_blank" rel="noopener">เปิดหน้าโหวตเต็มจอ ↗</a><span>ถ้ากรอบด้านบนไม่ขึ้น กดปุ่มนี้</span></div>
+    </section>
+    <section class="vote-pick" id="vote-pick">
+      <div class="vote-sec-head"><b>Most Stupid Project · เลือก 1 ทีมหลัง pitch จบ</b><span id="vote-pick-hint">ทีมงานจะเปิดจากจอ NOC</span></div>
+      <div class="vote-list" id="vote-list"></div>
+      <ol class="vote-results" id="vote-results" hidden></ol>
+      <div class="vote-actions">
+        <button type="button" class="xp-btn primary" id="vote-send" disabled>Vote</button>
+        <span class="vote-msg" id="vote-msg"></span>
+      </div>
+    </section>
   </div>
 </Window>
 
@@ -31,6 +40,21 @@ import Icon from '../Icon.astro';
   .vote-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
   .vote-banner p { margin: 0; color: #333; }
   .vote-banner-icon { width: 44px; height: 44px; flex: none; }
+  .vote-sec-head { display: flex; flex-direction: column; gap: 1px; padding: 8px 18px 0; }
+  .vote-sec-head b { font-size: 12px; }
+  .vote-sec-head span { font-size: 11px; color: #555; }
+  .vote-live { display: flex; flex-direction: column; flex: none; min-height: 0; border-bottom: 1px solid #c9c9c9; padding-bottom: 8px; }
+  .vote-live-wait { margin: 6px 18px 0; padding: 10px; background: #fff; border: 1px solid #7f9db9; color: #666; text-align: center; }
+  .vote-live-frame { flex: 1; min-height: 0; margin: 8px 18px 0; border: 1px solid #7f9db9; background: #fff; }
+  .vote-live-frame iframe { display: block; width: 100%; height: 100%; min-height: 320px; border: 0; }
+  .vote-live-frame[hidden], .vote-live-actions[hidden], .vote-live-wait[hidden] { display: none; }
+  .vote-live-actions { display: flex; align-items: center; gap: 10px; margin: 8px 18px 0; font-size: 11px; color: #555; }
+  .vote-live-actions .xp-btn { text-decoration: none; font-weight: bold; }
+  .vote[data-live='1'] .vote-live { flex: 1; }
+  .vote[data-live='1'][data-state='wait'] .vote-pick .vote-list, .vote[data-live='1'][data-state='wait'] .vote-pick .vote-actions { display: none; } /* keep the live vote in focus until staff open the final pick */
+  .vote[data-live='1'][data-state='open'] .vote-live-frame, .vote[data-live='1'][data-state='open'] .vote-live-wait { display: none; } /* and the other way round */
+  .vote[data-live='1'][data-state='open'] .vote-live { flex: none; }
+  .vote-pick { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .vote-list { flex: 1; min-height: 0; overflow: auto; margin: 10px 18px 0; background: #fff; border: 1px solid #7f9db9; }
   .vote-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #eee; cursor: pointer; }
   .vote-row:hover { background: #f3f7fd; }
@@ -114,8 +138,23 @@ import Icon from '../Icon.astro';
         list.appendChild(row);
       }
     }
+    let liveUrl = '';
+    function renderLive(url: string) {
+      if (url === liveUrl) return;
+      liveUrl = url;
+      root.dataset.live = url ? '1' : '';
+      $('vote-live-wait').hidden = !!url;
+      $('vote-live-frame').hidden = !url;
+      $('vote-live-actions').hidden = !url;
+      const f = $<HTMLIFrameElement>('vote-live-iframe');
+      if (url) {
+        if (f.src !== url) f.src = url;
+        $<HTMLAnchorElement>('vote-live-open').href = url;
+      } else f.removeAttribute('src');
+    }
     function renderState() {
       root.dataset.state = open ? 'open' : mine ? 'closed' : 'wait';
+      $('vote-pick-hint').textContent = open ? 'เปิดแล้ว เลือกทีมที่โง่ที่สุด 1 ทีม' : mine ? 'ปิดแล้ว' : 'ทีมงานจะเปิดจากจอ NOC หลัง pitch จบ';
       $<HTMLButtonElement>('vote-send').disabled = !open || !picked;
       $('vote-send').textContent = mine && open ? 'Change vote' : 'Vote';
       $('vote-sub').textContent = open
@@ -156,7 +195,10 @@ import Icon from '../Icon.astro';
       if (!hasApi() || !navigator.onLine) return;
       const [p, pr] = await Promise.all([api.pause(), api.projects()]);
       if (pr) projects = pr.projects;
-      if (p) open = !!p.vote;
+      if (p) {
+        open = !!p.vote;
+        renderLive(p.voteUrl ?? '');
+      }
       renderList();
       renderState();
       void renderResults();

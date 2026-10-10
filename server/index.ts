@@ -33,6 +33,7 @@ const pauseState = () => ({
   vote: qSetting.get('vote.open')?.v === '1',
   update: Number(qSetting.get('update.at')?.v ?? 0),
   updateMsg: qSetting.get('update.msg')?.v ?? '',
+  voteUrl: qSetting.get('vote.url')?.v ?? '', // Uddy's popular-voting app (https://github.com/WasinUddy/shtx-voting), set by staff from the NOC
   dp: deadPixel(),
 });
 type DeadPixel = { round: number; at: number; deadline: number; macs: string[] };
@@ -283,6 +284,15 @@ const app = new Elysia()
       if (body.net !== undefined) setSetting.run('pause.net', body.net ? '1' : '0');
       if (body.submit !== undefined) setSetting.run('pause.submit', body.submit ? '1' : '0');
       if (body.vote !== undefined) setSetting.run('vote.open', body.vote ? '1' : '0');
+      if (body.voteUrl !== undefined) {
+        const u = clip(body.voteUrl, 300);
+        if (u && !/^https?:\/\//i.test(u)) {
+          set.status = 400;
+          return { error: 'voteUrl must start with http(s)://' };
+        }
+        setSetting.run('vote.url', u);
+        insertEvent.run('note', '', u ? `popular vote link set: ${u}` : 'popular vote link cleared', Date.now());
+      }
       if (body.update) {
         setSetting.run('update.at', String(Date.now()));
         setSetting.run('update.msg', clip(body.updateMsg, 140));
@@ -293,7 +303,7 @@ const app = new Elysia()
       broadcast({ type: 'pause', pause });
       return pause;
     },
-    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()), submit: t.Optional(t.Boolean()), vote: t.Optional(t.Boolean()), update: t.Optional(t.Boolean()), updateMsg: t.Optional(t.String({ maxLength: 200 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()), submit: t.Optional(t.Boolean()), vote: t.Optional(t.Boolean()), voteUrl: t.Optional(t.String({ maxLength: 400 })), update: t.Optional(t.Boolean()), updateMsg: t.Optional(t.String({ maxLength: 200 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   /* The host with the most QR links (and at least 10) gets "ransomwared": the phone must do real air handshakes to recover */
   .get('/api/ransom', () => {
@@ -309,6 +319,11 @@ const app = new Elysia()
   })
   /* Project submissions for pitching: one per device, resubmit = update, order = first submission time */
   .get('/api/projects', () => ({ projects: projectList() }))
+  .get('/api/projects.txt', ({ set }) => {
+    // team names in pitching order, one per line: paste into the popular-voting admin (Uddy's app) as the team list
+    set.headers['content-type'] = 'text/plain; charset=utf-8';
+    return projectList().map((p) => p.team).join('\n') + '\n';
+  })
   .get('/api/projects.csv', ({ set }) => {
     set.headers['content-type'] = 'text/csv; charset=utf-8';
     set.headers['content-disposition'] = 'attachment; filename="shtx-projects.csv"';
