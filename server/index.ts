@@ -27,12 +27,12 @@ const pauseState = () => ({ hunt: qSetting.get('pause.hunt')?.v === '1', net: qS
 
 /* Drawdy Logo Hunting: the six product keys, as SHA-256 of the printed key (same list as src/data/hunt.ts) */
 const HUNT: { id: string; name: string; hash: string }[] = [
-  { id: 'k1', name: 'Recycle Bin', hash: 'e7822b577b7065240606fa98e24398735af63b470331f473ea7f17203797a036' },
-  { id: 'k2', name: 'My Computer', hash: '6d800f149c94130dc5ef3adf71298fdd9de66ced2e1feabd769d490169c2afde' },
-  { id: 'k3', name: 'Desktop', hash: '89ebb198348516fb06f869b5dcf2a407ecc024b3a15dc20f31e93ea0ac120e3c' },
-  { id: 'k4', name: 'C:\\Windows\\System32', hash: '32fc53e6e4525b0b7e406ef3ab205a22a6044681e4ebe93d2f6dfebab86e7be6' },
-  { id: 'k5', name: 'Downloads', hash: 'f285ac2970164637f20cd1be9f2d36aa6989c134b90e15f7ca98236e58a7896e' },
-  { id: 'k6', name: 'Program Files', hash: '3eb9158e52e4110f8ef8e87732b2d799f7da3ab2f1ef175ed58a6c73e78f0729' },
+  { id: 'k1', name: 'Recycle Bin', hash: '6f4788f372ae874ef8f9dca401d09ba103b30b0ac0ce6173732eb4004e9b40e7' },
+  { id: 'k2', name: 'My Computer', hash: 'bba2b1d8b4a1a81e303b5c70d9fadd88a38cdc77fbf9a439786f4d588c61d88a' },
+  { id: 'k3', name: 'Desktop', hash: 'e100634ce085b56829f512ca686a265719769cb295776c9959436a1006c32367' },
+  { id: 'k4', name: 'C:\\Windows\\System32', hash: '975c9c185e9d813ee55c09f07c2e57ab21734f8ac4dacbd779d6d63558073b3e' },
+  { id: 'k5', name: 'Downloads', hash: 'f64e8e1a74577dda9bea6929a89fd194dff38742cde6234a27ee25d3e964997d' },
+  { id: 'k6', name: 'Program Files', hash: '65a311787f303fbc82614d771ac8a3c9a7c2a8854d289c2a686d786559f86cf5' },
 ];
 const huntCert = (device: string) => 'ACT-' + new Bun.CryptoHasher('sha256').update(`${device}|${HUNT.map((h) => h.id).join(',')}`).digest('hex').slice(0, 6).toUpperCase();
 const qHuntAll = db.query<{ device: string; key: string; nick: string; at: number }, []>('SELECT device, key, nick, at FROM hunt ORDER BY at');
