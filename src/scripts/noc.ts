@@ -66,9 +66,14 @@ function pushEvent(e: Ev) {
   renderTicker();
 }
 
-let pauseNow = { hunt: false, net: false };
-function renderPause(p: { hunt: boolean; net: boolean }) {
+let pauseNow: { hunt: boolean; net: boolean; submit?: boolean } = { hunt: false, net: false };
+function renderPause(p: { hunt: boolean; net: boolean; submit?: boolean }) {
   pauseNow = p;
+  const bs = document.getElementById('adm-submit');
+  if (bs) {
+    bs.setAttribute('aria-pressed', String(!!p.submit));
+    bs.textContent = p.submit ? 'Open submissions' : 'Close submissions';
+  }
   const el = $('noc-paused');
   const what = [p.net ? 'SHTX-NET' : '', p.hunt ? 'Logo Hunting' : ''].filter(Boolean).join(' · ');
   el.hidden = !what;
@@ -121,6 +126,24 @@ async function loadRansom() {
   el.hidden = !ransomMac;
   if (ransomInfo) $('noc-ransom-text').textContent = `${ransomInfo.nick || ransomMac} · QR ${ransomInfo.qr} ครั้ง · AIR connection required`;
   if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
+}
+
+/* ---------- pitching queue ---------- */
+async function loadProjects() {
+  if (demo) return;
+  const r = await api.projects();
+  if (!r) return;
+  const ol = $('noc-projects');
+  ol.innerHTML = '';
+  for (const p of r.projects.slice(0, 12)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="n"></span><b></b><span class="mac"></span>`;
+    li.querySelector('.n')!.textContent = String(p.order);
+    li.querySelector('b')!.textContent = `${p.team} — ${p.project}`;
+    li.querySelector('.mac')!.textContent = p.needs ? p.needs.slice(0, 18) : '';
+    ol.appendChild(li);
+  }
+  $('noc-proj-count').textContent = `(${r.projects.length})`;
 }
 
 /* ---------- Drawdy Logo Hunting ---------- */
@@ -183,6 +206,8 @@ function connect() {
   void api.state().then((s) => s && applyState(s));
   void loadHunt();
   void loadRansom();
+  void loadProjects();
+  setInterval(() => void loadProjects(), 30_000);
   setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
   setInterval(() => void loadHunt(), 30_000);
   setInterval(() => void loadRansom(), 30_000);
@@ -543,6 +568,9 @@ function setupAdmin() {
   });
   $('adm-pause-net').addEventListener('click', async () => {
     await call('/api/pause', { method: 'POST', body: JSON.stringify({ net: !pauseNow.net }) });
+  });
+  $('adm-submit').addEventListener('click', async () => {
+    await call('/api/pause', { method: 'POST', body: JSON.stringify({ submit: !pauseNow.submit }) });
   });
   $('adm-pause-hunt').addEventListener('click', async () => {
     await call('/api/pause', { method: 'POST', body: JSON.stringify({ hunt: !pauseNow.hunt }) });

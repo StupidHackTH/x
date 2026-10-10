@@ -18,12 +18,18 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS hunt (device TEXT NOT NULL, key TEXT NOT NULL, nick TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (device, key));
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS projects (device TEXT PRIMARY KEY, team TEXT NOT NULL, members TEXT NOT NULL DEFAULT '', project TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', needs TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, first_at INTEGER NOT NULL);
 `);
 
 /* Pause switches (survive restarts): while paused the server refuses new links / finds and every screen shows it */
 const qSetting = db.query<{ v: string }, [string]>('SELECT v FROM settings WHERE k = ?');
 const setSetting = db.query('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v');
-const pauseState = () => ({ hunt: qSetting.get('pause.hunt')?.v === '1', net: qSetting.get('pause.net')?.v === '1' });
+const pauseState = () => ({ hunt: qSetting.get('pause.hunt')?.v === '1', net: qSetting.get('pause.net')?.v === '1', submit: qSetting.get('pause.submit')?.v === '1' });
+type Project = { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; first_at: number };
+const qProjects = db.query<Project, []>('SELECT * FROM projects ORDER BY first_at');
+const qProject = db.query<Project, [string]>('SELECT * FROM projects WHERE device = ?');
+const upsertProject = db.query('INSERT INTO projects (device, team, members, project, description, link, needs, at, first_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(device) DO UPDATE SET team = excluded.team, members = excluded.members, project = excluded.project, description = excluded.description, link = excluded.link, needs = excluded.needs, at = excluded.at');
+const projectList = () => qProjects.all().map((p, i) => ({ ...p, order: i + 1 }));
 
 /* Drawdy Logo Hunting: the six product keys, as SHA-256 of the printed key (same list as src/data/hunt.ts) */
 const HUNT: { id: string; name: string; hash: string }[] = [
@@ -250,12 +256,13 @@ const app = new Elysia()
       }
       if (body.hunt !== undefined) setSetting.run('pause.hunt', body.hunt ? '1' : '0');
       if (body.net !== undefined) setSetting.run('pause.net', body.net ? '1' : '0');
+      if (body.submit !== undefined) setSetting.run('pause.submit', body.submit ? '1' : '0');
       const pause = pauseState();
       insertEvent.run('note', '', `pause: hunt=${pause.hunt ? 'on' : 'off'} net=${pause.net ? 'on' : 'off'}`, Date.now());
       broadcast({ type: 'pause', pause });
       return pause;
     },
-    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
+    { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()), submit: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   /* The host with the most QR links (and at least 10) gets "ransomwared": the phone must do real air handshakes to recover */
   .get('/api/ransom', () => {
@@ -269,6 +276,45 @@ const app = new Elysia()
     if (!top || top[1] < 10) return { macs: [], top: null };
     return { macs: [top[0]], top: { mac: top[0], nick: qNode.get(top[0])?.nick ?? '', qr: top[1] } };
   })
+  /* Project submissions for pitching: one per device, resubmit = update, order = first submission time */
+  .get('/api/projects', () => ({ projects: projectList() }))
+  .get('/api/projects.csv', ({ set }) => {
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename="shtx-projects.csv"';
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = projectList().map((p) => [p.order, p.team, p.members, p.project, p.description, p.link, p.needs, new Date(p.first_at).toISOString(), new Date(p.at).toISOString(), p.device].map(esc).join(','));
+    return '\ufeff' + ['order,team,members,project,description,link,needs,first_submitted,updated,device', ...rows].join('\n');
+  })
+  .post(
+    '/api/projects',
+    ({ body, set }) => {
+      if (pauseState().submit) return { ok: false, error: 'closed' }; // 200 so the client can tell "closed" from "network failed"
+      const device = clip(body.device, 40);
+      if (!device) {
+        set.status = 400;
+        return { error: 'no device' };
+      }
+      const now = Date.now();
+      const first = qProject.get(device)?.first_at ?? now;
+      upsertProject.run(device, clip(body.team, 40), clip(body.members, 200), clip(body.project, 60), clip(body.description, 300), clip(body.link, 200), clip(body.needs, 120), now, first);
+      const list = projectList();
+      const mine = list.find((p) => p.device === device)!;
+      insertEvent.run('note', '', `project ${first === now ? 'submitted' : 'updated'}: ${mine.team} — ${mine.project}`, now);
+      broadcast({ type: 'project', project: mine });
+      broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `project ${first === now ? 'submitted' : 'updated'}: ${mine.team} — ${mine.project}`, at: now } });
+      return { ok: true, order: mine.order };
+    },
+    { body: t.Object({ device: t.String({ maxLength: 64 }), team: t.String({ maxLength: 80 }), members: t.Optional(t.String({ maxLength: 400 })), project: t.String({ maxLength: 120 }), description: t.Optional(t.String({ maxLength: 600 })), link: t.Optional(t.String({ maxLength: 400 })), needs: t.Optional(t.String({ maxLength: 240 })) }) },
+  )
+  .delete('/api/projects/:device', ({ params, query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM projects WHERE device = ?').run(params.device);
+    broadcast({ type: 'project', removed: params.device });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())
   .post(
     '/api/hunt/hints',

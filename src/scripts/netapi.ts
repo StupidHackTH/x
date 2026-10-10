@@ -65,11 +65,26 @@ export const api = {
   hunt: () => call<HuntState>('/api/hunt'),
   pause: () => call<PauseState>('/api/pause'),
   ransom: () => call<{ macs: string[]; top: { mac: string; nick: string; qr: number } | null }>('/api/ransom'),
+  submitProject: (p: { device: string; team: string; members: string; project: string; description: string; link: string; needs: string }) => call<{ ok: boolean; order?: number; error?: string }>('/api/projects', { method: 'POST', body: JSON.stringify(p) }),
+  projects: () => call<{ projects: Project[] }>('/api/projects'),
 };
+
+export interface Project {
+  device: string;
+  team: string;
+  members: string;
+  project: string;
+  description: string;
+  link: string;
+  needs: string;
+  at: number;
+  order: number;
+}
 
 export interface PauseState {
   hunt: boolean;
   net: boolean;
+  submit?: boolean; // submissions closed by staff
 }
 
 export interface HuntState {

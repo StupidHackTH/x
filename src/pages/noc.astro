@@ -133,6 +133,7 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-kick-btn">Kick</button>
             <button type="button" class="noc-btn" id="adm-pause-net" title="หยุด/เปิด SHTX-NET">Pause SHTX-NET</button>
             <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
+            <button type="button" class="noc-btn" id="adm-submit" title="เปิด/ปิดรับโปรเจกต์">Close submissions</button>
             <button type="button" class="noc-btn" id="adm-hints" title="แก้คำใบ้ Logo Hunting">Hints…</button>
             <button type="button" class="noc-btn" id="adm-hunt-reset" title="ล้างผล Logo Hunting">Reset hunt…</button>
             <button type="button" class="noc-btn" id="adm-logout" title="ลืม token ในเครื่องนี้">Log out</button>
@@ -142,6 +143,7 @@ import Icons from '../components/Icons.astro';
         <aside class="noc-side">
           <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
+          <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
           <div class="panel glass hunt"><h3>Drawdy Logo Hunting</h3><div class="hunt-keys" id="hunt-keys"></div><div class="hunt-done" id="hunt-done">ยังไม่มีใคร activate</div></div>
           <div class="panel glass idea"><h3>Dumb idea of the moment</h3><blockquote id="noc-idea">…</blockquote><cite id="noc-idea-by"></cite></div>
         </aside>

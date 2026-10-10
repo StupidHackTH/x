@@ -1,0 +1,152 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+
+// Project submission for pitching (Day 2). One record per device; resubmitting updates it. Stored on the NOC server
+// (POST /api/projects); the NOC shows the pitching queue and staff export /api/projects.csv.
+---
+
+<Window id="submit" menu={['File', 'Help']} status="Project Submission · ปิดรับ 11:50 วันอาทิตย์" beige>
+  <div class="sub" id="sub" data-state="open">
+    <header class="sub-banner">
+      <div>
+        <h2>Submit your stupid project</h2>
+        <p>ส่งข้อมูลทีมสำหรับ pitching บ่ายวันอาทิตย์ ส่งแล้วแก้ได้จนถึง 11:50 ส่งซ้ำจากเครื่องเดิม = แก้ไขอันเดิม</p>
+      </div>
+      <Icon name="submit" class="sub-banner-icon" />
+    </header>
+    <form class="sub-form" id="sub-form" novalidate>
+      <label>ชื่อทีม <input id="sub-team" maxlength="40" required placeholder="เช่น ทีมไม่มีประโยชน์" /></label>
+      <label>สมาชิก (ชื่อเล่น คั่นด้วยจุลภาค) <input id="sub-members" maxlength="200" placeholder="โขง, ไท, มีมี่" /></label>
+      <label>ชื่อโปรเจกต์ <input id="sub-project" maxlength="60" required placeholder="เช่น เว็บที่โหลดช้าลงทุกครั้งที่กด" /></label>
+      <label>มันทำอะไร (สั้น ๆ 1–2 ประโยค) <textarea id="sub-desc" maxlength="300" rows="3" required placeholder="อธิบายความโง่ของมัน"></textarea></label>
+      <label>ลิงก์ (demo / repo / slide ถ้ามี) <input id="sub-link" maxlength="200" inputmode="url" placeholder="https://" /></label>
+      <label>ต้องการอะไรบนเวที <input id="sub-needs" maxlength="120" placeholder="เช่น HDMI, เสียง, ให้คนในห้องยกมือ" /></label>
+      <div class="sub-actions">
+        <button type="submit" class="xp-btn primary" id="sub-send">Submit</button>
+        <span class="sub-msg" id="sub-msg"></span>
+      </div>
+    </form>
+    <p class="sub-note" id="sub-status">ยังไม่ได้ส่ง</p>
+  </div>
+</Window>
+
+<style is:global>
+  .sub { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: auto; }
+  .sub-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .sub-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
+  .sub-banner p { margin: 0; color: #333; }
+  .sub-banner-icon { width: 44px; height: 44px; flex: none; }
+  .sub-form { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px 6px; }
+  .sub-form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #333; }
+  .sub-form input, .sub-form textarea { padding: 4px 6px; border: 1px solid #7f9db9; background: #fff; font: 13px Tahoma, 'Inter Thai Looped', sans-serif; }
+  .sub-form textarea { resize: vertical; }
+  .sub[data-state='closed'] .sub-form input, .sub[data-state='closed'] .sub-form textarea { background: #f0f0f0; color: #777; }
+  .sub-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .sub-actions .xp-btn.primary { font-weight: bold; }
+  .sub-msg { font-size: 11px; color: #b00; }
+  .sub-msg.ok { color: #0b7a2a; }
+  .sub-note { margin: 0; padding: 8px 18px 14px; font-size: 11px; color: #555; }
+</style>
+
+<script>
+  import { api, hasApi } from '../../scripts/netapi';
+
+  const KEY = 'shtx-submit-v1';
+  const DEADLINE = new Date('2026-10-11T11:50:00+07:00').getTime();
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function setupSubmit() {
+    const root = $('sub');
+    if (!root) return;
+    const fields = ['team', 'members', 'project', 'desc', 'link', 'needs'] as const;
+    type Draft = Record<(typeof fields)[number], string> & { device: string; sentAt?: number };
+
+    function device(): string {
+      try {
+        const net = JSON.parse(localStorage.getItem('shtx-net-v1') || '{}');
+        if (net.me?.mac) return net.me.mac;
+        const hunt = JSON.parse(localStorage.getItem('shtx-hunt-v1') || '{}');
+        if (hunt.device) return hunt.device;
+      } catch {
+        /* ignore */
+      }
+      const id = `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+      try {
+        localStorage.setItem('shtx-hunt-v1', JSON.stringify({ device: id }));
+      } catch {
+        /* ignore */
+      }
+      return id;
+    }
+    function load(): Draft {
+      try {
+        const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+        return { team: '', members: '', project: '', desc: '', link: '', needs: '', ...s, device: s.device || device() };
+      } catch {
+        return { team: '', members: '', project: '', desc: '', link: '', needs: '', device: device() };
+      }
+    }
+    const draft = load();
+    for (const f of fields) $<HTMLInputElement>(`sub-${f}`).value = draft[f];
+    const msg = $('sub-msg');
+    const say = (t: string, ok = false) => {
+      msg.textContent = t;
+      msg.classList.toggle('ok', ok);
+    };
+    let closedByStaff = false;
+    function renderStatus() {
+      const closed = closedByStaff || Date.now() > DEADLINE;
+      root.dataset.state = closed ? 'closed' : 'open';
+      $<HTMLButtonElement>('sub-send').disabled = closed;
+      $('sub-send').textContent = closed ? 'ปิดรับแล้ว' : draft.sentAt ? 'Update' : 'Submit';
+      $('sub-status').textContent = draft.sentAt
+        ? `ส่งแล้ว ${new Date(draft.sentAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })} (ทีม ${draft.team})${closed ? ' · ปิดรับแล้ว' : ' · แก้ได้จนถึง 11:50 วันอาทิตย์'}`
+        : closed
+          ? 'ปิดรับแล้ว ถ้ายังไม่ได้ส่ง ไปบอกทีมงานที่หน้างาน'
+          : 'ยังไม่ได้ส่ง';
+    }
+    async function refreshClosed() {
+      if (!hasApi() || !navigator.onLine) return;
+      const p = await api.pause();
+      if (p) closedByStaff = !!(p as { submit?: boolean }).submit;
+      renderStatus();
+    }
+    for (const f of fields)
+      $(`sub-${f}`).addEventListener('input', () => {
+        draft[f] = $<HTMLInputElement>(`sub-${f}`).value;
+        try {
+          localStorage.setItem(KEY, JSON.stringify(draft));
+        } catch {
+          /* ignore */
+        }
+      });
+    $('sub-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      for (const f of fields) draft[f] = $<HTMLInputElement>(`sub-${f}`).value.trim();
+      if (!draft.team || !draft.project || !draft.desc) return say('ใส่ชื่อทีม ชื่อโปรเจกต์ และคำอธิบายก่อน');
+      if (draft.link && !/^https?:\/\//i.test(draft.link)) draft.link = `https://${draft.link}`;
+      if (!hasApi() || !navigator.onLine) return say('ไม่มีเน็ต ส่งไม่ได้ ลองใหม่เมื่อออนไลน์ (ข้อมูลยังอยู่ในเครื่อง)');
+      say('กำลังส่ง…');
+      const r = await api.submitProject({ device: draft.device, team: draft.team, members: draft.members, project: draft.project, description: draft.desc, link: draft.link, needs: draft.needs });
+      if (!r) return say('ส่งไม่สำเร็จ ลองใหม่ หรือบอกทีมงาน');
+      if ((r as { error?: string }).error === 'closed') {
+        closedByStaff = true;
+        renderStatus();
+        return say('ปิดรับแล้ว');
+      }
+      draft.sentAt = Date.now();
+      try {
+        localStorage.setItem(KEY, JSON.stringify(draft));
+      } catch {
+        /* ignore */
+      }
+      renderStatus();
+      say(`ส่งแล้ว ทีม ${draft.team} อยู่ในคิว pitching ลำดับที่ ${(r as { order?: number }).order ?? '?'}`, true);
+    });
+    renderStatus();
+    void refreshClosed();
+    setInterval(() => void refreshClosed(), 60_000);
+  }
+  setupSubmit();
+</script>
