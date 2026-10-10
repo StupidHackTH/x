@@ -115,8 +115,23 @@ function gachaRates(): Record<GachaTier, number> {
   }
   return { T1: 0.06, T2: 0.24, T3: 0.7 };
 }
+type GachaMode = 'uniform' | 'tier';
+const gachaMode = (): GachaMode => (qSetting.get('gacha.mode')?.v === 'tier' ? 'tier' : 'uniform'); // uniform = every remaining ticket equally likely (fair, order-independent); tier = fixed tier rates
+function gachaLiveRates(prizes: GachaPrize[]): Record<GachaTier, number> {
+  const left = (t: GachaTier) => prizes.filter((p) => p.tier === t).reduce((s, p) => s + p.remaining, 0);
+  const total = left('T1') + left('T2') + left('T3') || 1;
+  return { T1: left('T1') / total, T2: left('T2') / total, T3: left('T3') / total };
+}
 function gachaDrawOne(prizes: GachaPrize[], rates: Record<GachaTier, number>): GachaPrize | null {
   const order: GachaTier[] = ['T1', 'T2', 'T3'];
+  if (gachaMode() === 'uniform') {
+    const items = prizes.filter((p) => p.remaining > 0);
+    if (!items.length) return null;
+    let k = rnd() * items.reduce((s, p) => s + p.remaining, 0);
+    const item = items.find((p) => (k -= p.remaining) < 0) ?? items[items.length - 1];
+    item.remaining--;
+    return item;
+  }
   const avail = order.filter((t) => prizes.some((p) => p.tier === t && p.remaining > 0));
   if (!avail.length) return null;
   let r = rnd() * avail.reduce((s, t) => s + rates[t], 0);
@@ -780,7 +795,7 @@ const app = new Elysia()
     }
     try {
       const prizes = await gachaPrizes();
-      return { prizes, rates: gachaRates(), pulls: qGachaPulls.all().length };
+      return { prizes, rates: gachaRates(), mode: gachaMode(), liveRates: gachaLiveRates(prizes), pulls: qGachaPulls.all().length };
     } catch (e) {
       set.status = 502;
       return { error: `prize list: ${(e as Error).message}` };
@@ -819,7 +834,7 @@ const app = new Elysia()
       insertEvent.run('note', '', detail, now);
       broadcast({ type: 'event', event: { type: 'note', mac: '', detail, at: now } });
       broadcast({ type: 'gacha' });
-      return { ok: true, id, team, prizes: got.map((p) => p.id), at: now, remaining: Object.fromEntries(prizes.map((p) => [p.id, p.remaining])) };
+      return { ok: true, id, team, prizes: got.map((p) => p.id), at: now, remaining: Object.fromEntries(prizes.map((p) => [p.id, p.remaining])), liveRates: gachaLiveRates(prizes) };
     },
     { body: t.Object({ team: t.String({ maxLength: 80 }), count: t.Optional(t.Integer()), demo: t.Optional(t.String({ maxLength: 80 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
@@ -844,11 +859,11 @@ const app = new Elysia()
       set.status = 403;
       return { error: 'admin only' };
     }
-    const r = { T1: Math.max(0, body.T1), T2: Math.max(0, body.T2), T3: Math.max(0, body.T3) };
-    setSetting.run('gacha.rates', JSON.stringify(r));
+    if (body.T1 !== undefined && body.T2 !== undefined && body.T3 !== undefined) setSetting.run('gacha.rates', JSON.stringify({ T1: Math.max(0, body.T1), T2: Math.max(0, body.T2), T3: Math.max(0, body.T3) }));
+    if (body.mode) setSetting.run('gacha.mode', body.mode === 'tier' ? 'tier' : 'uniform');
     broadcast({ type: 'gacha' });
-    return { ok: true, rates: gachaRates() };
-  }, { body: t.Object({ T1: t.Number(), T2: t.Number(), T3: t.Number() }), query: t.Object({ token: t.Optional(t.String()) }) })
+    return { ok: true, rates: gachaRates(), mode: gachaMode() };
+  }, { body: t.Object({ T1: t.Optional(t.Number()), T2: t.Optional(t.Number()), T3: t.Optional(t.Number()), mode: t.Optional(t.String()) }), query: t.Object({ token: t.Optional(t.String()) }) })
   .delete('/api/gacha', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;

@@ -18,6 +18,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 
 let prizes: Prize[] = [];
 let stock: Record<string, number> = {}; // remaining per prize id, as the server reports it
+let mode: 'uniform' | 'tier' = 'uniform'; // uniform: every remaining ticket is equally likely, so the live rate = share of stock left
 let count = 3;
 
 function renderStock() {
@@ -26,6 +27,9 @@ function renderStock() {
     .map((t) => `<div><b>${t} ${tiers[t].label}</b> · ${left(t)} left — ${prizes.filter((p) => p.tier === t).map((p) => `${p.name} ×${stock[p.id] ?? 0}`).join(', ')}</div>`)
     .join('');
   $<HTMLButtonElement>('pull').disabled = order.every((t) => left(t) === 0);
+  const total = order.reduce((n, t) => n + left(t), 0) || 1;
+  const rates = document.getElementById('rates');
+  if (rates) rates.innerHTML = order.map((t) => `<span class="rate ${t}">${t} ${tiers[t].label} ${(100 * (mode === 'uniform' ? left(t) / total : tiers[t].rate)).toFixed(1)}%</span>`).join('') + `<span class="rate mode">${mode === 'uniform' ? 'ทุกตั๋วเท่ากัน · เรตตามของที่เหลือ' : 'เรตคงที่ต่อ tier'}</span>`;
 }
 
 function setCount(n: number) {
@@ -48,6 +52,7 @@ async function pull() {
       return;
     }
     stock = data.remaining;
+    renderStock();
     const got = data.prizes.map((id) => prizes.find((p) => p.id === id)).filter((p): p is Prize => !!p);
     if (!got.length) return;
     const best = order.find((t) => got.some((p) => p.tier === t))!;
@@ -301,7 +306,8 @@ async function loadPrizes(token: string): Promise<Prize[] | null> {
   const res = await fetch(`${api()}/api/gacha/prizes?token=${encodeURIComponent(token)}`, { cache: 'no-store' });
   if (res.status === 403) return null;
   if (!res.ok) throw new Error(`reward list: HTTP ${res.status}`);
-  const data = (await res.json()) as { prizes: ServerPrize[]; rates: Record<Tier, number> };
+  const data = (await res.json()) as { prizes: ServerPrize[]; rates: Record<Tier, number>; mode?: 'uniform' | 'tier'; liveRates?: Record<Tier, number> };
+  mode = data.mode ?? 'uniform';
   for (const t of order) if (typeof data.rates?.[t] === 'number') tiers[t].rate = data.rates[t];
   stock = Object.fromEntries(data.prizes.map((p) => [p.id, p.remaining]));
   const list = data.prizes.map((p): Prize => ({ id: p.id, name: p.name, tier: p.tier, amount: p.amount, icon: 'gear', image: p.image, base: p.base, reveal: p.reveal }));
