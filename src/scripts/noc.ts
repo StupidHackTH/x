@@ -107,6 +107,22 @@ function applyState(s: ServerState) {
   renderTicker();
 }
 
+/* ---------- ransomware victim (most QR links): banner + skull on the mesh ---------- */
+let ransomMac: string | null = null;
+let ransomInfo: { nick: string; qr: number } | null = null;
+async function loadRansom() {
+  if (demo) return;
+  const r = await api.ransom();
+  if (!r) return;
+  const prev = ransomMac;
+  ransomMac = r.macs[0] ?? null;
+  ransomInfo = r.top ? { nick: r.top.nick, qr: r.top.qr } : null;
+  const el = $('noc-ransom');
+  el.hidden = !ransomMac;
+  if (ransomInfo) $('noc-ransom-text').textContent = `${ransomInfo.nick || ransomMac} · QR ${ransomInfo.qr} ครั้ง · AIR connection required`;
+  if (ransomMac && ransomMac !== prev) pushEvent({ type: 'note', mac: ransomMac, detail: `RANSOMWARE: ${ransomInfo?.nick || ransomMac} abused QR (${ransomInfo?.qr}) — must connect via AIR`, at: Date.now() });
+}
+
 /* ---------- Drawdy Logo Hunting ---------- */
 function renderHunt(h: HuntState | null) {
   const keys = $('hunt-keys');
@@ -166,8 +182,10 @@ function connect() {
   open();
   void api.state().then((s) => s && applyState(s));
   void loadHunt();
+  void loadRansom();
   setInterval(() => void api.state().then((s) => s && applyState(s)), 20_000);
   setInterval(() => void loadHunt(), 30_000);
+  setInterval(() => void loadRansom(), 30_000);
 }
 
 /* ---------- demo: 60 people in a hall ---------- */
@@ -288,7 +306,8 @@ function draw() {
     const pop = Math.min(1, (now - h.born) / 600);
     const rr = r * (0.3 + 0.7 * pop);
     const g = ctx.createRadialGradient(h.x - rr * 0.35, h.y - rr * 0.4, rr * 0.1, h.x, h.y, rr);
-    const col = h.deg === 0 ? ['#ffd0d0', '#ff7b7b', '#a83232'] : h.deg >= 5 ? ['#fff3b0', '#ffd34d', '#b8860b'] : ['#e6ffee', '#8ef5a3', '#2f9e52'];
+    const victim = h.mac === ransomMac;
+    const col = victim ? ['#ff6b6b', '#8a0000', '#000'] : h.deg === 0 ? ['#ffd0d0', '#ff7b7b', '#a83232'] : h.deg >= 5 ? ['#fff3b0', '#ffd34d', '#b8860b'] : ['#e6ffee', '#8ef5a3', '#2f9e52'];
     g.addColorStop(0, col[0]);
     g.addColorStop(0.5, col[1]);
     g.addColorStop(1, col[2]);
@@ -300,10 +319,17 @@ function draw() {
     ctx.beginPath();
     ctx.ellipse(h.x, h.y - rr * 0.45, rr * 0.55, rr * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#fff';
+    if (victim) {
+      ctx.strokeStyle = '#ff3b3b';
+      ctx.lineWidth = 3 * dpr;
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, rr + 4 * dpr + Math.sin(now / 150) * 2 * dpr, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = victim ? '#ff6b6b' : '#fff';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 4 * dpr;
-    ctx.fillText(h.nick, h.x, h.y + rr + 14 * dpr);
+    ctx.fillText(victim ? `☠ ${h.nick} · RANSOMWARE` : h.nick, h.x, h.y + rr + 14 * dpr);
     ctx.shadowBlur = 0;
   }
 }
