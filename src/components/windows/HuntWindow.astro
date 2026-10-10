@@ -29,7 +29,7 @@ import { asset } from '../../lib/asset';
           <li data-key={s.id} data-day={s.day}>
             <span class="act-check" aria-hidden="true"><Icon name="check" class="mono" /></span>
             <span class="act-name"><Icon name="folder" class="mono" /> {s.name}</span>
-            <span class="act-hint">{s.hint}</span>
+            <span class="act-hint"></span>
             <button type="button" class="act-ask" data-ask={s.id}>ขอคำใบ้</button>
             <span class="act-when" data-when></span>
           </li>
@@ -43,7 +43,7 @@ import { asset } from '../../lib/asset';
         <p class="act-msg" id="act-msg" hidden></p>
       </form>
       <div class="act-hintbar"><span id="act-hint-info"></span></div>
-      <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · ห้ามหยิบหรือย้ายการ์ด คนอื่นต้องหาเจอด้วย · เครื่องละ 1 สิทธิ์ · <span id="act-mode"></span></p>
+      <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · แตะช่องเพื่อเลือกว่าจะให้ key ถัดไปลงช่องไหน · คำใบ้สุ่ม ไม่ตรงช่อง · ห้ามหยิบหรือย้ายการ์ด · <span id="act-mode"></span></p>
     </div>
 
     <footer class="act-sponsor">
@@ -81,6 +81,8 @@ import { asset } from '../../lib/asset';
   .act-check .icon { width: 14px; height: 14px; visibility: hidden; }
   .act-keys li.found .act-check .icon { visibility: visible; }
   .act-keys li.found { background: #eefbea; border-color: #8fd39a; }
+  .act-keys li.selected { outline: 2px solid #316ac5; outline-offset: -2px; }
+  .act-keys li:not(.found) { cursor: pointer; }
   .act-name { font-weight: bold; display: flex; align-items: center; gap: 4px; }
   .act-name .icon { width: 14px; height: 14px; color: #c9a227; }
   .act-hint { color: #444; font-size: 11px; }
@@ -127,9 +129,11 @@ import { asset } from '../../lib/asset';
     device: string;
     nick: string;
     found: Record<string, number>;
-    hints: Record<string, number>; // spot id → when the player asked for its hint
+    hints: Record<string, string>; // slot id → the (random) spot id whose hint was handed out there
     lastHintAt: number;
     order: string[]; // this phone's shuffled order of the six slots
+    slots: Record<string, string>; // slot id → key (spot) id the player put there
+    selected?: string; // slot chosen for the next key
     cert?: string;
   }
   const HINT_COOLDOWN = 2 * 60 * 1000; // one random hint every 2 minutes
@@ -145,6 +149,7 @@ import { asset } from '../../lib/asset';
     const root = $('act');
     if (!root) return;
     const store = load();
+    const liveHints: Record<string, string> = {};
 
     function load(): HuntStore {
       let s: Partial<HuntStore> = {};
@@ -162,7 +167,8 @@ import { asset } from '../../lib/asset';
       const device = s.device || net.me?.mac || `dev-${Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('')}`;
       const ids = huntSpots.map((sp) => sp.id);
       const order = Array.isArray(s.order) && s.order.length === ids.length ? s.order : ids.sort(() => Math.random() - 0.5);
-      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, hints: s.hints || {}, lastHintAt: s.lastHintAt || 0, order, cert: s.cert };
+      const hints = typeof s.hints === 'object' && s.hints ? (Object.fromEntries(Object.entries(s.hints).filter(([, v]) => typeof v === 'string')) as Record<string, string>) : {};
+      return { device, nick: s.nick || net.me?.nick || '', found: s.found || {}, hints, lastHintAt: s.lastHintAt || 0, order, slots: s.slots || {}, selected: s.selected, cert: s.cert };
     }
     function save() {
       try {
@@ -172,35 +178,51 @@ import { asset } from '../../lib/asset';
       }
     }
 
-    /* Hints: tap "ขอคำใบ้" on a slot to reveal that spot's hint; one hint every 2 minutes per phone; slot order is shuffled per phone */
+    /* Slots are just six tick boxes in a shuffled order. A key goes into whichever slot the player selected (or the next
+       empty one). Hints are deliberately random: "ขอคำใบ้" on any slot hands out one location clue the phone has not
+       seen yet, one every 2 minutes, and it says nothing about which slot or key it belongs to. */
     function hintWait() {
       return Math.max(0, store.lastHintAt + HINT_COOLDOWN - Date.now());
     }
+    function hintPool() {
+      const given = new Set(Object.values(store.hints));
+      return huntSpots.filter((sp) => !given.has(sp.id));
+    }
+    function hintText(spotId: string) {
+      return liveHints[spotId] || huntSpots.find((sp) => sp.id === spotId)?.hint || '';
+    }
     function renderHintBar() {
       const wait = hintWait();
-      const left = huntSpots.filter((sp) => !store.found[sp.id] && !store.hints[sp.id]).length;
+      const left = hintPool().length;
       for (const b of root.querySelectorAll<HTMLButtonElement>('.act-ask')) {
-        b.disabled = wait > 0;
-        b.textContent = wait > 0 ? `รออีก ${Math.ceil(wait / 1000)} วิ` : 'ขอคำใบ้';
+        b.disabled = wait > 0 || left === 0;
+        b.textContent = left === 0 ? 'คำใบ้หมดแล้ว' : wait > 0 ? `รออีก ${Math.ceil(wait / 1000)} วิ` : 'ขอคำใบ้';
       }
-      $('act-hint-info').textContent = left === 0 ? 'คำใบ้ออกครบแล้ว' : `กด "ขอคำใบ้" ที่ช่องไหนก็ได้ · ขอได้ทุก ${HINT_COOLDOWN / 60000} นาที · เหลือ ${left} ใบ`;
+      $('act-hint-info').textContent = left === 0 ? 'คำใบ้ออกครบ 6 ข้อแล้ว' : `ขอคำใบ้ได้ทุก ${HINT_COOLDOWN / 60000} นาที · เหลือ ${left} ข้อ · คำใบ้ไม่บอกว่าเป็นช่องไหน`;
     }
-    function askHint(id: string) {
-      const spot = huntSpots.find((sp) => sp.id === id);
-      if (!spot || store.found[id] || store.hints[id]) return;
+    function askHint(slotId: string) {
+      if (store.slots[slotId] || store.hints[slotId]) return;
       if (hintWait() > 0) {
         say(`ขอคำใบ้ได้อีกครั้งใน ${Math.ceil(hintWait() / 1000)} วินาที`);
         return;
       }
-      store.hints[id] = Date.now();
+      const pool = hintPool();
+      if (!pool.length) return;
+      const spot = pool[Math.floor(Math.random() * pool.length)];
+      store.hints[slotId] = spot.id;
       store.lastHintAt = Date.now();
       save();
       render();
-      say(`คำใบ้ ${spot.name}: ${liveHints[id] || spot.hint}`, true);
+      say(`คำใบ้: ${hintText(spot.id)}`, true);
     }
     root.querySelector('#act-keys')!.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ask]');
-      if (b) askHint(b.dataset.ask!);
+      if (b) return askHint(b.dataset.ask!);
+      const li = (e.target as HTMLElement).closest<HTMLLIElement>('li[data-key]');
+      if (!li || store.slots[li.dataset.key!]) return;
+      store.selected = store.selected === li.dataset.key ? undefined : li.dataset.key;
+      save();
+      render();
     });
     setInterval(renderHintBar, 1000);
     {
@@ -209,6 +231,13 @@ import { asset } from '../../lib/asset';
       for (const id of store.order) {
         const li = list.querySelector<HTMLLIElement>(`li[data-key="${id}"]`);
         if (li) list.appendChild(li);
+      }
+      // older saves (before slots existed): place already-found keys into slots in order
+      for (const keyId of Object.keys(store.found)) {
+        if (!Object.values(store.slots).includes(keyId)) {
+          const free = store.order.find((sid) => !store.slots[sid]);
+          if (free) store.slots[free] = keyId;
+        }
       }
       save();
     }
@@ -221,11 +250,14 @@ import { asset } from '../../lib/asset';
       $('act-mode').textContent = 'ลำดับช่องสุ่มต่างกันแต่ละเครื่อง';
       let n = 0;
       for (const li of items) {
-        const id = li.dataset.key!;
-        const at = store.found[id];
+        const sid = li.dataset.key!;
+        const keyId = store.slots[sid];
+        const at = keyId ? store.found[keyId] : 0;
         li.classList.toggle('found', !!at);
-        li.classList.toggle('revealed', !at && !!store.hints[id]);
-        li.classList.toggle('locked', !at && !store.hints[id]);
+        li.classList.toggle('revealed', !at && !!store.hints[sid]);
+        li.classList.toggle('locked', !at && !store.hints[sid]);
+        li.classList.toggle('selected', !at && store.selected === sid);
+        li.querySelector('.act-hint')!.textContent = store.hints[sid] ? hintText(store.hints[sid]) : '';
         if (at) {
           n++;
           const d = new Date(at);
@@ -257,7 +289,6 @@ import { asset } from '../../lib/asset';
     }
 
     /* Staff can rewrite hints on the NOC during the event; the phone picks them up here */
-    const liveHints: Record<string, string> = {};
     async function refreshHints() {
       if (!hasApi() || !navigator.onLine) return;
       const h = await api.hunt();
@@ -269,12 +300,7 @@ import { asset } from '../../lib/asset';
           changed = true;
         }
       }
-      if (changed) {
-        for (const li of items) {
-          const id = li.dataset.key!;
-          if (liveHints[id]) li.querySelector('.act-hint')!.textContent = liveHints[id];
-        }
-      }
+      if (changed) render();
     }
     void refreshHints();
     setInterval(() => void refreshHints(), 60_000);
@@ -315,14 +341,17 @@ import { asset } from '../../lib/asset';
       const nick = $<HTMLInputElement>('act-nick').value.trim().slice(0, 12);
       if (nick) store.nick = nick;
       if (store.found[spot.id]) {
-        say(`${spot.name} เจอไปแล้ว หาอันอื่นต่อ`, true);
+        say('key นี้ใส่ไปแล้ว หาใบอื่นต่อ', true);
         render();
         return;
       }
       store.found[spot.id] = Date.now();
+      const slot = store.selected && !store.slots[store.selected] ? store.selected : store.order.find((sid) => !store.slots[sid]);
+      if (slot) store.slots[slot] = spot.id;
+      store.selected = undefined;
       save();
       render();
-      say(`เจอ ${spot.name} แล้ว (${via === 'qr' ? 'สแกน' : 'พิมพ์'})`, true);
+      say(`key ถูกต้อง ติ๊กให้แล้ว 1 ช่อง (${Object.keys(store.found).length}/${total})`, true);
       if (hasApi()) void api.huntFind(store.device, store.nick, spot.id, hash);
       if (Object.keys(store.found).length === total) await complete();
     }
@@ -357,6 +386,8 @@ import { asset } from '../../lib/asset';
       if (params.get('reset')) {
         store.found = {};
         store.hints = {};
+        store.slots = {};
+        store.selected = undefined;
         store.lastHintAt = 0;
         store.cert = undefined;
         save();
