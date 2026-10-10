@@ -521,6 +521,32 @@ function setupAdmin() {
   $('adm-pause-hunt').addEventListener('click', async () => {
     await call('/api/pause', { method: 'POST', body: JSON.stringify({ hunt: !pauseNow.hunt }) });
   });
+  const hintsForm = $('noc-hints') as HTMLFormElement;
+  $('adm-hints').addEventListener('click', async () => {
+    const h = await api.hunt();
+    if (!h) return say('โหลดคำใบ้ไม่ได้');
+    const rows = $('noc-hints-rows');
+    rows.innerHTML = '';
+    for (const k of h.keys) {
+      const l = document.createElement('label');
+      l.innerHTML = `<span></span><input name="${k.id}" maxlength="160">`;
+      l.querySelector('span')!.textContent = `${k.id} · ${k.name}`;
+      (l.querySelector('input') as HTMLInputElement).value = k.hint || '';
+      rows.appendChild(l);
+    }
+    $('noc-hints-msg').textContent = 'ช่องว่าง = ใช้คำใบ้เดิมจากเว็บ';
+    hintsForm.hidden = false;
+  });
+  $('noc-hints-cancel').addEventListener('click', () => (hintsForm.hidden = true));
+  hintsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const hints: Record<string, string> = {};
+    for (const inp of hintsForm.querySelectorAll<HTMLInputElement>('input[name]')) hints[inp.name] = inp.value.trim();
+    if (await call('/api/hunt/hints', { method: 'POST', body: JSON.stringify({ hints }) })) {
+      hintsForm.hidden = true;
+      say('บันทึกคำใบ้แล้ว');
+    }
+  });
   const huntReset = $('adm-hunt-reset') as HTMLButtonElement;
   let huntArmed: ReturnType<typeof setTimeout> | null = null;
   huntReset.addEventListener('click', async () => {

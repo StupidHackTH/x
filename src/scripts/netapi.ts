@@ -72,7 +72,7 @@ export interface PauseState {
 }
 
 export interface HuntState {
-  keys: { id: string; name: string; finds: number; first: { nick: string; at: number } | null }[];
+  keys: { id: string; name: string; hint?: string | null; finds: number; first: { nick: string; at: number } | null }[];
   completed: { nick: string; cert: string; at: number }[];
   devices: number;
 }

@@ -38,11 +38,19 @@ const huntCert = (device: string) => 'ACT-' + new Bun.CryptoHasher('sha256').upd
 const qHuntAll = db.query<{ device: string; key: string; nick: string; at: number }, []>('SELECT device, key, nick, at FROM hunt ORDER BY at');
 const qHuntDevice = db.query<{ key: string }, [string]>('SELECT key FROM hunt WHERE device = ? ORDER BY at');
 const insertFind = db.query('INSERT OR IGNORE INTO hunt (device, key, nick, at) VALUES (?, ?, ?, ?)');
+const huntHints = (): Record<string, string> => {
+  try {
+    return JSON.parse(qSetting.get('hunt.hints')?.v || '{}');
+  } catch {
+    return {};
+  }
+};
 const huntState = () => {
   const rows = qHuntAll.all();
+  const hints = huntHints();
   const keys = HUNT.map((h) => {
     const finds = rows.filter((r) => r.key === h.id);
-    return { id: h.id, name: h.name, finds: finds.length, first: finds[0] ? { nick: finds[0].nick, at: finds[0].at } : null };
+    return { id: h.id, name: h.name, hint: hints[h.id] ?? null, finds: finds.length, first: finds[0] ? { nick: finds[0].nick, at: finds[0].at } : null };
   });
   const byDevice = new Map<string, { nick: string; keys: Set<string>; at: number }>();
   for (const r of rows) {
@@ -250,6 +258,21 @@ const app = new Elysia()
     { body: t.Object({ hunt: t.Optional(t.Boolean()), net: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   .get('/api/hunt', () => huntState())
+  .post(
+    '/api/hunt/hints',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const hints = huntHints();
+      for (const [k, v] of Object.entries(body.hints)) if (HUNT.some((h) => h.id === k)) hints[k] = clip(v, 160);
+      setSetting.run('hunt.hints', JSON.stringify(hints));
+      broadcast({ type: 'hunt', hints: true });
+      return { ok: true, hints };
+    },
+    { body: t.Object({ hints: t.Record(t.String(), t.String({ maxLength: 200 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
   .post(
     '/api/hunt/find',
     ({ body, set }) => {

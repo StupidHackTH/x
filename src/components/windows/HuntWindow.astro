@@ -196,7 +196,7 @@ import { asset } from '../../lib/asset';
       store.lastHintAt = Date.now();
       save();
       render();
-      say(`คำใบ้ ${spot.name}: ${spot.hint}`, true);
+      say(`คำใบ้ ${spot.name}: ${liveHints[id] || spot.hint}`, true);
     }
     root.querySelector('#act-keys')!.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ask]');
@@ -255,6 +255,29 @@ import { asset } from '../../lib/asset';
       const ids = huntSpots.map((s) => s.id).join(',');
       return `ACT-${(await sha256(`${store.device}|${ids}`)).slice(0, 6).toUpperCase()}`;
     }
+
+    /* Staff can rewrite hints on the NOC during the event; the phone picks them up here */
+    const liveHints: Record<string, string> = {};
+    async function refreshHints() {
+      if (!hasApi() || !navigator.onLine) return;
+      const h = await api.hunt();
+      if (!h) return;
+      let changed = false;
+      for (const k of h.keys) {
+        if (k.hint && liveHints[k.id] !== k.hint) {
+          liveHints[k.id] = k.hint;
+          changed = true;
+        }
+      }
+      if (changed) {
+        for (const li of items) {
+          const id = li.dataset.key!;
+          if (liveHints[id]) li.querySelector('.act-hint')!.textContent = liveHints[id];
+        }
+      }
+    }
+    void refreshHints();
+    setInterval(() => void refreshHints(), 60_000);
 
     let paused = false;
     async function refreshPause() {

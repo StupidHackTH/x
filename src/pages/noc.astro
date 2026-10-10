@@ -47,6 +47,10 @@ import Icons from '../components/Icons.astro';
       .noc-paused span { font-size: 18px; }
       .noc-paused[hidden] { display: none; }
       .noc-admin .noc-btn[aria-pressed='true'] { background: linear-gradient(180deg, #ffd27a, #e0901a); color: #3b2400; }
+      .noc-hints { position: absolute; left: 14px; top: 60px; z-index: 16; width: min(92%, 640px); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+      .noc-hints[hidden] { display: none; }
+      .noc-hints label { display: grid; grid-template-columns: 170px 1fr; gap: 8px; align-items: center; }
+      .noc-hints input { padding: 5px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.9); color: #06264f; font: inherit; }
       .noc-admin { position: absolute; left: 14px; top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
       .noc-admin[hidden] { display: none; }
       .noc-admin .noc-btn { padding: 3px 10px; font-size: 12px; }
@@ -110,6 +114,11 @@ import Icons from '../components/Icons.astro';
           <canvas id="noc-canvas"></canvas>
           <div class="noc-legend"><span><i style="background:#8ef5a3"></i>host</span><span><i style="background:#ffd34d"></i>core switch (5+ links)</span><span><i style="background:#ff7b7b"></i>isolated</span></div>
           <div class="noc-demo" id="noc-demo" hidden>DEMO DATA</div>
+          <form class="noc-hints glass" id="noc-hints" hidden>
+            <b>คำใบ้ Logo Hunting (แก้แล้วมือถือทุกเครื่องอัปเดตภายใน 1 นาที)</b>
+            <div id="noc-hints-rows"></div>
+            <div><button type="submit" class="noc-btn">Save</button> <button type="button" class="noc-btn" id="noc-hints-cancel">Cancel</button> <span id="noc-hints-msg"></span></div>
+          </form>
           <div class="noc-paused" id="noc-paused" hidden><b>PAUSED</b><span id="noc-paused-what"></span></div>
           <div class="noc-admin glass" id="noc-admin" hidden>
             <b>Staff</b>
@@ -119,6 +128,7 @@ import Icons from '../components/Icons.astro';
             <button type="button" class="noc-btn" id="adm-kick-btn">Kick</button>
             <button type="button" class="noc-btn" id="adm-pause-net" title="หยุด/เปิด SHTX-NET">Pause SHTX-NET</button>
             <button type="button" class="noc-btn" id="adm-pause-hunt" title="หยุด/เปิด Logo Hunting">Pause hunt</button>
+            <button type="button" class="noc-btn" id="adm-hints" title="แก้คำใบ้ Logo Hunting">Hints…</button>
             <button type="button" class="noc-btn" id="adm-hunt-reset" title="ล้างผล Logo Hunting">Reset hunt…</button>
             <button type="button" class="noc-btn" id="adm-logout" title="ลืม token ในเครื่องนี้">Log out</button>
             <span id="adm-msg"></span>
