@@ -1,33 +1,29 @@
 // Prize gacha POC: draw from a finite pool, play the pull video for the best rarity, then flip cards one by one.
 // Staff only: the reward list comes from Grist through the media server, which checks the NOC staff password.
-// Stock and the pull log stay in localStorage (one stage machine); the real system will draw on the NOC server.
+// Draws, stock and the pull log live on the NOC server (/api/gacha/*), so a reload or a second screen cannot re-roll.
 import { tiers, type Prize, type Tier } from '../data/prizes';
 import { asset } from '../lib/asset';
+import { apiBase } from './netapi';
 
 const MEDIA = (import.meta.env.PUBLIC_GACHA_MEDIA as string | undefined) || 'https://82-26-104-114.sslip.io:8445/';
 const shared = `${MEDIA}gacha/shared/`;
 const ADMIN_KEY = 'shtx-noc-admin'; // same key (raw string) as /noc, so a logged-in staff browser is logged in here too
 const getToken = () => { try { return localStorage.getItem(ADMIN_KEY) ?? ''; } catch { return ''; } };
 const setToken = (t: string) => { try { t ? localStorage.setItem(ADMIN_KEY, t) : localStorage.removeItem(ADMIN_KEY); } catch { /* private mode */ } };
-const STOCK_KEY = 'shtx-gacha-stock';
-const LOG_KEY = 'shtx-gacha-log';
 const order: Tier[] = ['T1', 'T2', 'T3'];
+const api = () => apiBase().replace(/\/$/, '');
+const adminFetch = (path: string, init?: RequestInit) => fetch(`${api()}${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(getToken())}`, { cache: 'no-store', ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const read = <T>(key: string, fallback: T): T => {
-  try { return JSON.parse(localStorage.getItem(key) ?? '') as T; } catch { return fallback; }
-};
-const write = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* private mode */ } };
 
 let prizes: Prize[] = [];
-const fresh = () => Object.fromEntries(prizes.map((p) => [p.id, p.amount]));
-let stock: Record<string, number> = {};
+let stock: Record<string, number> = {}; // remaining per prize id, as the server reports it
 let count = 3;
 
 function renderStock() {
-  const left = (t: Tier) => prizes.filter((p) => p.tier === t).reduce((n, p) => n + stock[p.id], 0);
+  const left = (t: Tier) => prizes.filter((p) => p.tier === t).reduce((n, p) => n + (stock[p.id] ?? 0), 0);
   $('stock').innerHTML = order
-    .map((t) => `<div><b>${t} ${tiers[t].label}</b> · ${left(t)} left — ${prizes.filter((p) => p.tier === t).map((p) => `${p.name} ×${stock[p.id]}`).join(', ')}</div>`)
+    .map((t) => `<div><b>${t} ${tiers[t].label}</b> · ${left(t)} left — ${prizes.filter((p) => p.tier === t).map((p) => `${p.name} ×${stock[p.id] ?? 0}`).join(', ')}</div>`)
     .join('');
   $<HTMLButtonElement>('pull').disabled = order.every((t) => left(t) === 0);
 }
@@ -38,38 +34,31 @@ function setCount(n: number) {
   $('pull').textContent = `Pull ×${count}`;
 }
 
-// Tier by rate (renormalised over tiers that still have stock), then item weighted by what is left of it.
-function drawOne(): Prize | null {
-  const avail = order.filter((t) => prizes.some((p) => p.tier === t && stock[p.id] > 0));
-  if (!avail.length) return null;
-  let r = Math.random() * avail.reduce((s, t) => s + tiers[t].rate, 0);
-  const tier = avail.find((t) => (r -= tiers[t].rate) < 0) ?? avail[avail.length - 1];
-  const items = prizes.filter((p) => p.tier === tier && stock[p.id] > 0);
-  let k = Math.random() * items.reduce((s, p) => s + stock[p.id], 0);
-  const item = items.find((p) => (k -= stock[p.id]) < 0) ?? items[items.length - 1];
-  stock[item.id]--;
-  return item;
-}
-
-function pull() {
+// The server draws (tier by rate, renormalised over tiers with stock; item weighted by what is left) and records the pull.
+async function pull() {
   const team = $<HTMLInputElement>('team').value.trim() || 'Team ?';
-  const got: Prize[] = [];
-  const demo = prizes.find((p) => p.id === $<HTMLSelectElement>('demo').value && stock[p.id] > 0);
-  if (demo) {
-    stock[demo.id]--;
-    got.push(demo);
+  const btn = $<HTMLButtonElement>('pull');
+  btn.disabled = true;
+  try {
+    const res = await adminFetch('/api/gacha/pull', { method: 'POST', body: JSON.stringify({ team, count, demo: $<HTMLSelectElement>('demo').value || undefined }) });
+    const data = (await res.json()) as { ok: boolean; error?: string; prizes: string[]; remaining: Record<string, number> };
+    if (!res.ok || !data.ok) {
+      alert(`Pull failed: ${data.error ?? res.status}`);
+      btn.disabled = false;
+      return;
+    }
+    stock = data.remaining;
+    const got = data.prizes.map((id) => prizes.find((p) => p.id === id)).filter((p): p is Prize => !!p);
+    if (!got.length) return;
+    const best = order.find((t) => got.some((p) => p.tier === t))!;
+    currentTeam = team;
+    $('setup').hidden = true;
+    playPull(best, () => showResults(team, got, best));
+  } catch (err) {
+    alert(`Pull failed: ${(err as Error).message}`);
+  } finally {
+    btn.disabled = false;
   }
-  for (let i = got.length; i < count; i++) {
-    const p = drawOne();
-    if (p) got.push(p);
-  }
-  if (!got.length) return;
-  write(STOCK_KEY, stock);
-  write(LOG_KEY, [...read<unknown[]>(LOG_KEY, []), { team, at: new Date().toISOString(), prizes: got.map((p) => p.id) }]);
-  const best = order.find((t) => got.some((p) => p.tier === t))!;
-  currentTeam = team;
-  $('setup').hidden = true;
-  playPull(best, () => showResults(team, got, best));
 }
 
 const FADE_MS = 700;
@@ -278,13 +267,11 @@ function chime(t: Tier) {
 
 $('minus').onclick = () => setCount(count - 1);
 $('plus').onclick = () => setCount(count + 1);
-$('pull').onclick = pull;
-$('reset').onclick = () => {
-  if (!confirm('Reset prize stock and the pull log?')) return;
-  stock = fresh();
-  write(STOCK_KEY, stock);
-  write(LOG_KEY, []);
-  renderStock();
+$('pull').onclick = () => void pull();
+$('reset').onclick = async () => {
+  if (!confirm('Reset prize stock and the pull log on the server? (every pull so far is forgotten)')) return;
+  await adminFetch('/api/gacha', { method: 'DELETE' });
+  await unlock(getToken());
 };
 $('reveal-all').onclick = () => {
   // commons first, SSR last
@@ -306,27 +293,35 @@ $('next').onclick = () => {
   $<HTMLInputElement>('team').value = '';
   renderStock();
 };
-// Grist Prize rows → prizes: tier T1–T3, Reward amount > 0, not Rejected. `Video link` = <folder>/reveal.mp4; the folder
-// also has show.mp4, music.mp3 and meta.json ({ "flash": ms }).
-interface Row { Item: string; Final_Prize_Tier: string; Status: string; Reward_amount: number; PriceID: unknown; Image_link?: string; Video_link?: string }
+// Prize list from the NOC server (which reads the Grist Prize table live and knows what has been drawn). `base` = media
+// folder from Grist `Video link`; its meta.json may add { "flash": ms }.
+interface ServerPrize { id: string; name: string; tier: Tier; amount: number; image?: string; base?: string; reveal: boolean; remaining: number }
 
 async function loadPrizes(token: string): Promise<Prize[] | null> {
-  const res = await fetch(`${MEDIA}gacha-api/prizes?token=${encodeURIComponent(token)}`, { cache: 'no-store' });
+  const res = await fetch(`${api()}/api/gacha/prizes?token=${encodeURIComponent(token)}`, { cache: 'no-store' });
   if (res.status === 403) return null;
   if (!res.ok) throw new Error(`reward list: HTTP ${res.status}`);
-  const rows: Row[] = (await res.json()).records.map((r: { fields: Row }) => r.fields);
-  const list = rows
-    .filter((f) => order.includes(f.Final_Prize_Tier as Tier) && f.Status !== 'Rejected' && Number(f.Reward_amount) > 0)
-    .map((f): Prize => {
-      const base = f.Video_link?.replace(/reveal\.mp4$/, '');
-      const id = base ? base.split('/').filter(Boolean).pop()! : String(f.PriceID ?? f.Item);
-      return { id, name: f.Item, tier: f.Final_Prize_Tier as Tier, amount: Number(f.Reward_amount), icon: 'gear', image: f.Image_link || undefined, base, reveal: !!base };
-    });
+  const data = (await res.json()) as { prizes: ServerPrize[]; rates: Record<Tier, number> };
+  for (const t of order) if (typeof data.rates?.[t] === 'number') tiers[t].rate = data.rates[t];
+  stock = Object.fromEntries(data.prizes.map((p) => [p.id, p.remaining]));
+  const list = data.prizes.map((p): Prize => ({ id: p.id, name: p.name, tier: p.tier, amount: p.amount, icon: 'gear', image: p.image, base: p.base, reveal: p.reveal }));
   await Promise.all(list.filter((p) => p.base).map(async (p) => {
     const meta = await fetch(`${p.base}meta.json`).catch(() => null);
     if (meta?.ok) Object.assign(p, await meta.json());
   }));
   return list;
+}
+
+async function loadTeams() {
+  try {
+    const r = await fetch(`${api()}/api/projects`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const { projects } = (await r.json()) as { projects: { order: number; team: string; members: string }[] };
+    const dl = document.getElementById('teams');
+    if (dl) dl.replaceChildren(...projects.map((p) => new Option(`${p.members ? `${p.members.split(/[,\n]/).filter((m) => m.trim()).length} คน` : ''}`, p.team)));
+  } catch {
+    /* offline */
+  }
 }
 
 function savedToken(): string {
@@ -345,7 +340,7 @@ async function unlock(token: string): Promise<boolean> {
   if (!list) return false;
   setToken(token);
   prizes = list;
-  stock = { ...fresh(), ...read(STOCK_KEY, {}) };
+  void loadTeams();
   $('demo').replaceChildren(new Option('Demo: random', ''), ...prizes.filter((p) => p.reveal).map((p) => new Option(`Demo: ${tiers[p.tier].label} ${p.name}`, p.id)));
   renderStock();
   $('lock').hidden = true;

@@ -20,6 +20,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS prizes (id TEXT PRIMARY KEY, item TEXT NOT NULL, tier TEXT NOT NULL DEFAULT '', count INTEGER NOT NULL DEFAULT 1, cost REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', pos INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS awards (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, place INTEGER NOT NULL DEFAULT 0, mac TEXT NOT NULL DEFAULT '', nick TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', prize_id TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 0, ord INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE IF NOT EXISTS gacha_pulls (id INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT NOT NULL, count INTEGER NOT NULL, prizes TEXT NOT NULL, at INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE IF NOT EXISTS gacha_drawn (id TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS votes (device TEXT PRIMARY KEY, target TEXT NOT NULL, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS projects (device TEXT PRIMARY KEY, team TEXT NOT NULL, members TEXT NOT NULL DEFAULT '', project TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', needs TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, first_at INTEGER NOT NULL);
@@ -74,6 +76,58 @@ function weightedPick(items: { w: number }[]): number {
   }
   return items.length - 1;
 }
+/* ---- gacha helpers: Grist Prize table (doc id from GRIST_DOC; the doc is link-editable so no key is needed, GRIST_API_KEY optional) ---- */
+const GRIST_HOST = (process.env.GRIST_HOST ?? 'https://grist.creatorsgarten.org').replace(/\/$/, '');
+const GRIST_DOC = process.env.GRIST_DOC ?? '';
+const GRIST_KEY = process.env.GRIST_API_KEY ?? '';
+type GachaTier = 'T1' | 'T2' | 'T3';
+type GachaPrize = { id: string; name: string; tier: GachaTier; amount: number; image?: string; base?: string; reveal: boolean; remaining: number };
+type GristRow = { Item?: string; Final_Prize_Tier?: string; Status?: string; Reward_amount?: number; PriceID?: unknown; Image_link?: string; Video_link?: string };
+let gristCache: { at: number; rows: GristRow[] } | null = null;
+async function gristRows(): Promise<GristRow[]> {
+  if (!GRIST_DOC) throw new Error('GRIST_DOC is not set on the server');
+  if (gristCache && Date.now() - gristCache.at < 15_000) return gristCache.rows;
+  const r = await fetch(`${GRIST_HOST}/api/docs/${GRIST_DOC}/tables/Prize/records`, { headers: GRIST_KEY ? { authorization: `Bearer ${GRIST_KEY}` } : {}, signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error(`grist HTTP ${r.status}`);
+  const rows = ((await r.json()) as { records: { fields: GristRow }[] }).records.map((x) => x.fields);
+  gristCache = { at: Date.now(), rows };
+  return rows;
+}
+const qGachaDrawn = db.query<{ id: string; n: number }, []>('SELECT id, n FROM gacha_drawn');
+const qGachaPulls = db.query<{ id: number; team: string; count: number; prizes: string; at: number; claimed: number }, []>('SELECT * FROM gacha_pulls ORDER BY id');
+async function gachaPrizes(): Promise<GachaPrize[]> {
+  const drawn = new Map(qGachaDrawn.all().map((d) => [d.id, d.n]));
+  return (await gristRows())
+    .filter((f) => /^T[123]$/.test(f.Final_Prize_Tier ?? '') && f.Status !== 'Rejected' && Number(f.Reward_amount) > 0 && (f.Item ?? '').trim())
+    .map((f) => {
+      const base = f.Video_link?.trim() ? f.Video_link.trim().replace(/reveal\.mp4$/, '') : undefined;
+      const id = base ? base.split('/').filter(Boolean).pop()! : String(f.PriceID ?? f.Item);
+      const amount = Number(f.Reward_amount);
+      return { id, name: (f.Item ?? '').trim(), tier: f.Final_Prize_Tier as GachaTier, amount, image: f.Image_link?.trim() || undefined, base, reveal: !!base, remaining: Math.max(0, amount - (drawn.get(id) ?? 0)) };
+    });
+}
+function gachaRates(): Record<GachaTier, number> {
+  try {
+    const r = JSON.parse(qSetting.get('gacha.rates')?.v || 'null');
+    if (r && typeof r.T1 === 'number') return r;
+  } catch {
+    /* ignore */
+  }
+  return { T1: 0.06, T2: 0.24, T3: 0.7 };
+}
+function gachaDrawOne(prizes: GachaPrize[], rates: Record<GachaTier, number>): GachaPrize | null {
+  const order: GachaTier[] = ['T1', 'T2', 'T3'];
+  const avail = order.filter((t) => prizes.some((p) => p.tier === t && p.remaining > 0));
+  if (!avail.length) return null;
+  let r = rnd() * avail.reduce((s, t) => s + rates[t], 0);
+  const tier = avail.find((t) => (r -= rates[t]) < 0) ?? avail[avail.length - 1];
+  const items = prizes.filter((p) => p.tier === tier && p.remaining > 0);
+  let k = rnd() * items.reduce((s, p) => s + p.remaining, 0);
+  const item = items.find((p) => (k -= p.remaining) < 0) ?? items[items.length - 1];
+  item.remaining--;
+  return item;
+}
+
 /* Everyone registered on SHTX-NET with at least minLinks links, one entry per person (duplicate nicks keep the best-linked device), test nodes dropped */
 function drawParticipants(minLinks: number, exclude: string[]) {
   const deg = new Map<string, number>();
@@ -716,6 +770,95 @@ const app = new Elysia()
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = qAwards.all().map((a) => [a.id, a.kind, a.place || '', a.nick, a.team, a.mac, a.prize_id, a.item, a.qty, a.revealed ? 'yes' : '', a.claimed ? 'yes' : '', new Date(a.at).toISOString()].map(esc).join(','));
     return '\ufeff' + ['id,kind,place,nick,team,mac,prize_id,item,qty,revealed,claimed,at', ...rows].join('\n');
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  /* ---- Prize gacha (stage page /gacha): the prize list is read live from Grist, draws/stock/log live here so a reload
+     or a second screen cannot re-roll. Rates per tier (renormalised over tiers with stock), item weighted by what is left. ---- */
+  .get('/api/gacha/prizes', async ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    try {
+      const prizes = await gachaPrizes();
+      return { prizes, rates: gachaRates(), pulls: qGachaPulls.all().length };
+    } catch (e) {
+      set.status = 502;
+      return { error: `prize list: ${(e as Error).message}` };
+    }
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .post(
+    '/api/gacha/pull',
+    async ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const prizes = await gachaPrizes();
+      const rates = gachaRates();
+      const count = Math.max(1, Math.min(20, body.count ?? 1));
+      const got: GachaPrize[] = [];
+      const demo = body.demo ? prizes.find((p) => p.id === body.demo && p.remaining > 0) : undefined;
+      if (demo) {
+        demo.remaining--;
+        got.push(demo);
+      }
+      for (let i = got.length; i < count; i++) {
+        const p = gachaDrawOne(prizes, rates);
+        if (!p) break;
+        got.push(p);
+      }
+      if (!got.length) return { ok: false, error: 'no stock left' };
+      const now = Date.now();
+      const team = clip(body.team, 60) || 'Team ?';
+      db.transaction(() => {
+        for (const p of got) db.query('INSERT INTO gacha_drawn (id, n) VALUES (?, 1) ON CONFLICT(id) DO UPDATE SET n = n + 1').run(p.id);
+        db.query('INSERT INTO gacha_pulls (team, count, prizes, at) VALUES (?, ?, ?, ?)').run(team, got.length, JSON.stringify(got.map((p) => p.id)), now);
+      })();
+      const id = (db.query<{ id: number }, []>('SELECT last_insert_rowid() id').get()?.id) ?? 0;
+      const detail = `🎰 ${team} pulled ${got.length}: ${got.map((p) => `${p.tier} ${p.name}`).join(', ')}`;
+      insertEvent.run('note', '', detail, now);
+      broadcast({ type: 'event', event: { type: 'note', mac: '', detail, at: now } });
+      broadcast({ type: 'gacha' });
+      return { ok: true, id, team, prizes: got.map((p) => p.id), at: now, remaining: Object.fromEntries(prizes.map((p) => [p.id, p.remaining])) };
+    },
+    { body: t.Object({ team: t.String({ maxLength: 80 }), count: t.Optional(t.Integer()), demo: t.Optional(t.String({ maxLength: 80 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .get('/api/gacha/log', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    return { pulls: qGachaPulls.all().map((r) => ({ ...r, prizes: JSON.parse(r.prizes) as string[], claimed: !!r.claimed })) };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .post('/api/gacha/claim', ({ body, query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('UPDATE gacha_pulls SET claimed = ? WHERE id = ?').run(body.claimed === false ? 0 : 1, body.id);
+    broadcast({ type: 'gacha' });
+    return { ok: true };
+  }, { body: t.Object({ id: t.Integer(), claimed: t.Optional(t.Boolean()) }), query: t.Object({ token: t.Optional(t.String()) }) })
+  .post('/api/gacha/rates', ({ body, query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    const r = { T1: Math.max(0, body.T1), T2: Math.max(0, body.T2), T3: Math.max(0, body.T3) };
+    setSetting.run('gacha.rates', JSON.stringify(r));
+    broadcast({ type: 'gacha' });
+    return { ok: true, rates: gachaRates() };
+  }, { body: t.Object({ T1: t.Number(), T2: t.Number(), T3: t.Number() }), query: t.Object({ token: t.Optional(t.String()) }) })
+  .delete('/api/gacha', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.exec('DELETE FROM gacha_pulls; DELETE FROM gacha_drawn;');
+    gristCache = null;
+    insertEvent.run('note', '', 'gacha stock and log reset', Date.now());
+    broadcast({ type: 'gacha' });
+    return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())
   .post(

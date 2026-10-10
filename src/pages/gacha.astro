@@ -180,8 +180,9 @@ import { tiers } from '../data/prizes';
           <div class="wiz-side"><img src={asset('logo-transparent.png')} alt="Stupid Hackathon" /></div>
           <div class="wiz-main">
             <h1>Insert prize disc</h1>
-            <p>แต่ละทีมได้สุ่มเท่ากับจำนวนสมาชิก กด Pull แล้วเปิดการ์ดทีละใบ</p>
-            <label class="field">Team <input id="team" placeholder="ชื่อทีม" /></label>
+            <p>แต่ละทีมได้สุ่มเท่ากับจำนวนสมาชิก (ที่ 1-2-3 หมุนเพิ่มได้) กด Pull แล้วเปิดการ์ดทีละใบ ผลสุ่มบันทึกบน NOC server</p>
+            <label class="field">Team <input id="team" placeholder="ชื่อทีม" list="teams" autocomplete="off" /></label>
+            <datalist id="teams"></datalist>
             <div class="field">Pulls
               <div class="stepper"><button class="xpbtn" id="minus" type="button">−</button><output id="count">3</output><button class="xpbtn" id="plus" type="button">+</button></div>
             </div>
