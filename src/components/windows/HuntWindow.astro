@@ -43,7 +43,7 @@ import { asset } from '../../lib/asset';
         <p class="act-msg" id="act-msg" hidden></p>
       </form>
       <div class="act-hintbar"><span id="act-hint-info"></span></div>
-      <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · key ถูก 1 ใบ = ติ๊กเองได้ 1 ช่อง ช่องไหนก็ได้ · ห้ามหยิบหรือย้ายการ์ด · <span id="act-mode"></span></p>
+      <p class="act-rules">พิมพ์ key จากการ์ดเท่านั้น (QR บนการ์ด… ลองสแกนดูสิ) · key ถูกแล้วแตะติ๊กช่องที่ตรงกับชื่อการ์ด ผิดช่องก็ลองใหม่ · ห้ามหยิบหรือย้ายการ์ด · <span id="act-mode"></span></p>
     </div>
 
     <footer class="act-sponsor">
@@ -84,6 +84,8 @@ import { asset } from '../../lib/asset';
   .act-keys li.tickable { cursor: pointer; border-color: #316ac5; animation: act-pulse 1s infinite; }
   .act-keys li.tickable .act-check { border-color: #316ac5; box-shadow: 0 0 0 2px #cfe0ff; }
   @keyframes act-pulse { 50% { background: #eef4ff; } }
+  .act-keys li.wrong { animation: act-shake 0.4s; background: #ffe9e9; border-color: #d9452a; }
+  @keyframes act-shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
   .act-name { font-weight: bold; display: flex; align-items: center; gap: 4px; }
   .act-name .icon { width: 14px; height: 14px; color: #c9a227; }
   .act-hint { color: #444; font-size: 11px; }
@@ -133,8 +135,10 @@ import { asset } from '../../lib/asset';
     hints: Record<string, string>; // slot id → the (random) spot id whose clue was handed out there
     lastHintAt: number;
     order: string[]; // this phone's shuffled order of the six slots
-    slots: Record<string, string>; // slot id → key id the player ticked it with
-    pending: string[]; // valid keys typed but not yet ticked into a slot
+    slots: Record<string, string>; // slot id → key id locked into it
+    pending: string[]; // valid keys typed but not yet placed
+    map: Record<string, string>; // key (card) id → slot id (identity: card and slot share the folder name)
+    misses: number; // wrong ticks, for bragging
     cert?: string;
   }
   const HINT_COOLDOWN = 2 * 60 * 1000; // one random hint every 2 minutes
@@ -173,7 +177,9 @@ import { asset } from '../../lib/asset';
       const slots = s.slots || {};
       const ticked = new Set(Object.values(slots));
       const pending = Array.isArray(s.pending) ? s.pending.filter((k) => found[k] && !ticked.has(k)) : Object.keys(found).filter((k) => !ticked.has(k));
-      return { device, nick: s.nick || net.me?.nick || '', found, hints, lastHintAt: s.lastHintAt || 0, order, slots, pending, cert: s.cert };
+      // matching: the Recycle Bin card's key belongs in the Recycle Bin slot (the player still has to tick it themselves)
+      const map = Object.fromEntries(ids.map((k) => [k, k]));
+      return { device, nick: s.nick || net.me?.nick || '', found, hints, lastHintAt: s.lastHintAt || 0, order, slots, pending, map, misses: s.misses || 0, cert: s.cert };
     }
     function save() {
       try {
@@ -188,9 +194,9 @@ import { asset } from '../../lib/asset';
     function hintWait() {
       return Math.max(0, store.lastHintAt + HINT_COOLDOWN - Date.now());
     }
+    const slotToKey = () => Object.fromEntries(Object.entries(store.map).map(([k, sid]) => [sid, k])) as Record<string, string>;
     function hintPool() {
-      const given = new Set(Object.values(store.hints));
-      return huntSpots.filter((sp) => !given.has(sp.id));
+      return huntSpots.filter((sp) => !store.slots[sp.id] && !store.hints[sp.id]);
     }
     function hintText(spotId: string) {
       return liveHints[spotId] || huntSpots.find((sp) => sp.id === spotId)?.hint || '';
@@ -203,7 +209,7 @@ import { asset } from '../../lib/asset';
         b.textContent = left === 0 ? 'คำใบ้หมดแล้ว' : wait > 0 ? `รออีก ${Math.ceil(wait / 1000)} วิ` : 'ขอคำใบ้';
       }
       const pend = store.pending.length;
-      $('act-hint-info').textContent = pend > 0 ? `คุณมี ${pend} ติ๊กค้างอยู่ แตะช่องที่อยากติ๊ก` : left === 0 ? 'คำใบ้ออกครบ 6 ข้อแล้ว' : `ขอคำใบ้ได้ทุก ${HINT_COOLDOWN / 60000} นาที · เหลือ ${left} ข้อ · คำใบ้ไม่บอกว่าเป็นช่องไหน`;
+      $('act-hint-info').textContent = pend > 0 ? `มี key รอติ๊ก ${pend} ใบ แตะช่องที่ตรงกับการ์ด${store.misses ? ` (ติ๊กผิดไปแล้ว ${store.misses} ครั้ง)` : ''}` : left === 0 ? 'คำใบ้ออกครบแล้ว' : `ขอคำใบ้ได้ทุก ${HINT_COOLDOWN / 60000} นาที · เหลือ ${left} ช่อง`;
     }
     function askHint(sid: string) {
       if (store.slots[sid] || store.hints[sid]) return;
@@ -211,26 +217,37 @@ import { asset } from '../../lib/asset';
         say(`ขอคำใบ้ได้อีกครั้งใน ${Math.ceil(hintWait() / 1000)} วินาที`);
         return;
       }
-      const pool = hintPool();
-      if (!pool.length) return;
-      const spot = pool[Math.floor(Math.random() * pool.length)];
-      store.hints[sid] = spot.id;
+      const key = slotToKey()[sid];
+      if (!key) return;
+      store.hints[sid] = key; // the clue leads to the card that belongs in this slot
       store.lastHintAt = Date.now();
       save();
       render();
-      say(`คำใบ้: ${hintText(spot.id)}`, true);
+      say(`คำใบ้ช่องนี้: ${hintText(key)}`, true);
     }
     function tick(sid: string) {
       if (store.slots[sid]) return;
       if (!store.pending.length) {
-        say('พิมพ์ key ให้ถูกก่อน แล้วค่อยมาติ๊กช่องนี้');
+        say('พิมพ์ key ให้ถูกก่อน แล้วค่อยมาเดาช่อง');
         return;
       }
-      store.slots[sid] = store.pending.shift()!;
+      const li = items.find((x) => x.dataset.key === sid);
+      const idx = store.pending.findIndex((k) => store.map[k] === sid);
+      if (idx === -1) {
+        store.misses++;
+        save();
+        renderHintBar();
+        li?.classList.remove('wrong');
+        void li?.offsetWidth;
+        li?.classList.add('wrong');
+        say(`ไม่ใช่ช่องนี้ ลองช่องอื่น (พลาด ${store.misses} ครั้งแล้ว)`);
+        return;
+      }
+      store.slots[sid] = store.pending.splice(idx, 1)[0];
       save();
       render();
       const n = Object.keys(store.slots).length;
-      say(`ติ๊กแล้ว (${n}/${total})`, true);
+      say(`ถูก! ${huntSpots.find((sp) => sp.id === sid)?.name} (${n}/${total})`, true);
       if (n === total) void complete();
     }
     root.querySelector('#act-keys')!.addEventListener('click', (e) => {
@@ -255,7 +272,7 @@ import { asset } from '../../lib/asset';
     const msg = $('act-msg');
 
     function render() {
-      $('act-mode').textContent = 'ติ๊กเองหลังพิมพ์ key ถูก';
+      $('act-mode').textContent = 'ลำดับช่องสุ่มต่างกันแต่ละเครื่อง';
       let n = 0;
       root.classList.toggle('has-pending', store.pending.length > 0);
       for (const li of items) {
@@ -358,7 +375,7 @@ import { asset } from '../../lib/asset';
       store.pending.push(spot.id);
       save();
       render();
-      say('key ถูกต้อง แตะช่องที่อยากติ๊กได้ 1 ช่อง', true);
+      say('key ถูกต้อง แตะติ๊กช่องที่ตรงกับชื่อบนการ์ด', true);
       if (hasApi()) void api.huntFind(store.device, store.nick, spot.id, hash);
     }
 
@@ -394,6 +411,7 @@ import { asset } from '../../lib/asset';
         store.hints = {};
         store.slots = {};
         store.pending = [];
+        store.misses = 0;
         store.lastHintAt = 0;
         store.cert = undefined;
         save();
