@@ -35,7 +35,7 @@ import Icon from '../Icon.astro';
 </Window>
 
 <style is:global>
-  .vote { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; }
+  .vote { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: auto; }
   .vote-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
   .vote-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
   .vote-banner p { margin: 0; color: #333; }
@@ -45,8 +45,8 @@ import Icon from '../Icon.astro';
   .vote-sec-head span { font-size: 11px; color: #555; }
   .vote-live { display: flex; flex-direction: column; flex: none; min-height: 0; border-bottom: 1px solid #c9c9c9; padding-bottom: 8px; }
   .vote-live-wait { margin: 6px 18px 0; padding: 10px; background: #fff; border: 1px solid #7f9db9; color: #666; text-align: center; }
-  .vote-live-frame { flex: 1; min-height: 0; margin: 8px 18px 0; border: 1px solid #7f9db9; background: #fff; }
-  .vote-live-frame iframe { display: block; width: 100%; height: 100%; min-height: 320px; border: 0; }
+  .vote-live-frame { flex: 1; min-height: 340px; margin: 8px 18px 0; border: 1px solid #7f9db9; background: #fff; overflow: hidden; }
+  .vote-live-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
   .vote-live-frame[hidden], .vote-live-actions[hidden], .vote-live-wait[hidden] { display: none; }
   .vote-live-actions { display: flex; align-items: center; gap: 10px; margin: 8px 18px 0; font-size: 11px; color: #555; }
   .vote-live-actions .xp-btn { text-decoration: none; font-weight: bold; }
@@ -54,6 +54,8 @@ import Icon from '../Icon.astro';
   .vote[data-live='1'][data-state='wait'] .vote-pick .vote-list, .vote[data-live='1'][data-state='wait'] .vote-pick .vote-actions { display: none; } /* keep the live vote in focus until staff open the final pick */
   .vote[data-live='1'][data-state='open'] .vote-live-frame, .vote[data-live='1'][data-state='open'] .vote-live-wait { display: none; } /* and the other way round */
   .vote[data-live='1'][data-state='open'] .vote-live { flex: none; }
+  .vote[data-live='1'] .vote-pick { flex: none; } /* the collapsed final pick must not steal height from the embedded vote */
+  .vote[data-live='1'][data-state='open'] .vote-pick { flex: 1; }
   .vote-pick { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .vote-list { flex: 1; min-height: 0; overflow: auto; margin: 10px 18px 0; background: #fff; border: 1px solid #7f9db9; }
   .vote-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #eee; cursor: pointer; }
