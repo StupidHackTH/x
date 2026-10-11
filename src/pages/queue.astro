@@ -1,0 +1,103 @@
+---
+// Live pitching queue: every team that submitted through Submit Project, with all fields, updating in real time
+// (NOC websocket + 10 s polling fallback). Public, like the pitching queue on the NOC.
+import { asset } from '../lib/asset';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>shtX Pitching Queue</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body { font: 15px/1.45 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #e8f2ff; background: radial-gradient(circle at 30% 0%, #2a6be0, #06264f 60%, #031a3d) fixed; padding: 14px; }
+      h1 { margin: 0 0 10px; font: bold 22px 'Trebuchet MS', Tahoma, sans-serif; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      h1 small { font-weight: normal; font-size: 12px; color: #bfe6ff; margin-left: auto; }
+      .live { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ffd34d; }
+      .live.on { background: #8ef5a3; box-shadow: 0 0 8px #8ef5a3; }
+      .meta { font-size: 13px; color: #bfe6ff; margin-bottom: 10px; }
+      .list { display: grid; gap: 10px; }
+      .team { display: grid; grid-template-columns: 44px 1fr; gap: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 14px; padding: 12px 14px; backdrop-filter: blur(6px); animation: in 0.4s ease-out; }
+      .team.new { box-shadow: 0 0 0 2px #ffd34d; }
+      @keyframes in { from { transform: translateY(8px); opacity: 0; } }
+      .num { font: bold 30px 'Trebuchet MS', Tahoma, sans-serif; color: #ffd34d; line-height: 1; }
+      .team h2 { margin: 0; font-size: 18px; }
+      .team h2 span { font-weight: normal; color: #bfe6ff; }
+      .desc { margin: 4px 0 6px; }
+      .kv { display: grid; grid-template-columns: 96px 1fr; gap: 2px 8px; font-size: 13px; }
+      .kv dt { color: #bfe6ff; }
+      .kv dd { margin: 0; overflow-wrap: anywhere; }
+      .kv a { color: #8ef5a3; }
+      .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.18); font-size: 12px; margin-left: 6px; }
+      .imported { font-size: 12px; color: #ffd34d; }
+      .empty { padding: 30px; text-align: center; color: #bfe6ff; }
+      @media (max-width: 480px) { .kv { grid-template-columns: 1fr; } .kv dt { margin-top: 4px; } }
+    </style>
+  </head>
+  <body>
+    <h1><img src={asset('favicon-64.png')} width="28" height="28" alt="" /> คิว Pitching <span class="live" id="live" title="live"></span><small id="sync">…</small></h1>
+    <div class="meta" id="meta"></div>
+    <div class="list" id="list"></div>
+    <script>
+      import { apiBase } from '../scripts/netapi';
+      interface P { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; order: number }
+      const $ = (id: string) => document.getElementById(id)!;
+      const t = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+      const linkify = (s: string) => esc(s).replace(/https?:\/\/[^\s,]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\//, '')}</a>`);
+      let known = new Set<string>();
+      let first = true;
+      async function load() {
+        try {
+          const r = await fetch(`${apiBase()}/api/projects`, { cache: 'no-store' });
+          if (!r.ok) throw new Error(String(r.status));
+          const { projects } = (await r.json()) as { projects: P[] };
+          const members = (p: P) => p.members.split(/[,\n]/).map((m) => m.trim()).filter(Boolean);
+          $('meta').textContent = `${projects.length} ทีม · ${projects.reduce((n, p) => n + members(p).length, 0)} คน · ส่งผ่านหน้าต่าง Submit Project (ปิดรับ 11:50) · ทีมแก้ข้อมูลเองได้จากเครื่องที่ส่ง`;
+          $('list').replaceChildren(
+            ...projects.map((p) => {
+              const el = document.createElement('article');
+              el.className = `team${!first && !known.has(p.device) ? ' new' : ''}`;
+              const imported = p.device.startsWith('eventpop-');
+              const desc = p.description.replace(/^นำเข้าจาก Eventpop[^·]*·\s*/, '');
+              el.innerHTML = `<div class="num">${p.order}</div><div>
+                <h2>${esc(p.team)} <span>— ${esc(p.project)}</span><span class="tag">${members(p).length} คน</span></h2>
+                <p class="desc">${esc(desc)}</p>
+                <dl class="kv">
+                  <dt>สมาชิก</dt><dd>${esc(members(p).join(', ')) || '-'}</dd>
+                  <dt>ลิงก์</dt><dd>${p.link && p.link !== '-' ? linkify(p.link) : '-'}</dd>
+                  <dt>ต้องการบนเวที</dt><dd>${esc(p.needs && p.needs !== '-' ? p.needs : '-')}</dd>
+                  <dt>ส่งเมื่อ</dt><dd>${t(p.at)}${imported ? ' <span class="imported">· นำเข้าจาก Eventpop ยังไม่ได้กรอกเอง</span>' : ''}</dd>
+                </dl></div>`;
+              return el;
+            }),
+          );
+          if (!projects.length) $('list').innerHTML = '<div class="empty">ยังไม่มีทีมส่ง</div>';
+          known = new Set(projects.map((p) => p.device));
+          first = false;
+          $('sync').textContent = `อัปเดต ${t(Date.now())}`;
+        } catch (e) { $('sync').textContent = `โหลดไม่ได้ (${(e as Error).message})`; }
+      }
+      function live() {
+        const base = apiBase();
+        if (!base) return;
+        let backoff = 1000;
+        const open = () => {
+          const ws = new WebSocket(`${base.replace(/^http/, 'ws')}/api/live`);
+          ws.onopen = () => { backoff = 1000; $('live').classList.add('on'); };
+          ws.onmessage = (m) => { try { const msg = JSON.parse(m.data); if (msg.type === 'project' || msg.type === 'state') void load(); } catch { /* ignore */ } };
+          ws.onclose = () => { $('live').classList.remove('on'); setTimeout(open, backoff); backoff = Math.min(backoff * 2, 15000); };
+        };
+        open();
+      }
+      void load();
+      live();
+      setInterval(() => void load(), 10_000);
+    </script>
+  </body>
+</html>
