@@ -88,7 +88,7 @@ import { asset } from '../lib/asset';
         const tick = () => {
           name.textContent = pool[Math.floor(Math.random() * pool.length)];
           i++;
-          if (i < total) setTimeout(tick, 60 + i * i * 0.9);
+          if (i < total) setTimeout(tick, 50 + i * i * 0.5);
           else {
             name.classList.remove('spin');
             name.textContent = d.team;
