@@ -21,6 +21,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS prizes (id TEXT PRIMARY KEY, item TEXT NOT NULL, tier TEXT NOT NULL DEFAULT '', count INTEGER NOT NULL DEFAULT 1, cost REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', pos INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS awards (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, place INTEGER NOT NULL DEFAULT 0, mac TEXT NOT NULL DEFAULT '', nick TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', prize_id TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 0, ord INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS attendees (ref TEXT PRIMARY KEY, name TEXT NOT NULL, grp TEXT NOT NULL DEFAULT '', ticket TEXT NOT NULL DEFAULT '', price REAL NOT NULL DEFAULT 0, email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', order_no TEXT NOT NULL DEFAULT '', eventpop_used TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', checked_at INTEGER NOT NULL DEFAULT 0, refunded_at INTEGER NOT NULL DEFAULT 0, pos INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE IF NOT EXISTS pitch_order (device TEXT PRIMARY KEY, no INTEGER NOT NULL, at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS gacha_pulls (id INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT NOT NULL, count INTEGER NOT NULL, prizes TEXT NOT NULL, at INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS gacha_drawn (id TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
@@ -198,7 +199,11 @@ type Project = { device: string; team: string; members: string; project: string;
 const qProjects = db.query<Project, []>('SELECT * FROM projects ORDER BY first_at');
 const qProject = db.query<Project, [string]>('SELECT * FROM projects WHERE device = ?');
 const upsertProject = db.query('INSERT INTO projects (device, team, members, project, description, link, needs, at, first_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(device) DO UPDATE SET team = excluded.team, members = excluded.members, project = excluded.project, description = excluded.description, link = excluded.link, needs = excluded.needs, at = excluded.at');
-const projectList = () => qProjects.all().map((p, i) => ({ ...p, order: i + 1 }));
+const qPitchOrder = db.query<{ device: string; no: number; at: number }, []>('SELECT * FROM pitch_order ORDER BY no');
+const projectList = () => {
+  const po = new Map(qPitchOrder.all().map((o) => [o.device, o]));
+  return qProjects.all().map((p, i) => ({ ...p, order: i + 1, pitch_no: po.get(p.device)?.no ?? 0, pitch_at: po.get(p.device)?.at ?? 0 }));
+};
 
 /* Drawdy Logo Hunting: the six product keys, as SHA-256 of the printed key (same list as src/data/hunt.ts) */
 const HUNT: { id: string; name: string; hash: string }[] = [
@@ -463,10 +468,39 @@ const app = new Elysia()
   })
   /* Project submissions for pitching: one per device, resubmit = update, order = first submission time */
   .get('/api/projects', () => ({ projects: projectList() }))
+  /* Pitching order lucky draw: pick a random team that has not been drawn yet (crypto RNG); persisted so every screen agrees */
+  .post('/api/projects/draw', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    const left = projectList().filter((p) => !p.pitch_no);
+    if (!left.length) return { ok: false, error: 'all drawn' };
+    const pick = left[Math.floor(rnd() * left.length)];
+    const no = qPitchOrder.all().length + 1;
+    const now = Date.now();
+    db.query('INSERT INTO pitch_order (device, no, at) VALUES (?, ?, ?)').run(pick.device, no, now);
+    insertEvent.run('note', '', `🎲 pitch #${no}: ${pick.team} — ${pick.project}`, now);
+    broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `🎲 pitch #${no}: ${pick.team}`, at: now } });
+    broadcast({ type: 'project' });
+    return { ok: true, no, team: pick.team, project: pick.project, device: pick.device, left: left.length - 1, candidates: left.map((p) => p.team) };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .delete('/api/projects/draw', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    db.query('DELETE FROM pitch_order').run();
+    insertEvent.run('note', '', 'pitch order reset', Date.now());
+    broadcast({ type: 'project' });
+    return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/projects.txt', ({ set }) => {
     // team names in pitching order, one per line: paste into the popular-voting admin (Uddy's app) as the team list
     set.headers['content-type'] = 'text/plain; charset=utf-8';
-    return projectList().map((p) => p.team).join('\n') + '\n';
+    const list = projectList();
+    const drawn = list.filter((p) => p.pitch_no).sort((a, b) => a.pitch_no - b.pitch_no);
+    return (drawn.length ? [...drawn, ...list.filter((p) => !p.pitch_no)] : list).map((p) => p.team).join('\n') + '\n';
   })
   .get('/api/projects.csv', ({ set }) => {
     set.headers['content-type'] = 'text/csv; charset=utf-8';

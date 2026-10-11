@@ -35,6 +35,9 @@ import { asset } from '../lib/asset';
       .kv a { color: #8ef5a3; }
       .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.18); font-size: 12px; margin-left: 6px; }
       .imported { font-size: 12px; color: #ffd34d; }
+      .pno { color: #8ef5a3; }
+      .wait { font: 11px Tahoma, sans-serif; color: #bfe6ff; }
+      .tag.on { background: #2f9e52; }
       .empty { padding: 30px; text-align: center; color: #bfe6ff; }
       @media (max-width: 480px) { .kv { grid-template-columns: 1fr; } .kv dt { margin-top: 4px; } }
     </style>
@@ -45,7 +48,7 @@ import { asset } from '../lib/asset';
     <div class="list" id="list"></div>
     <script>
       import { apiBase } from '../scripts/netapi';
-      interface P { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; order: number }
+      interface P { device: string; team: string; members: string; project: string; description: string; link: string; needs: string; at: number; order: number; pitch_no?: number }
       const $ = (id: string) => document.getElementById(id)!;
       const t = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
       const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -56,7 +59,9 @@ import { asset } from '../lib/asset';
         try {
           const r = await fetch(`${apiBase()}/api/projects`, { cache: 'no-store' });
           if (!r.ok) throw new Error(String(r.status));
-          const { projects } = (await r.json()) as { projects: P[] };
+          const { projects: raw } = (await r.json()) as { projects: P[] };
+          const drawn = raw.some((p) => p.pitch_no);
+          const projects = drawn ? [...raw].sort((a, b) => (a.pitch_no || 999) - (b.pitch_no || 999) || a.order - b.order) : raw;
           const members = (p: P) => p.members.split(/[,\n]/).map((m) => m.trim()).filter(Boolean);
           $('meta').textContent = `${projects.length} ทีม · ${projects.reduce((n, p) => n + members(p).length, 0)} คน · ส่งผ่านหน้าต่าง Submit Project (ปิดรับ 11:50) · ทีมแก้ข้อมูลเองได้จากเครื่องที่ส่ง`;
           $('list').replaceChildren(
@@ -65,8 +70,8 @@ import { asset } from '../lib/asset';
               el.className = `team${!first && !known.has(p.device) ? ' new' : ''}`;
               const imported = p.device.startsWith('eventpop-');
               const desc = p.description.replace(/^นำเข้าจาก Eventpop[^·]*·\s*/, '');
-              el.innerHTML = `<div class="num">${p.order}</div><div>
-                <h2>${esc(p.team)} <span>— ${esc(p.project)}</span><span class="tag">${members(p).length} คน</span></h2>
+              el.innerHTML = `<div class="num">${p.pitch_no ? `<span class="pno">#${p.pitch_no}</span>` : drawn ? '<span class="wait">รอสุ่ม</span>' : p.order}</div><div>
+                <h2>${esc(p.team)} <span>— ${esc(p.project)}</span><span class="tag">${members(p).length} คน</span>${p.pitch_no ? `<span class="tag on">ขึ้นเวทีลำดับ ${p.pitch_no}</span>` : ''}</h2>
                 <p class="desc">${esc(desc)}</p>
                 <dl class="kv">
                   <dt>สมาชิก</dt><dd>${esc(members(p).join(', ')) || '-'}</dd>

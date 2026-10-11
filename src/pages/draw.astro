@@ -1,0 +1,126 @@
+---
+// Pitching-order lucky draw (staff, stage screen): spins through the undrawn teams and locks on the one the NOC
+// server picked. The order is stored server-side, so /queue, the NOC ticker and projects.txt all agree.
+import { asset } from '../lib/asset';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>shtX Pitch Lucky Draw</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body { font: 16px/1.4 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #fff; background: radial-gradient(circle at 50% 30%, #2a6be0, #06264f 60%, #031a3d) fixed; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; overflow: hidden; }
+      [hidden] { display: none !important; }
+      .lock { display: flex; gap: 8px; }
+      input { padding: 8px 10px; border: 1px solid #7f9db9; font: inherit; }
+      .xpbtn { padding: 8px 18px; border: 1px solid #003c74; border-radius: 3px; font: inherit; color: #000; cursor: pointer; background: linear-gradient(180deg, #fff 0%, #ecebe6 86%, #d6d0c5 100%); }
+      .xpbtn.big { font: bold 22px 'Trebuchet MS', Tahoma, sans-serif; padding: 14px 34px; border-radius: 24px; color: #fff; border-color: #1b6b00; background: linear-gradient(180deg, #8fe36b 0%, #3fb31b 48%, #2d9a0f 52%, #47c11f 100%); box-shadow: 0 4px 14px rgba(0, 60, 0, 0.4); }
+      .xpbtn:disabled { filter: grayscale(1); cursor: not-allowed; }
+      .kicker { font-size: 14px; letter-spacing: 6px; color: #bfe6ff; }
+      .card { min-width: min(90vw, 860px); margin: 16px 0; padding: 30px 40px; border-radius: 18px; background: linear-gradient(180deg, #fffdf3, #f3e7bd); border: 6px double #b8860b; color: #3b2400; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+      .no { font: bold 22px 'Trebuchet MS', Tahoma, sans-serif; color: #8a6a12; letter-spacing: 3px; }
+      .name { font: 900 clamp(34px, 6vw, 84px)/1.1 'Trebuchet MS', Tahoma, sans-serif; margin: 6px 0; min-height: 1.1em; }
+      .name.spin { color: #8a6a12; filter: blur(0.5px); }
+      .proj { font-size: clamp(18px, 2.6vw, 30px); color: #6b5a2a; min-height: 1.3em; }
+      .roast { margin-top: 10px; font-size: 18px; color: #a0522d; min-height: 1.4em; }
+      .left { margin-top: 10px; color: #bfe6ff; font-size: 14px; }
+      .list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 900px; margin-top: 8px; }
+      .chip { padding: 3px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.15); font-size: 13px; }
+      .chip.done { background: #2f9e52; }
+      .foot { display: flex; gap: 8px; margin-top: 14px; }
+    </style>
+  </head>
+  <body>
+    <section id="lock" class="lock"><input id="pass" type="password" placeholder="รหัส staff" /><button class="xpbtn" id="go">เข้า</button></section>
+    <section id="stage" hidden>
+      <div class="kicker">🎲 PITCH ORDER LUCKY DRAW</div>
+      <div class="card">
+        <div class="no" id="no">พร้อมสุ่ม</div>
+        <div class="name" id="name">ทีมไหนจะซวยได้ขึ้นก่อน?</div>
+        <div class="proj" id="proj"></div>
+        <div class="roast" id="roast"></div>
+      </div>
+      <button class="xpbtn big" id="draw">สุ่มทีมถัดไป</button>
+      <div class="left" id="left"></div>
+      <div class="list" id="list"></div>
+      <div class="foot"><button class="xpbtn" id="reset">Reset ลำดับ</button><button class="xpbtn" id="logout">Log off</button></div>
+    </section>
+    <script>
+      import { apiBase } from '../scripts/netapi';
+      interface P { device: string; team: string; project: string; pitch_no?: number }
+      const KEY = 'shtx-noc-admin';
+      const $ = (id: string) => document.getElementById(id)!;
+      const api = () => apiBase().replace(/\/$/, '');
+      const tok = () => { try { return localStorage.getItem(KEY) ?? ''; } catch { return ''; } };
+      const ROASTS = ['ขอให้โชคดี ไม่ได้แปลว่าจะดี', 'ไปเลย ก่อนที่ demo จะพัง', 'กรรมการพร้อม บั๊กพร้อม', 'ซ้อมมาแล้วใช่ไหม… ใช่ไหม?', 'เสียงปรบมือเตรียมไว้แล้ว เสียงหัวเราะด้วย', 'อย่าลืมเสียบ HDMI', 'ขึ้นก่อนได้เปรียบ กรรมการยังไม่ง่วง', 'นี่คือดวงของคุณ ไม่ใช่ความผิดของระบบ', 'ระบบสุ่มด้วย crypto RNG โทษใครไม่ได้', '300 baud ยังเร็วกว่า pitch ของคุณ'];
+      let teams: P[] = [];
+      async function load() {
+        const r = await fetch(`${api()}/api/projects`, { cache: 'no-store' });
+        teams = ((await r.json()) as { projects: P[] }).projects;
+        const left = teams.filter((p) => !p.pitch_no);
+        $('left').textContent = left.length ? `เหลือ ${left.length} ทีมยังไม่ได้สุ่ม` : 'สุ่มครบทุกทีมแล้ว';
+        ($('draw') as HTMLButtonElement).disabled = !left.length;
+        const drawn = teams.filter((p) => p.pitch_no).sort((a, b) => a.pitch_no! - b.pitch_no!);
+        $('list').replaceChildren(...[...drawn, ...left].map((p) => { const c = document.createElement('span'); c.className = `chip${p.pitch_no ? ' done' : ''}`; c.textContent = p.pitch_no ? `#${p.pitch_no} ${p.team}` : p.team; return c; }));
+      }
+      let busy = false;
+      async function draw() {
+        if (busy) return;
+        busy = true;
+        ($('draw') as HTMLButtonElement).disabled = true;
+        const r = await fetch(`${api()}/api/projects/draw?token=${encodeURIComponent(tok())}`, { method: 'POST' });
+        const d = (await r.json()) as { ok: boolean; no: number; team: string; project: string; candidates: string[]; error?: string };
+        if (!d.ok) { $('roast').textContent = d.error ?? 'สุ่มไม่ได้'; busy = false; return; }
+        const pool = d.candidates.length > 1 ? d.candidates : [...d.candidates, 'ทีมผี', 'staff', 'ไม่มีใคร'];
+        const name = $('name');
+        name.classList.add('spin');
+        $('no').textContent = `กำลังสุ่มลำดับที่ ${d.no}…`;
+        $('proj').textContent = '';
+        $('roast').textContent = '';
+        let i = 0;
+        const total = 28;
+        const tick = () => {
+          name.textContent = pool[Math.floor(Math.random() * pool.length)];
+          i++;
+          if (i < total) setTimeout(tick, 60 + i * i * 0.9);
+          else {
+            name.classList.remove('spin');
+            name.textContent = d.team;
+            $('no').textContent = `ขึ้นเวทีลำดับที่ ${d.no}`;
+            $('proj').textContent = d.project;
+            $('roast').textContent = ROASTS[Math.floor(Math.random() * ROASTS.length)];
+            chime();
+            busy = false;
+            void load();
+          }
+        };
+        tick();
+      }
+      let actx: AudioContext | undefined;
+      function chime() {
+        actx ??= new AudioContext();
+        [523, 659, 784, 1047].forEach((f, i) => { const o = actx!.createOscillator(); const g = actx!.createGain(); const at = actx!.currentTime + i * 0.1; o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.25, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.7); o.connect(g).connect(actx!.destination); o.start(at); o.stop(at + 0.75); });
+      }
+      async function unlock(t: string) {
+        const r = await fetch(`${api()}/api/awards/all?token=${encodeURIComponent(t)}`);
+        if (r.status === 403) return false;
+        try { localStorage.setItem(KEY, t); } catch { /* ignore */ }
+        $('lock').hidden = true;
+        $('stage').hidden = false;
+        await load();
+        return true;
+      }
+      $('go').onclick = async () => { if (!(await unlock(($('pass') as HTMLInputElement).value.trim()))) alert('รหัสไม่ถูกต้อง'); };
+      $('draw').onclick = () => void draw();
+      $('reset').onclick = async () => { if (!confirm('ล้างลำดับ pitch ทั้งหมด?')) return; await fetch(`${api()}/api/projects/draw?token=${encodeURIComponent(tok())}`, { method: 'DELETE' }); $('no').textContent = 'พร้อมสุ่ม'; $('name').textContent = 'ทีมไหนจะซวยได้ขึ้นก่อน?'; $('proj').textContent = ''; $('roast').textContent = ''; await load(); };
+      $('logout').onclick = () => { try { localStorage.removeItem(KEY); } catch { /* ignore */ } location.reload(); };
+      if (tok()) void unlock(tok());
+    </script>
+  </body>
+</html>
