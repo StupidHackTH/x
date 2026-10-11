@@ -1,7 +1,7 @@
 // Check-in desk: attendee list + check-in / deposit-refund toggles on the NOC server, shared across staff phones.
 import { apiBase } from './netapi';
 
-interface Attendee { ref: string; name: string; grp: string; ticket: string; price: number; email: string; phone: string; order_no: string; eventpop_used: string; team: string; note: string; checked_at: number; refunded_at: number }
+interface Attendee { ref: string; name: string; grp: string; ticket: string; price: number; paid: number; email: string; phone: string; order_no: string; eventpop_used: string; team: string; note: string; checked_at: number; refunded_at: number }
 const ADMIN_KEY = 'shtx-noc-admin';
 const api = () => apiBase().replace(/\/$/, '');
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -10,7 +10,7 @@ const setToken = (t: string) => { try { t ? localStorage.setItem(ADMIN_KEY, t) :
 const call = async (path: string, init?: RequestInit) => fetch(`${api()}${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(getToken())}`, { cache: 'no-store', ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
 
 let rows: Attendee[] = [];
-let counts = { total: 0, checked: 0, refunded: 0, paid: 0, paidChecked: 0, paidRefunded: 0 };
+let counts = { total: 0, checked: 0, refunded: 0, paid: 0, paidChecked: 0, paidRefunded: 0, refundedBaht: 0, toRefundBaht: 0 };
 let filter: 'todo' | 'checked' | 'refund' | 'all' = 'todo';
 const say = (t: string) => { $('msg').textContent = t; setTimeout(() => { if ($('msg').textContent === t) $('msg').textContent = ''; }, 4000); };
 const time = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -43,7 +43,7 @@ function render() {
       row.className = `row${a.refunded_at ? ' r' : a.checked_at ? ' c' : ''}`;
       row.innerHTML = `<div><b></b><small></small><small class="st"></small></div><div class="acts"><button class="xpbtn ci" type="button"></button><button class="xpbtn rf" type="button"></button></div>`;
       row.querySelector('b')!.textContent = a.name;
-      row.querySelectorAll('small')[0].textContent = `${a.ticket}${a.price ? ` · ฿${a.price}` : ' · ฟรี'}${a.grp && a.grp !== 'ผู้เข้าร่วม' ? ` · ${a.grp}` : ''} · ${a.ref}${a.team ? ` · ทีม ${a.team}` : ''}`;
+      row.querySelectorAll('small')[0].textContent = `${a.ticket}${a.price ? ` · จ่ายจริง ฿${a.paid || a.price}` : ' · ฟรี'}${a.grp && a.grp !== 'ผู้เข้าร่วม' ? ` · ${a.grp}` : ''} · ${a.ref}${a.team ? ` · ทีม ${a.team}` : ''}`;
       row.querySelector('.st')!.textContent = `${a.checked_at ? `เช็คอิน ${time(a.checked_at)}` : a.eventpop_used ? `Eventpop สแกนแล้ว (${a.eventpop_used})` : 'ยังไม่เช็คอิน'}${a.refunded_at ? ` · คืนมัดจำแล้ว ${time(a.refunded_at)}` : ''}${a.note ? ` · ${a.note}` : ''}`;
       const ci = row.querySelector<HTMLButtonElement>('.ci')!;
       ci.textContent = a.checked_at ? '✔ เช็คอินแล้ว' : 'เช็คอิน';
@@ -51,14 +51,14 @@ function render() {
       ci.onclick = () => void mark(a, { checked: !a.checked_at });
       const rf = row.querySelector<HTMLButtonElement>('.rf')!;
       rf.hidden = !a.price;
-      rf.textContent = a.refunded_at ? `✔ คืน ฿${a.price}` : `คืน ฿${a.price}`;
+      rf.textContent = a.refunded_at ? `✔ คืน ฿${a.paid || a.price}` : `คืน ฿${a.paid || a.price}`;
       rf.classList.toggle('on', !!a.refunded_at);
       rf.onclick = () => { if (a.refunded_at && !confirm(`ยกเลิกการคืนเงินของ ${a.name}?`)) return; void mark(a, { refunded: !a.refunded_at }); };
       return row;
     }),
   );
   if (!shown.length) list.innerHTML = `<div class="empty">${rows.length ? 'ไม่มีรายการในตัวกรองนี้' : 'ยังไม่มีรายชื่อ นำเข้า CSV จาก Eventpop ด้านล่าง'}</div>`;
-  $('counts').innerHTML = `ผู้เข้าร่วมจ่ายเงิน <b>${counts.paidChecked}/${counts.paid}</b> เช็คอิน · คืนมัดจำแล้ว <b>${counts.paidRefunded}/${counts.paid}</b> (฿${counts.paidRefunded * 300}) · ทุกบัตร <b>${counts.checked}/${counts.total}</b> · แสดง ${shown.length}`;
+  $('counts').innerHTML = `ผู้เข้าร่วมจ่ายเงิน <b>${counts.paidChecked}/${counts.paid}</b> เช็คอิน · คืนเงินแล้ว <b>${counts.paidRefunded}/${counts.paid}</b> (฿${counts.refundedBaht.toLocaleString()}) · ยังต้องคืน ฿${counts.toRefundBaht.toLocaleString()} · ทุกบัตร <b>${counts.checked}/${counts.total}</b> · แสดง ${shown.length}`;
 }
 
 async function mark(a: Attendee, fields: { checked?: boolean; refunded?: boolean }) {
@@ -68,7 +68,7 @@ async function mark(a: Attendee, fields: { checked?: boolean; refunded?: boolean
   Object.assign(a, d.attendee);
   await load();
   if (fields.checked) say(`เช็คอิน ${a.name} แล้ว`);
-  if (fields.refunded) say(`คืน ฿${a.price} ให้ ${a.name} แล้ว`);
+  if (fields.refunded) say(`คืน ฿${a.paid || a.price} ให้ ${a.name} แล้ว`);
 }
 
 // Eventpop "attendees" export → rows (ref = Reference code)
@@ -95,6 +95,7 @@ async function importCsv(file: File) {
   const [head, ...body] = parseCsv(text);
   const col = (name: string) => head.findIndex((h) => h.trim() === name);
   const idx = { ref: col('Reference code'), type: col('Ticket type'), email: col('Email'), fn: col('Firstname'), ln: col('Lastname'), phone: col('Phone'), order: col('Order number'), price: col('Price'), used: col('Used at'), team: col('ชื่อทีม') };
+  // the attendees export has no fee column: keep the server's `paid` (imported from the orders export) by sending none
   if (idx.ref < 0 || idx.fn < 0) return say('ไม่ใช่ไฟล์ attendees ของ Eventpop (ไม่มี Reference code / Firstname)');
   const rowsOut = body.map((r) => {
     const ticket = r[idx.type] ?? '';

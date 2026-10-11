@@ -26,7 +26,7 @@ import Icon from '../Icon.astro';
         <button type="button" class="xp-btn primary" id="ci-confirm">✔ เช็คอิน</button>
         <button type="button" class="xp-btn" id="ci-again">ไม่ใช่ฉัน</button>
       </div>
-      <p class="ci-fine">เช็คอินแล้วรับมัดจำ ฿300 คืนที่โต๊ะ staff หลัง pitching (staff ติ๊กคืนเงินจากหน้าจอของเขา)</p>
+      <p class="ci-fine">เช็คอินแล้วรับมัดจำคืนที่โต๊ะ staff หลัง pitching เต็มจำนวนที่จ่ายรวมค่าธรรมเนียม (staff ติ๊กคืนเงินจากหน้าจอของเขา)</p>
     </section>
   </div>
 </Window>
@@ -69,13 +69,13 @@ import Icon from '../Icon.astro';
     const say = (t: string) => (msg.textContent = t);
     let q = '';
     const fmt = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    function showCard(r: { name?: string; ticket?: string; price?: number; ref?: string; checked_at?: number; refunded_at?: number }) {
+    function showCard(r: { name?: string; ticket?: string; price?: number; paid?: number; ref?: string; checked_at?: number; refunded_at?: number }) {
       $('ci-name').textContent = r.name ?? '—';
       $('ci-ticket').textContent = `${r.ticket ?? ''}${r.price ? ` · ฿${r.price}` : ''}`;
       $('ci-ref').textContent = r.ref ? `Ref ${r.ref}` : '';
       const st = $('ci-status');
       if (r.checked_at) {
-        st.textContent = `✅ เช็คอินแล้ว ${fmt(r.checked_at)}${r.refunded_at ? ` · คืนมัดจำแล้ว ${fmt(r.refunded_at)}` : r.price ? ' · มัดจำ ฿300 ยังไม่ได้คืน' : ''}`;
+        st.textContent = `✅ เช็คอินแล้ว ${fmt(r.checked_at)}${r.refunded_at ? ` · คืนมัดจำแล้ว ${fmt(r.refunded_at)}` : r.price ? ` · มัดจำ ฿${r.paid ?? r.price} (รวมค่าธรรมเนียม) ยังไม่ได้คืน` : ''}`;
         st.classList.add('ok');
         root.dataset.state = 'done';
       } else {

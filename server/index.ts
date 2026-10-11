@@ -77,7 +77,12 @@ function weightedPick(items: { w: number }[]): number {
   }
   return items.length - 1;
 }
-type Attendee = { ref: string; name: string; grp: string; ticket: string; price: number; email: string; phone: string; order_no: string; eventpop_used: string; team: string; note: string; checked_at: number; refunded_at: number; pos: number };
+try {
+  db.exec('ALTER TABLE attendees ADD COLUMN paid REAL NOT NULL DEFAULT 0'); // amount actually paid (ticket + payment-gateway fee) = what to refund
+} catch {
+  /* column exists */
+}
+type Attendee = { ref: string; name: string; grp: string; ticket: string; price: number; paid: number; email: string; phone: string; order_no: string; eventpop_used: string; team: string; note: string; checked_at: number; refunded_at: number; pos: number };
 const qAttendees = db.query<Attendee, []>('SELECT * FROM attendees ORDER BY pos');
 const qAttendee = db.query<Attendee, [string]>('SELECT * FROM attendees WHERE ref = ?');
 
@@ -889,7 +894,7 @@ const app = new Elysia()
       return { error: 'admin only' };
     }
     const rows = qAttendees.all();
-    return { attendees: rows, counts: { total: rows.length, checked: rows.filter((r) => r.checked_at).length, refunded: rows.filter((r) => r.refunded_at).length, paid: rows.filter((r) => r.price > 0).length, paidChecked: rows.filter((r) => r.price > 0 && r.checked_at).length, paidRefunded: rows.filter((r) => r.price > 0 && r.refunded_at).length } };
+    return { attendees: rows, counts: { total: rows.length, checked: rows.filter((r) => r.checked_at).length, refunded: rows.filter((r) => r.refunded_at).length, paid: rows.filter((r) => r.price > 0).length, paidChecked: rows.filter((r) => r.price > 0 && r.checked_at).length, paidRefunded: rows.filter((r) => r.price > 0 && r.refunded_at).length, refundedBaht: Math.round(rows.filter((r) => r.refunded_at).reduce((s, r) => s + (r.paid || r.price), 0) * 100) / 100, toRefundBaht: Math.round(rows.filter((r) => r.price > 0 && !r.refunded_at).reduce((s, r) => s + (r.paid || r.price), 0) * 100) / 100 } };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .post(
     '/api/attendees/import',
@@ -905,7 +910,7 @@ const app = new Elysia()
           if (!ref) return;
           const exists = qAttendee.get(ref);
           // keep local check-in/refund state; refresh the Eventpop fields
-          db.query('INSERT INTO attendees (ref, name, grp, ticket, price, email, phone, order_no, eventpop_used, team, note, pos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(ref) DO UPDATE SET name = excluded.name, grp = excluded.grp, ticket = excluded.ticket, price = excluded.price, email = excluded.email, phone = excluded.phone, order_no = excluded.order_no, eventpop_used = excluded.eventpop_used, team = excluded.team, pos = excluded.pos').run(ref, clip(r.name, 80), clip(r.grp, 30), clip(r.ticket, 80), Number(r.price) || 0, clip(r.email, 120), clip(r.phone, 30), clip(r.order_no, 30), clip(r.eventpop_used, 30), clip(r.team, 120), clip(r.note, 200), i);
+          db.query('INSERT INTO attendees (ref, name, grp, ticket, price, paid, email, phone, order_no, eventpop_used, team, note, pos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(ref) DO UPDATE SET name = excluded.name, grp = excluded.grp, ticket = excluded.ticket, price = excluded.price, paid = excluded.paid, email = excluded.email, phone = excluded.phone, order_no = excluded.order_no, eventpop_used = excluded.eventpop_used, team = excluded.team, pos = excluded.pos').run(ref, clip(r.name, 80), clip(r.grp, 30), clip(r.ticket, 80), Number(r.price) || 0, Number(r.paid) || Number(r.price) || 0, clip(r.email, 120), clip(r.phone, 30), clip(r.order_no, 30), clip(r.eventpop_used, 30), clip(r.team, 120), clip(r.note, 200), i);
           if (!exists) added++;
         });
       })();
@@ -913,7 +918,7 @@ const app = new Elysia()
       broadcast({ type: 'attendees' });
       return { ok: true, rows: body.rows.length, added };
     },
-    { body: t.Object({ rows: t.Array(t.Object({ ref: t.String(), name: t.String(), grp: t.Optional(t.String()), ticket: t.Optional(t.String()), price: t.Optional(t.Number()), email: t.Optional(t.String()), phone: t.Optional(t.String()), order_no: t.Optional(t.String()), eventpop_used: t.Optional(t.String()), team: t.Optional(t.String()), note: t.Optional(t.String()) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+    { body: t.Object({ rows: t.Array(t.Object({ ref: t.String(), name: t.String(), grp: t.Optional(t.String()), ticket: t.Optional(t.String()), price: t.Optional(t.Number()), paid: t.Optional(t.Number()), email: t.Optional(t.String()), phone: t.Optional(t.String()), order_no: t.Optional(t.String()), eventpop_used: t.Optional(t.String()), team: t.Optional(t.String()), note: t.Optional(t.String()) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
   .post(
     '/api/attendees/mark',
@@ -929,7 +934,7 @@ const app = new Elysia()
       if (body.refunded !== undefined) db.query('UPDATE attendees SET refunded_at = ? WHERE ref = ?').run(body.refunded ? now : 0, a.ref);
       if (body.note !== undefined) db.query('UPDATE attendees SET note = ? WHERE ref = ?').run(clip(body.note, 200), a.ref);
       if (body.checked) insertEvent.run('note', '', `✅ check-in: ${a.name} (${a.ticket})`, now);
-      if (body.refunded) insertEvent.run('note', '', `💸 refund ฿${a.price}: ${a.name}`, now);
+      if (body.refunded) insertEvent.run('note', '', `💸 refund ฿${a.paid || a.price}: ${a.name}`, now);
       broadcast({ type: 'attendees' });
       return { ok: true, attendee: qAttendee.get(a.ref) };
     },
@@ -957,7 +962,7 @@ const app = new Elysia()
         }
       }
       const f = qAttendee.get(a.ref)!;
-      return { ok: true, name: f.name, ticket: f.ticket, price: f.price, grp: f.grp, ref: f.ref, checked_at: f.checked_at, refunded_at: f.refunded_at, team: f.team };
+      return { ok: true, name: f.name, ticket: f.ticket, price: f.price, paid: f.paid || f.price, grp: f.grp, ref: f.ref, checked_at: f.checked_at, refunded_at: f.refunded_at, team: f.team };
     },
     { body: t.Object({ q: t.String({ maxLength: 200 }), confirm: t.Optional(t.Boolean()) }) },
   )
@@ -969,8 +974,8 @@ const app = new Elysia()
     set.headers['content-type'] = 'text/csv; charset=utf-8';
     set.headers['content-disposition'] = 'attachment; filename="shtx-checkin.csv"';
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = qAttendees.all().map((a) => [a.ref, a.name, a.grp, a.ticket, a.price, a.email, a.phone, a.order_no, a.eventpop_used, a.checked_at ? new Date(a.checked_at).toISOString() : '', a.refunded_at ? new Date(a.refunded_at).toISOString() : '', a.team, a.note].map(esc).join(','));
-    return '\ufeff' + ['ref,name,group,ticket,price,email,phone,order,eventpop_checkin,checked_at,refunded_at,team,note', ...rows].join('\n');
+    const rows = qAttendees.all().map((a) => [a.ref, a.name, a.grp, a.ticket, a.price, a.paid || a.price, a.email, a.phone, a.order_no, a.eventpop_used, a.checked_at ? new Date(a.checked_at).toISOString() : '', a.refunded_at ? new Date(a.refunded_at).toISOString() : '', a.team, a.note].map(esc).join(','));
+    return '\ufeff' + ['ref,name,group,ticket,price,paid_incl_fee,email,phone,order,eventpop_checkin,checked_at,refunded_at,team,note', ...rows].join('\n');
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())
   .post(
