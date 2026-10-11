@@ -154,6 +154,51 @@ function gachaDrawOne(prizes: GachaPrize[], rates: Record<GachaTier, number>): G
   return item;
 }
 
+/* Popular-vote ranking for the gacha guarantee (1st: at least one T1, 2nd-3rd: at least one T2 or better). Read from the
+   voting app's OBS board and saved, because the board goes empty once its session is completed. */
+type VoteRank = { team: string; score: number; votes: number };
+const teamKey = (s: string) => s.normalize('NFC').replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+async function liveVoteRanks(): Promise<VoteRank[]> {
+  if (!VOTE_UPSTREAM) return [];
+  const res = await fetch(`${VOTE_UPSTREAM}/api/obs`, { signal: AbortSignal.timeout(5000) });
+  const reader = res.body!.getReader();
+  let buf = '';
+  while (!buf.includes('\n\n')) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += new TextDecoder().decode(value);
+  }
+  void reader.cancel();
+  const line = buf.split('\n').find((l) => l.startsWith('data:'));
+  const state = line ? (JSON.parse(line.slice(5)) as { teams?: { name: string; totalScore: number; voteCount: number }[] }) : {};
+  return (state.teams ?? [])
+    .filter((t) => t.voteCount > 0)
+    .map((t) => ({ team: t.name, score: t.totalScore, votes: t.voteCount }))
+    .sort((a, b) => b.score - a.score || b.votes - a.votes);
+}
+async function voteRanks(): Promise<{ at: number; ranks: VoteRank[]; live: boolean } | null> {
+  try {
+    const ranks = await liveVoteRanks();
+    if (ranks.length) {
+      const snap = { at: Date.now(), ranks };
+      setSetting.run('gacha.ranks', JSON.stringify(snap));
+      return { ...snap, live: true };
+    }
+  } catch {
+    /* voting app down: use the snapshot */
+  }
+  try {
+    const snap = JSON.parse(qSetting.get('gacha.ranks')?.v || 'null');
+    return snap ? { ...snap, live: false } : null;
+  } catch {
+    return null;
+  }
+}
+function gachaGuarantee(ranks: VoteRank[], team: string): GachaTier | undefined {
+  const i = ranks.findIndex((r) => teamKey(r.team) === teamKey(team));
+  return i === 0 ? 'T1' : i === 1 || i === 2 ? 'T2' : undefined;
+}
+
 /* Everyone registered on SHTX-NET with at least minLinks links, one entry per person (duplicate nicks keep the best-linked device), test nodes dropped */
 function drawParticipants(minLinks: number, exclude: string[]) {
   const deg = new Map<string, number>();
@@ -856,6 +901,10 @@ const app = new Elysia()
       const prizes = await gachaPrizes();
       const rates = gachaRates();
       const count = Math.max(1, Math.min(20, body.count ?? 1));
+      const team = clip(body.team, 60) || 'Team ?';
+      // the vote guarantee applies to a team's first pull only
+      const first = !qGachaPulls.all().some((r) => teamKey(r.team) === teamKey(team));
+      const min = first ? gachaGuarantee((await voteRanks())?.ranks ?? [], team) : undefined;
       const got: GachaPrize[] = [];
       const demo = body.demo ? prizes.find((p) => p.id === body.demo && p.remaining > 0) : undefined;
       if (demo) {
@@ -868,21 +917,35 @@ const app = new Elysia()
         got.push(p);
       }
       if (!got.length) return { ok: false, error: 'no stock left' };
+      // pity: nothing good enough drawn → the last card is redrawn from the guaranteed tiers ('T1' < 'T2' < 'T3')
+      if (min && !got.some((p) => p.tier <= min)) {
+        const swap = gachaDrawOne(prizes.filter((p) => p.tier <= min), rates);
+        if (swap) {
+          got[got.length - 1].remaining++;
+          got[got.length - 1] = swap;
+        }
+      }
       const now = Date.now();
-      const team = clip(body.team, 60) || 'Team ?';
       db.transaction(() => {
         for (const p of got) db.query('INSERT INTO gacha_drawn (id, n) VALUES (?, 1) ON CONFLICT(id) DO UPDATE SET n = n + 1').run(p.id);
         db.query('INSERT INTO gacha_pulls (team, count, prizes, at) VALUES (?, ?, ?, ?)').run(team, got.length, JSON.stringify(got.map((p) => p.id)), now);
       })();
       const id = (db.query<{ id: number }, []>('SELECT last_insert_rowid() id').get()?.id) ?? 0;
-      const detail = `🎰 ${team} pulled ${got.length}: ${got.map((p) => `${p.tier} ${p.name}`).join(', ')}`;
+      const detail = `🎰 ${team} pulled ${got.length}${min ? ` (guaranteed ${min}+)` : ''}: ${got.map((p) => `${p.tier} ${p.name}`).join(', ')}`;
       insertEvent.run('note', '', detail, now);
       broadcast({ type: 'event', event: { type: 'note', mac: '', detail, at: now } });
       broadcast({ type: 'gacha' });
-      return { ok: true, id, team, prizes: got.map((p) => p.id), at: now, remaining: Object.fromEntries(prizes.map((p) => [p.id, p.remaining])), liveRates: gachaLiveRates(prizes) };
+      return { ok: true, id, team, guarantee: min ?? null, prizes: got.map((p) => p.id), at: now, remaining: Object.fromEntries(prizes.map((p) => [p.id, p.remaining])), liveRates: gachaLiveRates(prizes) };
     },
     { body: t.Object({ team: t.String({ maxLength: 80 }), count: t.Optional(t.Integer()), demo: t.Optional(t.String({ maxLength: 80 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
   )
+  .get('/api/gacha/ranks', async ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    return (await voteRanks()) ?? { at: 0, ranks: [], live: false };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/gacha/log', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;

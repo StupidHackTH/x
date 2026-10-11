@@ -23,6 +23,10 @@ let stock: Record<string, number> = {}; // remaining per prize id, as the server
 let mode: 'uniform' | 'tier' = 'uniform'; // uniform: every remaining ticket is equally likely, so the live rate = share of stock left
 let count = 3;
 const teamSize = new Map<string, number>();
+type VoteRank = { team: string; score: number; votes: number };
+let ranks: VoteRank[] = [];
+let ranksAt = 0;
+const teamKey = (s: string) => s.normalize('NFC').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); // same as the server
 
 function renderStock() {
   const left = (t: Tier) => prizes.filter((p) => p.tier === t).reduce((n, p) => n + (stock[p.id] ?? 0), 0);
@@ -30,6 +34,8 @@ function renderStock() {
     .map((t) => `<div><b>${t} ${tiers[t].label}</b> · ${left(t)} left — ${prizes.filter((p) => p.tier === t).map((p) => `${p.name} ×${stock[p.id] ?? 0}`).join(', ')}</div>`)
     .join('');
   $<HTMLButtonElement>('pull').disabled = order.every((t) => left(t) === 0);
+  const all = prizes.reduce((n, p) => n + p.amount, 0);
+  $('outof').textContent = `ออกแล้ว ${all - order.reduce((n, t) => n + left(t), 0)}/${all}`;
   const total = order.reduce((n, t) => n + left(t), 0) || 1;
   const rates = document.getElementById('rates');
   if (rates) rates.innerHTML = order.map((t) => `<span class="rate ${t}">${t} ${tiers[t].label} ${(100 * (mode === 'uniform' ? left(t) / total : tiers[t].rate)).toFixed(1)}%</span>`).join('') + `<span class="rate mode">${mode === 'uniform' ? 'ทุกตั๋วเท่ากัน · เรตตามของที่เหลือ' : 'เรตคงที่ต่อ tier'}</span>`;
@@ -120,7 +126,8 @@ function showResults(team: string, got: Prize[], best: Tier) {
     ...got.map((p, i) => {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = `card ${p.tier}`;
+      card.className = 'card'; // tier class only once clicked: each member picks a disc blind
+      card.dataset.tier = p.tier;
       card.style.animationDelay = `${i * 0.14}s`;
       card.innerHTML = `
         <div class="face back"><div class="disc"></div><img src="${asset('logo-transparent.png')}" alt="" /><span>PRIZE DISC</span></div>
@@ -146,7 +153,7 @@ const windup: Record<Tier, number> = { T1: 650, T2: 280, T3: 0 };
 
 function reveal(card: HTMLElement, p: Prize, total: number): Promise<void> {
   if (card.classList.contains('open') || card.classList.contains('charging')) return Promise.resolve();
-  card.classList.add('charging');
+  card.classList.add(p.tier, 'charging');
   return new Promise((resolve) => setTimeout(async () => {
     if (p.reveal) {
       await special(p);
@@ -277,7 +284,29 @@ $('minus').onclick = () => setCount(count - 1);
 $('team').oninput = () => {
   const n = teamSize.get($<HTMLInputElement>('team').value.trim());
   if (n) setCount(n);
+  renderGuarantee();
 };
+
+// Mirrors the server: popular-vote 1st gets at least one SSR, 2nd-3rd at least one Rare or better, on their first pull.
+function renderGuarantee() {
+  const i = ranks.findIndex((r) => teamKey(r.team) === teamKey($<HTMLInputElement>('team').value));
+  const el = $('guarantee');
+  el.hidden = i < 0 || i > 2;
+  if (el.hidden) return;
+  const at = ranksAt ? ` · คะแนนโหวต ณ ${new Date(ranksAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` : '';
+  el.textContent = `${['🥇', '🥈', '🥉'][i]} โหวตอันดับ ${i + 1} (${ranks[i].score} คะแนน) · การันตี ${i === 0 ? tiers.T1.label : `${tiers.T2.label} ขึ้นไป`} อย่างน้อย 1 ใบ${at}`;
+}
+
+async function loadRanks() {
+  try {
+    const r = await adminFetch('/api/gacha/ranks');
+    if (!r.ok) return;
+    ({ ranks, at: ranksAt } = (await r.json()) as { ranks: VoteRank[]; at: number });
+    renderGuarantee();
+  } catch {
+    /* no ranking: no guarantee shown */
+  }
+}
 $('plus').onclick = () => setCount(count + 1);
 $('pull').onclick = () => void pull();
 $('reset').onclick = async () => {
@@ -287,7 +316,7 @@ $('reset').onclick = async () => {
 };
 $('reveal-all').onclick = () => {
   // commons first, SSR last
-  const rank = (c: Element) => order.indexOf([...c.classList].find((k) => k in tiers) as Tier);
+  const rank = (c: HTMLElement) => order.indexOf(c.dataset.tier as Tier);
   const queue = [...document.querySelectorAll<HTMLElement>('.card:not(.open)')].sort((a, b) => rank(b) - rank(a));
   (async () => {
     for (const c of queue) {
@@ -304,6 +333,7 @@ $('next').onclick = () => {
   $('setup').hidden = false;
   $<HTMLInputElement>('team').value = '';
   renderStock();
+  void loadRanks();
 };
 // Prize list from the NOC server (which reads the Grist Prize table live and knows what has been drawn). `base` = media
 // folder from Grist `Video link`; its meta.json may add { "flash": ms }.
@@ -356,6 +386,7 @@ async function unlock(token: string): Promise<boolean> {
   setToken(token);
   prizes = list;
   void loadTeams();
+  void loadRanks();
   $('demo').replaceChildren(new Option('Demo: random', ''), ...prizes.filter((p) => p.reveal).map((p) => new Option(`Demo: ${tiers[p.tier].label} ${p.name}`, p.id)));
   renderStock();
   $('lock').hidden = true;

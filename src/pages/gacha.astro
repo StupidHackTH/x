@@ -52,7 +52,9 @@ import { tiers } from '../data/prizes';
       .rate.mode { background: #666; font-weight: normal; }
       .stock { font-size: 12px; color: #555; max-height: 92px; overflow: auto; border: 1px solid #c8c8c8; padding: 4px 8px; background: #fafafa; }
       .stock b { color: #0b2a5b; }
-      .rates[hidden], .stock[hidden] { display: none; }
+      .stock[hidden] { display: none; }
+      .outof { font-size: 12px; color: #0b2a5b; font-weight: bold; }
+      .guarantee { font-size: 13px; color: #7a4a00; background: #fff6d6; border: 1px solid #f0c64a; border-radius: 4px; padding: 4px 8px; }
       .wiz-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #c8c8c8; background: #ece9d8; font-size: 12px; }
       .wiz-foot label { display: flex; align-items: center; gap: 4px; }
       .pull-btn { padding: 8px 26px; border-radius: 20px; border: 1px solid #1b6b00; color: #fff; font: bold 17px 'Trebuchet MS', sans-serif; cursor: pointer; text-shadow: 0 1px 1px #145000;
@@ -86,7 +88,7 @@ import { tiers } from '../data/prizes';
       .results h2 { margin: 0; color: #fff; font: bold 28px 'Trebuchet MS', sans-serif; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); letter-spacing: 1px; }
       .results h2 small { display: block; font-size: 14px; font-weight: normal; opacity: 0.85; text-align: center; }
       .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; max-width: 1200px; perspective: 1200px; }
-      .card { width: 190px; height: 270px; position: relative; cursor: pointer; transform-style: preserve-3d; will-change: transform;
+      .card { --glow: rgba(255, 255, 255, 0.6); width: 190px; height: 270px; position: relative; cursor: pointer; transform-style: preserve-3d; will-change: transform;
         transition: transform 0.75s cubic-bezier(0.34, 1.4, 0.5, 1), filter 0.3s; border: 0; padding: 0; background: none; font: inherit; opacity: 0; }
       .results.dealt .card { animation: deal 0.75s cubic-bezier(0.22, 1.2, 0.36, 1) backwards; opacity: 1; }
       .results h2, .res-actions { opacity: 0; transition: opacity 0.5s 0.3s; }
@@ -99,7 +101,7 @@ import { tiers } from '../data/prizes';
       .card.instant { transition: none; }
       @keyframes deal { from { transform: translateY(70vh) rotate(18deg) scale(0.7); opacity: 0; } 60% { opacity: 1; } }
       .face { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-      /* back = glossy jewel case with the disc; the rim glow hints the rarity before the flip */
+      /* back = glossy jewel case with the disc; the rim glow is the same for every tier (the tier class is added on click) */
       .back { background: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.05)), #1d5fd1;
         border: 2px solid rgba(255, 255, 255, 0.7); box-shadow: 0 0 22px 4px var(--glow), inset 0 1px #fff; }
       .back .disc { width: 130px; height: 130px; border-radius: 50%; animation: spin 6s linear infinite;
@@ -187,12 +189,14 @@ import { tiers } from '../data/prizes';
             <p>แต่ละทีมได้สุ่มเท่ากับจำนวนสมาชิก (ที่ 1-2-3 หมุนเพิ่มได้) กด Pull แล้วเปิดการ์ดทีละใบ ผลสุ่มบันทึกบน NOC server</p>
             <label class="field">Team <input id="team" placeholder="ชื่อทีม" list="teams" autocomplete="off" /></label>
             <datalist id="teams"></datalist>
+            <div class="guarantee" id="guarantee" hidden></div>
             <div class="field">Pulls
               <div class="stepper"><button class="xpbtn" id="minus" type="button">−</button><output id="count">3</output><button class="xpbtn" id="plus" type="button">+</button></div>
             </div>
-            <div class="rates" id="rates" data-demo hidden>
+            <div class="rates" id="rates">
               {Object.entries(tiers).map(([t, v]) => <span class={`rate ${t}`}>{t} {v.label} {Math.round(v.rate * 100)}%</span>)}
             </div>
+            <div class="outof" id="outof"></div>
             <div class="stock" id="stock" data-demo hidden></div>
           </div>
         </div>
