@@ -216,6 +216,41 @@ function onAwardRevealed(a: Award) {
   pushEvent({ type: 'note', mac: a.mac, detail: a.kind === 'place' || a.kind === 'gacha' ? `🏆 #${a.place} ${a.team}: ${a.item}` : `🎁 ${a.nick} ← ${a.item}`, at: Date.now() });
 }
 
+/* ---------- live vote board (bridged from the voting app's SSE by the server) ---------- */
+interface VoteBoard { session: { id: number; name: string } | null; activeTeam: { teamId: number; name: string; totalScore: number; voteCount: number } | null; teams: { teamId: number; orderId: number; name: string; totalScore: number; voteCount: number; isActive: boolean }[]; connected?: boolean }
+function renderVoteBoard(b: VoteBoard) {
+  const panel = $('noc-livevote');
+  panel.hidden = !b.session;
+  if (!b.session) return;
+  const total = b.teams.reduce((s, t) => s + t.voteCount, 0);
+  $('noc-lv-state').textContent = `(${b.session.name} · ${total} โหวต${b.connected === false ? ' · offline' : ''})`;
+  const a = $('noc-lv-active');
+  a.hidden = !b.activeTeam;
+  if (b.activeTeam) {
+    $('noc-lv-name').textContent = b.activeTeam.name;
+    const sc = $('noc-lv-score');
+    sc.textContent = `${b.activeTeam.totalScore > 0 ? '+' : ''}${b.activeTeam.totalScore}`;
+    sc.classList.toggle('neg', b.activeTeam.totalScore < 0);
+    $('noc-lv-votes').textContent = `${b.activeTeam.voteCount} คนโหวต`;
+  }
+  const ol = $('noc-lv');
+  ol.innerHTML = '';
+  [...b.teams].sort((x, y) => y.totalScore - x.totalScore || y.voteCount - x.voteCount).slice(0, 6).forEach((t, i) => {
+    const li = document.createElement('li');
+    if (t.isActive) li.className = 'on';
+    li.innerHTML = `<span class="n"></span><b></b><span class="deg"></span>`;
+    li.querySelector('.n')!.textContent = String(i + 1);
+    li.querySelector('b')!.textContent = t.name;
+    li.querySelector('.deg')!.textContent = `${t.totalScore > 0 ? '+' : ''}${t.totalScore}`;
+    ol.appendChild(li);
+  });
+}
+async function loadVoteBoard() {
+  if (demo) return;
+  const r = await fetch(`${apiBase()}/api/vote/board`, { cache: 'no-store' }).catch(() => null);
+  if (r?.ok) renderVoteBoard((await r.json()) as VoteBoard);
+}
+
 /* ---------- popular-vote link (Uddy's app): QR on the stage screen ---------- */
 let voteLinkNow: string | null = null;
 function renderVoteLink(url: string) {
@@ -383,6 +418,7 @@ function connect() {
         else if (msg.type === 'bingo') void loadBingo();
         else if (msg.type === 'deadpixel') void loadDeadPixel();
         else if (msg.type === 'award') onAwardRevealed(msg.award);
+        else if (msg.type === 'voteboard') renderVoteBoard(msg.board);
         else if (msg.type === 'awards') void loadAwards();
         else if (msg.type === 'prizes') {
           void loadAwards();
@@ -407,6 +443,8 @@ function connect() {
   void loadDeadPixel();
   void loadAwards();
   void loadPrizeNames();
+  void loadVoteBoard();
+  setInterval(() => void loadVoteBoard(), 15_000);
   setInterval(() => void loadAwards(), 30_000);
   setInterval(() => void loadBingo(), 30_000);
   setInterval(() => void loadDeadPixel(), 10_000);

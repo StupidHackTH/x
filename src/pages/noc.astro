@@ -74,6 +74,14 @@ import Icons from '../components/Icons.astro';
       .adm-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); }
       .adm-group select { padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.9); color: #06264f; font: inherit; max-width: 140px; }
       .panel.awards li b.c { text-decoration: line-through; opacity: 0.6; }
+      .lv-active { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: center; padding: 6px 10px; margin-bottom: 6px; border-radius: 10px; background: rgba(255, 211, 77, 0.18); border: 1px solid rgba(255, 211, 77, 0.6); }
+      .lv-active[hidden] { display: none; }
+      .lv-active small { grid-column: 1 / -1; font-size: 10px; letter-spacing: 2px; color: #ffd34d; }
+      .lv-active b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .lv-active .lv-score { font: bold 26px 'Trebuchet MS', Tahoma, sans-serif; color: #ffd34d; font-variant-numeric: tabular-nums; }
+      .lv-active .lv-score.neg { color: #ff8a8a; }
+      .panel.livevote li .deg { min-width: 40px; text-align: center; }
+      .panel.livevote li.on b { color: #ffd34d; }
       .panel.votelink { display: flex; flex-direction: column; align-items: center; flex: none; }
       .panel.votelink canvas { background: #fff; padding: 6px; border-radius: 8px; width: 180px; height: 180px; }
       .votelink-url { margin-top: 6px; font: 11px 'Lucida Console', monospace; color: #d4f1ff; word-break: break-all; text-align: center; }
@@ -207,6 +215,7 @@ import Icons from '../components/Icons.astro';
           <div class="panel glass"><h3>Core switches</h3><ol id="noc-top"></ol></div>
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
+          <div class="panel glass livevote" id="noc-livevote" hidden><h3>Live vote <span id="noc-lv-state"></span></h3><div class="lv-active" id="noc-lv-active" hidden><small>ON STAGE</small><b id="noc-lv-name"></b><span class="lv-score" id="noc-lv-score"></span><small id="noc-lv-votes"></small></div><ol id="noc-lv"></ol></div>
           <div class="panel glass vote"><h3>Most Stupid Project <span id="noc-vote-state"></span></h3><ol id="noc-vote"></ol></div>
           <div class="panel glass bingo"><h3>Packet Loss Bingo <span id="noc-bingo-stats"></span></h3><ol id="noc-bingo"></ol></div>
           <div class="panel glass awards" id="noc-awards-panel" hidden><h3>Prizes <span id="noc-awards-stats"></span></h3><ol id="noc-awards"></ol></div>

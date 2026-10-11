@@ -528,6 +528,7 @@ const app = new Elysia()
     insertEvent.run('note', '', `🎲 pitch #${no}: ${pick.team} — ${pick.project}`, now);
     broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `🎲 pitch #${no}: ${pick.team}`, at: now } });
     broadcast({ type: 'project' });
+    scheduleVoteSync();
     return { ok: true, no, team: pick.team, project: pick.project, device: pick.device, left: left.length - 1, candidates: left.map((p) => p.team) };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .delete('/api/projects/draw', ({ query, set }) => {
@@ -538,6 +539,7 @@ const app = new Elysia()
     db.query('DELETE FROM pitch_order').run();
     insertEvent.run('note', '', 'pitch order reset', Date.now());
     broadcast({ type: 'project' });
+    scheduleVoteSync();
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/projects.txt', ({ set }) => {
@@ -573,6 +575,7 @@ const app = new Elysia()
       const mine = list.find((p) => p.device === device)!;
       insertEvent.run('note', '', `project ${first === now ? 'submitted' : 'updated'}: ${mine.team} — ${mine.project}`, now);
       broadcast({ type: 'project', project: mine });
+      scheduleVoteSync();
       broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `project ${first === now ? 'submitted' : 'updated'}: ${mine.team} — ${mine.project}`, at: now } });
       return { ok: true, order: mine.order };
     },
@@ -585,6 +588,7 @@ const app = new Elysia()
     }
     db.query('DELETE FROM projects WHERE device = ?').run(params.device);
     broadcast({ type: 'project', removed: params.device });
+    scheduleVoteSync();
     return { ok: true };
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   /* Most Stupid Project vote: one vote per device for a submitted project, changeable while voting is open */
@@ -1081,6 +1085,17 @@ const app = new Elysia()
       hunt: { players: new Set(qHuntAll.all().map((h) => h.device)).size, finished: Object.values(qHuntAll.all().reduce((m: Record<string, number>, h) => ((m[h.device] = (m[h.device] ?? 0) + 1), m), {})).filter((n) => n >= 6).length },
     };
   })
+  .get('/api/vote/board', () => voteBoard)
+  .post('/api/vote/sync', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    const r = syncVoteTeams();
+    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams})` : `vote sync failed: ${r.error}`, Date.now());
+    if (r.ok) refreshVoteBoard();
+    return r;
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/attendees.csv', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;
@@ -1172,6 +1187,93 @@ if (TLS_CERT && TLS_KEY) {
     console.log(`…and https on port ${tls.server?.port}`);
   } else console.log(`TLS files not found yet (${TLS_CERT}); serving plain http only. Restart after the certificate is issued.`);
 }
+
+/* Team sync into the voting app: with VOTE_DB (its SQLite file, volume shared with the shtx-vote container) the
+   pitching queue in drawn order is upserted into the teams of the session VOTE_SESSION ("Shtx") whenever the queue or
+   the draw changes. Existing teams keep their id and votes; teams removed from the queue are left alone. */
+const VOTE_DB = process.env.VOTE_DB ?? '';
+const VOTE_SESSION = process.env.VOTE_SESSION ?? 'Shtx';
+let voteAbort: AbortController | null = null;
+/** The voting app only pushes OBS updates for its own actions, so after we write its database directly we reconnect to get a fresh snapshot. */
+const refreshVoteBoard = () => voteAbort?.abort();
+let voteSyncTimer: ReturnType<typeof setTimeout> | null = null;
+function syncVoteTeams(): { ok: boolean; teams?: number; error?: string } {
+  if (!VOTE_DB) return { ok: false, error: 'VOTE_DB not set' };
+  try {
+    const vdb = new Database(VOTE_DB);
+    const list = projectList();
+    const drawn = list.filter((p) => p.pitch_no).sort((a, b) => a.pitch_no - b.pitch_no);
+    const order = [...drawn, ...list.filter((p) => !p.pitch_no)];
+    if (!order.length) return { ok: true, teams: 0 }; // an empty queue never wipes the vote app's team list
+    vdb.transaction(() => {
+      vdb.query('INSERT OR IGNORE INTO sessions (name, status) VALUES (?, ?)').run(VOTE_SESSION, 'NOT_STARTED');
+      const sid = vdb.query<{ id: number }, [string]>('SELECT id FROM sessions WHERE name = ?').get(VOTE_SESSION)!.id;
+      vdb.query('UPDATE teams SET order_id = -order_id - 1000 WHERE session_id = ?').run(sid);
+      order.forEach((p, i) => vdb.query('INSERT INTO teams (session_id, name, order_id) VALUES (?, ?, ?) ON CONFLICT(session_id, name) DO UPDATE SET order_id = excluded.order_id, updated_at = CURRENT_TIMESTAMP').run(sid, p.team.trim().slice(0, 80), i + 1));
+    })();
+    vdb.close();
+    return { ok: true, teams: order.length };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+function scheduleVoteSync() {
+  if (!VOTE_DB) return;
+  if (voteSyncTimer) clearTimeout(voteSyncTimer);
+  voteSyncTimer = setTimeout(() => {
+    const r = syncVoteTeams();
+    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams})` : `vote sync failed: ${r.error}`, Date.now());
+    if (r.ok) refreshVoteBoard();
+  }, 1500);
+}
+
+/* Live vote bridge: follow the voting app's /api/obs SSE stream (session, team on stage, per-team totals) and
+   re-broadcast it on our websocket + GET /api/vote/board, so the NOC and the dashboard show scores live. */
+type VoteBoard = { session: { id: number; name: string } | null; activeTeam: { teamId: number; name: string; totalScore: number; voteCount: number } | null; teams: { teamId: number; orderId: number; name: string; totalScore: number; voteCount: number; isActive: boolean }[] };
+let voteBoard: VoteBoard & { at: number; connected: boolean } = { session: null, activeTeam: null, teams: [], at: 0, connected: false };
+async function followVoteStream() {
+  const up = (process.env.VOTE_UPSTREAM ?? '').replace(/\/$/, '');
+  if (!up) return;
+  let backoff = 1000;
+  for (;;) {
+    try {
+      voteAbort = new AbortController();
+      const res = await fetch(`${up}/api/obs`, { headers: { accept: 'text/event-stream' }, signal: voteAbort.signal });
+      if (!res.ok || !res.body) throw new Error(`obs ${res.status}`);
+      backoff = 1000;
+      voteBoard.connected = true;
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const chunk = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          const data = chunk.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('');
+          if (!data) continue;
+          try {
+            const b = JSON.parse(data) as VoteBoard;
+            const changed = JSON.stringify({ s: b.session, a: b.activeTeam, t: b.teams }) !== JSON.stringify({ s: voteBoard.session, a: voteBoard.activeTeam, t: voteBoard.teams });
+            voteBoard = { ...b, at: Date.now(), connected: true };
+            if (changed) broadcast({ type: 'voteboard', board: voteBoard });
+          } catch {
+            /* ignore malformed */
+          }
+        }
+      }
+    } catch {
+      /* upstream down (or an intentional refresh): retry */
+    }
+    voteBoard.connected = false;
+    await Bun.sleep(voteAbort?.signal.aborted ? 300 : backoff);
+    backoff = Math.min(backoff * 2, 15_000);
+  }
+}
+void followVoteStream();
 
 /* HTTPS reverse proxy in front of the popular-voting app (Uddy's shtx-voting container, plain http on the docker network)
    so the site can embed it without mixed content. Same Let's Encrypt cert, port VOTE_PROXY_PORT (8444). */

@@ -46,6 +46,7 @@ import { asset } from '../lib/asset';
       <div class="card"><h2>คืนมัดจำ</h2><div class="big"><span id="rf-n">–</span><small id="rf-of"> / –</small></div><div class="row"><span>คืนแล้ว</span><b id="rf-baht">–</b></div><div class="row"><span>ยังต้องคืน</span><b id="rf-left">–</b></div></div>
       <div class="card"><h2>SHTX-NET</h2><div class="big" id="net-h">–<small> hosts</small></div><div class="row"><span>links ทั้งหมด</span><b id="net-l">–</b></div><div class="row"><span>air links</span><b id="net-a">–</b></div></div>
       <div class="card"><h2>โหวต / กาชา / Logo Hunting</h2><div class="row"><span>Popular vote</span><b id="vote">–</b></div><div class="row"><span>Most Stupid Project</span><b id="vote2">–</b></div><div class="row"><span>กาชาหมุนแล้ว</span><b id="gacha">–</b></div><div class="row"><span>Logo Hunting เล่น / ครบ 6</span><b id="hunt">–</b></div></div>
+      <div class="card"><h2>Live vote</h2><div id="lv-active" class="row" style="border:0"><span>บนเวที</span><b id="lv-name">–</b></div><div class="big" id="lv-score" style="font-size:36px">–</div><ol id="lv"></ol></div>
       <div class="card"><h2>เช็คอินล่าสุด</h2><ol id="last"></ol></div>
       <div class="card teams"><h2>คิว pitching</h2><ol id="teams"></ol></div>
     </div>
@@ -74,6 +75,12 @@ import { asset } from '../lib/asset';
           $('last').replaceChildren(...s.attendees.lastCheckins.map((c: { name: string; at: number }) => { const li = document.createElement('li'); li.innerHTML = `<span class="n">${t(c.at)}</span><b></b><span></span>`; li.querySelector('b')!.textContent = c.name; return li; }));
           $('teams').replaceChildren(...s.teams.map((x: { order: number; team: string; project: string; members: number; needs: string; at: number }) => { const li = document.createElement('li'); li.innerHTML = `<span class="n">${x.order}</span><b></b><span class="pill"></span>`; li.querySelector('b')!.innerHTML = `${x.team.replace(/</g, '&lt;')}<small></small>`; li.querySelector('small')!.textContent = `${x.project} · ส่ง ${t(x.at)}${x.needs && x.needs !== '-' ? ` · ${x.needs}` : ''}`; li.querySelector('.pill')!.textContent = `${x.members || '?'} คน`; return li; }));
           $('sync').textContent = `อัปเดต ${t(s.at)} · ทุก 10 วิ`;
+          const vb = await (await fetch(`${apiBase()}/api/vote/board`, { cache: 'no-store' })).json();
+          if (vb.session) {
+            $('lv-name').textContent = vb.activeTeam ? vb.activeTeam.name : 'ยังไม่มีทีมขึ้นเวที';
+            $('lv-score').textContent = vb.activeTeam ? `${vb.activeTeam.totalScore > 0 ? '+' : ''}${vb.activeTeam.totalScore} (${vb.activeTeam.voteCount} โหวต)` : `${vb.session.name}`;
+            $('lv').replaceChildren(...[...vb.teams].sort((x: { totalScore: number }, y: { totalScore: number }) => y.totalScore - x.totalScore).slice(0, 5).map((x: { name: string; totalScore: number; voteCount: number }, i: number) => { const li = document.createElement('li'); li.innerHTML = `<span class="n">${i + 1}</span><b></b><span class="pill"></span>`; li.querySelector('b')!.textContent = x.name; li.querySelector('.pill')!.textContent = `${x.totalScore > 0 ? '+' : ''}${x.totalScore} · ${x.voteCount}`; return li; }));
+          } else { $('lv-name').textContent = 'ยังไม่เริ่ม session'; $('lv-score').textContent = '–'; $('lv').replaceChildren(); }
         } catch (e) { $('sync').textContent = `โหลดไม่ได้ (${(e as Error).message})`; }
       }
       void load();
