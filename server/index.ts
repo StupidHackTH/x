@@ -966,6 +966,24 @@ const app = new Elysia()
     },
     { body: t.Object({ q: t.String({ maxLength: 200 }), confirm: t.Optional(t.Boolean()) }) },
   )
+  /* Public aggregate stats for the dashboard (no names, no contact data) */
+  .get('/api/stats', () => {
+    const at = qAttendees.all();
+    const paid = at.filter((a) => a.price > 0);
+    const projects = projectList();
+    const nodes = qNodes.all();
+    const links = qLinks.all();
+    const prizesDrawn = qGachaDrawn.all().reduce((s, d) => s + d.n, 0);
+    return {
+      at: Date.now(),
+      attendees: { paid: paid.length, checked: paid.filter((a) => a.checked_at).length, refunded: paid.filter((a) => a.refunded_at).length, refundedBaht: Math.round(paid.filter((a) => a.refunded_at).reduce((s, a) => s + (a.paid || a.price), 0) * 100) / 100, toRefundBaht: Math.round(paid.filter((a) => !a.refunded_at).reduce((s, a) => s + (a.paid || a.price), 0) * 100) / 100, staffChecked: at.filter((a) => a.price === 0 && a.checked_at).length, lastCheckins: paid.filter((a) => a.checked_at).sort((x, y) => y.checked_at - x.checked_at).slice(0, 8).map((a) => ({ name: a.name, at: a.checked_at })) },
+      teams: projects.map((p) => ({ order: p.order, team: p.team, project: p.project, members: p.members.split(/[,\n]/).map((m) => m.trim()).filter(Boolean).length, needs: p.needs, at: p.first_at })),
+      net: { hosts: nodes.length, links: links.length, air: links.filter((l) => l.via === 'air').length },
+      vote: { open: pauseState().vote, link: pauseState().voteUrl, submitClosed: pauseState().submit },
+      gacha: { pulls: qGachaPulls.all().length, drawn: prizesDrawn },
+      hunt: { players: new Set(qHuntAll.all().map((h) => h.device)).size, finished: Object.values(qHuntAll.all().reduce((m: Record<string, number>, h) => ((m[h.device] = (m[h.device] ?? 0) + 1), m), {})).filter((n) => n >= 6).length },
+    };
+  })
   .get('/api/attendees.csv', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;
