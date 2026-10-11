@@ -277,7 +277,8 @@ const broadcast = (msg: object) => {
   }
 };
 
-/* a very small rate limit: 120 requests / minute / IP */
+/* rate limit per client IP. The venue Wi-Fi puts every phone behind one NAT address, so this is really a per-venue
+   budget: ~60 phones × ~12 polls/min ≈ 700/min in normal use. 3000/min still stops a runaway script. */
 const buckets = new Map<string, { n: number; t: number }>();
 const limited = (ip: string) => {
   const now = Date.now();
@@ -288,7 +289,7 @@ const limited = (ip: string) => {
   }
   b.n++;
   buckets.set(ip, b);
-  return b.n > 120;
+  return b.n > 3000;
 };
 
 const app = new Elysia()
