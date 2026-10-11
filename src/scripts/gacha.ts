@@ -26,6 +26,7 @@ const teamSize = new Map<string, number>();
 type VoteRank = { team: string; score: number; votes: number };
 let ranks: VoteRank[] = [];
 let ranksAt = 0;
+const pulled = new Set<string>(); // teamKey of teams with a pull on the server: the guarantee is first pull only
 const teamKey = (s: string) => s.normalize('NFC').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); // same as the server
 
 function renderStock() {
@@ -38,7 +39,7 @@ function renderStock() {
   $('outof').textContent = `ออกแล้ว ${all - order.reduce((n, t) => n + left(t), 0)}/${all}`;
   const total = order.reduce((n, t) => n + left(t), 0) || 1;
   const rates = document.getElementById('rates');
-  if (rates) rates.innerHTML = order.map((t) => `<span class="rate ${t}">${t} ${tiers[t].label} ${(100 * (mode === 'uniform' ? left(t) / total : tiers[t].rate)).toFixed(1)}%</span>`).join('') + `<span class="rate mode">${mode === 'uniform' ? 'ทุกตั๋วเท่ากัน · เรตตามของที่เหลือ' : 'เรตคงที่ต่อ tier'}</span>`;
+  if (rates) rates.innerHTML = order.map((t) => `<span class="rate ${t}">${t} ${tiers[t].label} ${(100 * (mode === 'uniform' ? left(t) / total : tiers[t].rate)).toFixed(1)}%</span>`).join('') + `<span class="rate mode">${mode === 'uniform' ? 'ทุกตั๋วเท่ากัน · เรตตามของที่เหลือ' : 'เรตคงที่ต่อ tier'}</span>` + guaranteeChip();
 }
 
 function setCount(n: number) {
@@ -61,6 +62,7 @@ async function pull() {
       return;
     }
     stock = data.remaining;
+    pulled.add(teamKey(team));
     renderStock();
     const got = data.prizes.map((id) => prizes.find((p) => p.id === id)).filter((p): p is Prize => !!p);
     if (!got.length) return;
@@ -284,17 +286,16 @@ $('minus').onclick = () => setCount(count - 1);
 $('team').oninput = () => {
   const n = teamSize.get($<HTMLInputElement>('team').value.trim());
   if (n) setCount(n);
-  renderGuarantee();
+  renderStock();
 };
 
 // Mirrors the server: popular-vote 1st gets at least one SSR, 2nd-3rd at least one Rare or better, on their first pull.
-function renderGuarantee() {
-  const i = ranks.findIndex((r) => teamKey(r.team) === teamKey($<HTMLInputElement>('team').value));
-  const el = $('guarantee');
-  el.hidden = i < 0 || i > 2;
-  if (el.hidden) return;
-  const at = ranksAt ? ` · คะแนนโหวต ณ ${new Date(ranksAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` : '';
-  el.textContent = `${['🥇', '🥈', '🥉'][i]} โหวตอันดับ ${i + 1} (${ranks[i].score} คะแนน) · การันตี ${i === 0 ? tiers.T1.label : `${tiers.T2.label} ขึ้นไป`} อย่างน้อย 1 ใบ${at}`;
+function guaranteeChip(): string {
+  const team = teamKey($<HTMLInputElement>('team').value);
+  const i = ranks.findIndex((r) => teamKey(r.team) === team);
+  if (i < 0 || i > 2 || pulled.has(team)) return '';
+  const at = ranksAt ? `คะแนน ณ ${new Date(ranksAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` : '';
+  return `<span class="rate ${i === 0 ? 'T1' : 'T2'}" title="${at}">${['🥇', '🥈', '🥉'][i]} โหวตอันดับ ${i + 1} (${ranks[i].score}) · การันตี ${i === 0 ? tiers.T1.label : `${tiers.T2.label} ขึ้นไป`} ≥ 1 ใบ</span>`;
 }
 
 async function loadRanks() {
@@ -302,7 +303,10 @@ async function loadRanks() {
     const r = await adminFetch('/api/gacha/ranks');
     if (!r.ok) return;
     ({ ranks, at: ranksAt } = (await r.json()) as { ranks: VoteRank[]; at: number });
-    renderGuarantee();
+    const log = await adminFetch('/api/gacha/log');
+    if (log.ok) pulled.clear();
+    if (log.ok) for (const p of ((await log.json()) as { pulls: { team: string }[] }).pulls) pulled.add(teamKey(p.team));
+    renderStock();
   } catch {
     /* no ranking: no guarantee shown */
   }

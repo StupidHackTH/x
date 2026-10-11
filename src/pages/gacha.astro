@@ -54,7 +54,6 @@ import { tiers } from '../data/prizes';
       .stock b { color: #0b2a5b; }
       .stock[hidden] { display: none; }
       .outof { font-size: 12px; color: #0b2a5b; font-weight: bold; }
-      .guarantee { font-size: 13px; color: #7a4a00; background: #fff6d6; border: 1px solid #f0c64a; border-radius: 4px; padding: 4px 8px; }
       .wiz-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #c8c8c8; background: #ece9d8; font-size: 12px; }
       .wiz-foot label { display: flex; align-items: center; gap: 4px; }
       .pull-btn { padding: 8px 26px; border-radius: 20px; border: 1px solid #1b6b00; color: #fff; font: bold 17px 'Trebuchet MS', sans-serif; cursor: pointer; text-shadow: 0 1px 1px #145000;
@@ -189,7 +188,6 @@ import { tiers } from '../data/prizes';
             <p>แต่ละทีมได้สุ่มเท่ากับจำนวนสมาชิก (ที่ 1-2-3 หมุนเพิ่มได้) กด Pull แล้วเปิดการ์ดทีละใบ ผลสุ่มบันทึกบน NOC server</p>
             <label class="field">Team <input id="team" placeholder="ชื่อทีม" list="teams" autocomplete="off" /></label>
             <datalist id="teams"></datalist>
-            <div class="guarantee" id="guarantee" hidden></div>
             <div class="field">Pulls
               <div class="stepper"><button class="xpbtn" id="minus" type="button">−</button><output id="count">3</output><button class="xpbtn" id="plus" type="button">+</button></div>
             </div>
