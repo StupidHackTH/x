@@ -304,8 +304,10 @@ async function loadRanks() {
     if (!r.ok) return;
     ({ ranks, at: ranksAt } = (await r.json()) as { ranks: VoteRank[]; at: number });
     const log = await adminFetch('/api/gacha/log');
-    if (log.ok) pulled.clear();
-    if (log.ok) for (const p of ((await log.json()) as { pulls: { team: string }[] }).pulls) pulled.add(teamKey(p.team));
+    if (log.ok) {
+      pulled.clear();
+      for (const p of ((await log.json()) as { pulls: { team: string }[] }).pulls) pulled.add(teamKey(p.team));
+    }
     renderStock();
   } catch {
     /* no ranking: no guarantee shown */

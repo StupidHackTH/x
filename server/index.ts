@@ -157,7 +157,7 @@ function gachaDrawOne(prizes: GachaPrize[], rates: Record<GachaTier, number>): G
 /* Popular-vote ranking for the gacha guarantee (1st: at least one T1, 2nd-3rd: at least one T2 or better). Read from the
    voting app's OBS board and saved, because the board goes empty once its session is completed. */
 type VoteRank = { team: string; score: number; votes: number };
-const teamKey = (s: string) => s.normalize('NFC').replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+const teamKey = (s: string) => s.normalize('NFC').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 async function liveVoteRanks(): Promise<VoteRank[]> {
   if (!VOTE_UPSTREAM) return [];
   const res = await fetch(`${VOTE_UPSTREAM}/api/obs`, { signal: AbortSignal.timeout(5000) });
