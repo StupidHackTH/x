@@ -1092,7 +1092,7 @@ const app = new Elysia()
       return { error: 'admin only' };
     }
     const r = syncVoteTeams();
-    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams})` : `vote sync failed: ${r.error}`, Date.now());
+    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams}${r.reordered ? ', re-ordered' : `, +${r.added} new, order kept`})` : `vote sync failed: ${r.error}`, Date.now());
     if (r.ok) refreshVoteBoard();
     return r;
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
@@ -1197,7 +1197,7 @@ let voteAbort: AbortController | null = null;
 /** The voting app only pushes OBS updates for its own actions, so after we write its database directly we reconnect to get a fresh snapshot. */
 const refreshVoteBoard = () => voteAbort?.abort();
 let voteSyncTimer: ReturnType<typeof setTimeout> | null = null;
-function syncVoteTeams(): { ok: boolean; teams?: number; error?: string } {
+function syncVoteTeams(): { ok: boolean; teams?: number; added?: number; reordered?: boolean; error?: string } {
   if (!VOTE_DB) return { ok: false, error: 'VOTE_DB not set' };
   try {
     const vdb = new Database(VOTE_DB);
@@ -1205,14 +1205,32 @@ function syncVoteTeams(): { ok: boolean; teams?: number; error?: string } {
     const drawn = list.filter((p) => p.pitch_no).sort((a, b) => a.pitch_no - b.pitch_no);
     const order = [...drawn, ...list.filter((p) => !p.pitch_no)];
     if (!order.length) return { ok: true, teams: 0 }; // an empty queue never wipes the vote app's team list
+    let added = 0;
+    let reordered = false;
     vdb.transaction(() => {
       vdb.query('INSERT OR IGNORE INTO sessions (name, status) VALUES (?, ?)').run(VOTE_SESSION, 'NOT_STARTED');
-      const sid = vdb.query<{ id: number }, [string]>('SELECT id FROM sessions WHERE name = ?').get(VOTE_SESSION)!.id;
-      vdb.query('UPDATE teams SET order_id = -order_id - 1000 WHERE session_id = ?').run(sid);
-      order.forEach((p, i) => vdb.query('INSERT INTO teams (session_id, name, order_id) VALUES (?, ?, ?) ON CONFLICT(session_id, name) DO UPDATE SET order_id = excluded.order_id, updated_at = CURRENT_TIMESTAMP').run(sid, p.team.trim().slice(0, 80), i + 1));
+      const sess = vdb.query<{ id: number; status: string }, [string]>('SELECT id, status FROM sessions WHERE name = ?').get(VOTE_SESSION)!;
+      const names = order.map((p) => p.team.trim().slice(0, 80));
+      if (sess.status === 'NOT_STARTED') {
+        // before the show the vote app mirrors the drawn order exactly
+        vdb.query('UPDATE teams SET order_id = -order_id - 1000 WHERE session_id = ?').run(sess.id);
+        names.forEach((name, i) => {
+          const r = vdb.query('INSERT INTO teams (session_id, name, order_id) VALUES (?, ?, ?) ON CONFLICT(session_id, name) DO UPDATE SET order_id = excluded.order_id, updated_at = CURRENT_TIMESTAMP').run(sess.id, name, i + 1);
+          if (r.changes && !vdb.query('SELECT 1 FROM votes WHERE team_id = ?').get(r.lastInsertRowid as number)) added++;
+        });
+        reordered = true;
+      } else {
+        // session running: staff may have re-ordered by hand and votes are in, so never touch existing rows — only append missing teams
+        let next = vdb.query<{ m: number | null }, [number]>('SELECT MAX(order_id) AS m FROM teams WHERE session_id = ?').get(sess.id)?.m ?? 0;
+        for (const name of names) {
+          if (vdb.query('SELECT 1 FROM teams WHERE session_id = ? AND name = ?').get(sess.id, name)) continue;
+          vdb.query('INSERT INTO teams (session_id, name, order_id) VALUES (?, ?, ?)').run(sess.id, name, ++next);
+          added++;
+        }
+      }
     })();
     vdb.close();
-    return { ok: true, teams: order.length };
+    return { ok: true, teams: order.length, added, reordered };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -1222,7 +1240,7 @@ function scheduleVoteSync() {
   if (voteSyncTimer) clearTimeout(voteSyncTimer);
   voteSyncTimer = setTimeout(() => {
     const r = syncVoteTeams();
-    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams})` : `vote sync failed: ${r.error}`, Date.now());
+    insertEvent.run('note', '', r.ok ? `vote app teams synced (${r.teams}${r.reordered ? ', re-ordered' : `, +${r.added} new, order kept`})` : `vote sync failed: ${r.error}`, Date.now());
     if (r.ok) refreshVoteBoard();
   }, 1500);
 }
@@ -1279,6 +1297,10 @@ void followVoteStream();
    so the site can embed it without mixed content. Same Let's Encrypt cert, port VOTE_PROXY_PORT (8444). */
 const VOTE_UPSTREAM = (process.env.VOTE_UPSTREAM ?? '').replace(/\/$/, '');
 const VOTE_PROXY_PORT = Number(process.env.VOTE_PROXY_PORT ?? 8444);
+/* CSS patched into the voting app's HTML on the way through: its admin pages put the team list in a 100dvh window with
+   `main { min-height: 0 }` and `.xp-listview { overflow: hidden }`, so with many teams the list is clipped and nothing
+   scrolls. Letting main keep its content height makes the window's client area (overflow: auto) scroll instead. */
+const VOTE_HTML_FIX = process.env.VOTE_HTML_FIX ?? '.xp-app--admin main{min-height:auto}';
 if (VOTE_UPSTREAM && TLS_CERT && TLS_KEY) {
   const DROP_RES = ['connection', 'keep-alive', 'transfer-encoding', 'content-encoding', 'content-length', 'upgrade'];
   Bun.serve({
@@ -1302,6 +1324,10 @@ if (VOTE_UPSTREAM && TLS_CERT && TLS_KEY) {
         });
         const h = new Headers(up.headers);
         for (const k of DROP_RES) h.delete(k);
+        if (VOTE_HTML_FIX && up.status === 200 && (h.get('content-type') ?? '').includes('text/html')) {
+          const html = (await up.text()).replace('</head>', `<style id="shtx-proxy-fix">${VOTE_HTML_FIX}</style></head>`);
+          return new Response(html, { status: up.status, headers: h });
+        }
         return new Response(up.body, { status: up.status, headers: h });
       } catch {
         return new Response('popular vote app is not running', { status: 502, headers: { 'content-type': 'text/plain' } });
