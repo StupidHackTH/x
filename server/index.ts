@@ -1133,6 +1133,7 @@ if (VOTE_UPSTREAM && TLS_CERT && TLS_KEY) {
           headers,
           body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer(),
           redirect: 'manual',
+          signal: req.signal, // drop the upstream SSE stream when the phone goes away, or the app keeps a listener per dead tab
         });
         const h = new Headers(up.headers);
         for (const k of DROP_RES) h.delete(k);
