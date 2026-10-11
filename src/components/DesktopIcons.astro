@@ -2,6 +2,7 @@
 import { windows } from '../data/windows';
 import { event } from '../data/event';
 import Icon from './Icon.astro';
+import { asset } from '../lib/asset';
 const icons = windows.filter((w) => w.id !== 'error');
 ---
 
@@ -12,6 +13,10 @@ const icons = windows.filter((w) => w.id !== 'error');
       <span>{w.label}</span>
     </button>
   ))}
+  <a class="xp-icon shrink-0" href={asset('feedback/')} title="Feedback — บอกเราหน่อยว่างานเป็นยังไง">
+    <Icon name="feedback" class="glyph" />
+    <span>Feedback</span>
+  </a>
   <a class="xp-icon shrink-0" href={event.links.facebook} target="_blank" rel="noopener" title="Facebook Creatorsgarten">
     <Icon name="facebook" class="glyph" />
     <span>Facebook</span>
