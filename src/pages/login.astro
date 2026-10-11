@@ -2,6 +2,7 @@
 // One staff login for every staff page: the password is checked against the NOC server and kept in the browser
 // under the key all staff pages share (NOC, gacha, check-in desk, pitch draw). ?next=/x/noc/ redirects after login.
 import { asset } from '../lib/asset';
+const base = (import.meta.env.BASE_URL as string).replace(/\/$/, '');
 ---
 
 <!doctype html>
@@ -42,12 +43,12 @@ import { asset } from '../lib/asset';
         <div id="pages" hidden>
           <p class="ok" style="margin:0 0 6px">✔ ล็อกอินแล้ว ใช้ได้ทุกหน้าในเบราว์เซอร์นี้</p>
           <div class="links">
-            <a href="noc/">NOC จอใหญ่<small>SHTX-NET · ปุ่ม Staff</small></a>
-            <a href="draw/">สุ่มลำดับ pitch<small>จอเวที</small></a>
-            <a href="gacha/">กาชาแจกของ<small>จอเวที</small></a>
-            <a href="checkin/">โต๊ะเช็คอิน / คืนมัดจำ<small>มือถือ staff</small></a>
-            <a href="queue/">คิว pitching สด<small>public</small></a>
-            <a href="dashboard/">Dashboard<small>public</small></a>
+            <a href={`${base}/noc/`}>NOC จอใหญ่<small>SHTX-NET · ปุ่ม Staff</small></a>
+            <a href={`${base}/draw/`}>สุ่มลำดับ pitch<small>จอเวที</small></a>
+            <a href={`${base}/gacha/`}>กาชาแจกของ<small>จอเวที</small></a>
+            <a href={`${base}/checkin/`}>โต๊ะเช็คอิน / คืนมัดจำ<small>มือถือ staff</small></a>
+            <a href={`${base}/queue/`}>คิว pitching สด<small>public</small></a>
+            <a href={`${base}/dashboard/`}>Dashboard<small>public</small></a>
           </div>
         </div>
       </div>
@@ -69,7 +70,7 @@ import { asset } from '../lib/asset';
         $('f').hidden = true;
         $('logout').hidden = false;
         $('who').textContent = 'staff';
-        if (next && /^\/x\//.test(next)) location.replace(next);
+        if (next && /^\/x\/[a-z-]*\/?$/.test(next)) location.replace(next);
       }
       ($('f') as HTMLFormElement).onsubmit = async (e) => {
         e.preventDefault();
