@@ -82,6 +82,18 @@ import Icons from '../components/Icons.astro';
       .lv-active .lv-score.neg { color: #ff8a8a; }
       .panel.livevote li .deg { min-width: 40px; text-align: center; }
       .panel.livevote li.on b { color: #ffd34d; }
+      .panel.gachalog .gl-pull { padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+      .panel.gachalog .gl-pull:last-child { border-bottom: 0; }
+      .panel.gachalog .gl-pull.new { animation: gl-new 2.4s ease-out; }
+      @keyframes gl-new { from { background: rgba(255, 211, 77, 0.45); } to { background: transparent; } }
+      .panel.gachalog .gl-team { display: flex; gap: 6px; align-items: baseline; font-weight: bold; font-size: 14px; }
+      .panel.gachalog .gl-team small { font-weight: normal; font-size: 11px; opacity: 0.75; }
+      .panel.gachalog .gl-team .ok { margin-left: auto; color: #9dff8a; font-size: 11px; font-weight: normal; }
+      .panel.gachalog .gl-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+      .panel.gachalog .gl-chip { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.14); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+      .panel.gachalog .gl-chip.t1 { background: linear-gradient(180deg, #ffd34d, #d68a00); color: #3a2200; font-weight: bold; }
+      .panel.gachalog .gl-chip.t2 { background: rgba(180, 140, 255, 0.55); }
+      .panel.gachalog .gl-sum { font-size: 11px; opacity: 0.85; margin-bottom: 4px; }
       .panel.votelink { display: flex; flex-direction: column; align-items: center; flex: none; }
       .panel.votelink canvas { background: #fff; padding: 6px; border-radius: 8px; width: 180px; height: 180px; }
       .votelink-url { margin-top: 6px; font: 11px 'Lucida Console', monospace; color: #d4f1ff; word-break: break-all; text-align: center; }
@@ -216,6 +228,7 @@ import Icons from '../components/Icons.astro';
           <div class="panel glass"><h3>Just connected</h3><ul id="noc-recent"></ul></div>
           <div class="panel glass"><h3>Pitching queue <span id="noc-proj-count"></span></h3><ol id="noc-projects"></ol></div>
           <div class="panel glass livevote" id="noc-livevote" hidden><h3>Live vote <span id="noc-lv-state"></span></h3><div class="lv-active" id="noc-lv-active" hidden><small>ON STAGE</small><b id="noc-lv-name"></b><span class="lv-score" id="noc-lv-score"></span><small id="noc-lv-votes"></small></div><ol id="noc-lv"></ol></div>
+          <div class="panel glass gachalog" id="noc-gachalog" hidden><h3>Gacha log <span id="noc-gl-state"></span></h3><div class="gl-sum" id="noc-gl-sum"></div><div id="noc-gl"></div></div>
           <div class="panel glass vote"><h3>Most Stupid Project <span id="noc-vote-state"></span></h3><ol id="noc-vote"></ol></div>
           <div class="panel glass bingo"><h3>Packet Loss Bingo <span id="noc-bingo-stats"></span></h3><ol id="noc-bingo"></ol></div>
           <div class="panel glass awards" id="noc-awards-panel" hidden><h3>Prizes <span id="noc-awards-stats"></span></h3><ol id="noc-awards"></ol></div>

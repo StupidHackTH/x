@@ -245,6 +245,59 @@ function renderVoteBoard(b: VoteBoard) {
     ol.appendChild(li);
   });
 }
+/* Gacha log panel: who got what from the stage gacha. The log is staff-only on the server, so this shows only on a NOC
+   browser that is logged in as staff (same token as the Staff button). */
+type GachaPrize = { id: string; name: string; tier: 'T1' | 'T2' | 'T3'; remaining: number };
+type GachaPull = { id: number; team: string; prizes: string[]; at: number; claimed: boolean };
+let glLastId = 0;
+async function loadGachaLog() {
+  if (demo) return;
+  const token = savedToken();
+  const panel = $('noc-gachalog');
+  if (!token) { panel.hidden = true; return; }
+  const q = `token=${encodeURIComponent(token)}`;
+  const [pr, lg] = await Promise.all([
+    fetch(`${apiBase()}/api/gacha/prizes?${q}`, { cache: 'no-store' }).catch(() => null),
+    fetch(`${apiBase()}/api/gacha/log?${q}`, { cache: 'no-store' }).catch(() => null),
+  ]);
+  if (!lg?.ok) { panel.hidden = true; return; }
+  const pulls = ((await lg.json()) as { pulls: GachaPull[] }).pulls;
+  const prizes = new Map<string, GachaPrize>(pr?.ok ? ((await pr.json()) as { prizes: GachaPrize[] }).prizes.map((p) => [p.id, p]) : []);
+  panel.hidden = false;
+  if (!pulls.length) {
+    $('noc-gl-state').textContent = '';
+    $('noc-gl-sum').textContent = '';
+    $('noc-gl').innerHTML = '<small style="opacity:.75">ยังไม่มีใครกด pull</small>';
+    return;
+  }
+  const of = (id: string) => prizes.get(id) ?? { id, name: id, tier: 'T3' as const, remaining: 0 };
+  const rank = { T1: 0, T2: 1, T3: 2 };
+  const given = pulls.reduce((n, p) => n + p.prizes.length, 0);
+  const left = { T1: 0, T2: 0, T3: 0 };
+  for (const p of prizes.values()) left[p.tier] += p.remaining;
+  $('noc-gl-state').textContent = `(${new Set(pulls.map((p) => p.team)).size} ทีม · ${given} ชิ้น)`;
+  $('noc-gl-sum').textContent = prizes.size ? `เหลือ T1 ${left.T1} · T2 ${left.T2} · T3 ${left.T3} · รับของแล้ว ${pulls.filter((p) => p.claimed).length}/${pulls.length}` : '';
+  const box = $('noc-gl');
+  box.innerHTML = '';
+  for (const p of [...pulls].sort((a, b) => b.id - a.id).slice(0, 5)) {
+    const row = document.createElement('div');
+    row.className = `gl-pull${glLastId && p.id > glLastId ? ' new' : ''}`;
+    const head = document.createElement('div');
+    head.className = 'gl-team';
+    head.append(Object.assign(document.createElement('span'), { textContent: p.team }));
+    head.append(Object.assign(document.createElement('small'), { textContent: new Date(p.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) }));
+    if (p.claimed) head.append(Object.assign(document.createElement('span'), { className: 'ok', textContent: '✓ รับแล้ว' }));
+    const chips = document.createElement('div');
+    chips.className = 'gl-chips';
+    for (const id of [...p.prizes].sort((a, b) => rank[of(a).tier] - rank[of(b).tier])) {
+      const z = of(id);
+      chips.append(Object.assign(document.createElement('span'), { className: `gl-chip ${z.tier.toLowerCase()}`, textContent: `${z.tier} ${z.name}` }));
+    }
+    row.append(head, chips);
+    box.append(row);
+  }
+  glLastId = Math.max(glLastId, ...pulls.map((p) => p.id));
+}
 async function loadVoteBoard() {
   if (demo) return;
   const r = await fetch(`${apiBase()}/api/vote/board`, { cache: 'no-store' }).catch(() => null);
@@ -419,6 +472,7 @@ function connect() {
         else if (msg.type === 'deadpixel') void loadDeadPixel();
         else if (msg.type === 'award') onAwardRevealed(msg.award);
         else if (msg.type === 'voteboard') renderVoteBoard(msg.board);
+        else if (msg.type === 'gacha') void loadGachaLog();
         else if (msg.type === 'awards') void loadAwards();
         else if (msg.type === 'prizes') {
           void loadAwards();
@@ -445,6 +499,8 @@ function connect() {
   void loadPrizeNames();
   void loadVoteBoard();
   setInterval(() => void loadVoteBoard(), 15_000);
+  void loadGachaLog();
+  setInterval(() => void loadGachaLog(), 15_000);
   setInterval(() => void loadAwards(), 30_000);
   setInterval(() => void loadBingo(), 30_000);
   setInterval(() => void loadDeadPixel(), 10_000);
