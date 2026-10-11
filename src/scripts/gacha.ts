@@ -15,11 +15,14 @@ const api = () => apiBase().replace(/\/$/, '');
 const adminFetch = (path: string, init?: RequestInit) => fetch(`${api()}${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(getToken())}`, { cache: 'no-store', ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+// ?demo=1 = rehearsal controls (skip video, forced item); without it the page is the stage showcase
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
 
 let prizes: Prize[] = [];
 let stock: Record<string, number> = {}; // remaining per prize id, as the server reports it
 let mode: 'uniform' | 'tier' = 'uniform'; // uniform: every remaining ticket is equally likely, so the live rate = share of stock left
 let count = 3;
+const teamSize = new Map<string, number>();
 
 function renderStock() {
   const left = (t: Tier) => prizes.filter((p) => p.tier === t).reduce((n, p) => n + (stock[p.id] ?? 0), 0);
@@ -44,7 +47,7 @@ async function pull() {
   const btn = $<HTMLButtonElement>('pull');
   btn.disabled = true;
   try {
-    const res = await adminFetch('/api/gacha/pull', { method: 'POST', body: JSON.stringify({ team, count, demo: $<HTMLSelectElement>('demo').value || undefined }) });
+    const res = await adminFetch('/api/gacha/pull', { method: 'POST', body: JSON.stringify({ team, count, demo: (DEMO && $<HTMLSelectElement>('demo').value) || undefined }) });
     const data = (await res.json()) as { ok: boolean; error?: string; prizes: string[]; remaining: Record<string, number> };
     if (!res.ok || !data.ok) {
       alert(`Pull failed: ${data.error ?? res.status}`);
@@ -97,7 +100,7 @@ function playPull(best: Tier, done: () => void) {
   $('skip').onclick = finish;
   fallback.hidden = true;
   video.hidden = false;
-  if ($<HTMLInputElement>('novideo').checked) return runFallback();
+  if (DEMO && $<HTMLInputElement>('novideo').checked) return runFallback();
   video.ontimeupdate = () => { if (video.duration && video.currentTime >= video.duration - FADE_MS / 1000) finish(); };
   video.onended = finish;
   video.onerror = runFallback;
@@ -271,6 +274,10 @@ function chime(t: Tier) {
 }
 
 $('minus').onclick = () => setCount(count - 1);
+$('team').oninput = () => {
+  const n = teamSize.get($<HTMLInputElement>('team').value.trim());
+  if (n) setCount(n);
+};
 $('plus').onclick = () => setCount(count + 1);
 $('pull').onclick = () => void pull();
 $('reset').onclick = async () => {
@@ -323,8 +330,10 @@ async function loadTeams() {
     const r = await fetch(`${api()}/api/projects`, { cache: 'no-store' });
     if (!r.ok) return;
     const { projects } = (await r.json()) as { projects: { order: number; team: string; members: string }[] };
+    const size = (p: { members: string }) => (p.members || '').split(/[,\n]/).filter((m) => m.trim()).length;
+    for (const p of projects) if (size(p)) teamSize.set(p.team, size(p));
     const dl = document.getElementById('teams');
-    if (dl) dl.replaceChildren(...projects.map((p) => new Option(`${p.members ? `${p.members.split(/[,\n]/).filter((m) => m.trim()).length} คน` : ''}`, p.team)));
+    if (dl) dl.replaceChildren(...projects.map((p) => new Option(size(p) ? `${size(p)} คน` : '', p.team)));
   } catch {
     /* offline */
   }
@@ -369,6 +378,7 @@ $('logout').onclick = () => {
   location.reload();
 };
 
+for (const el of document.querySelectorAll<HTMLElement>('[data-demo]')) el.hidden = !DEMO;
 document.body.style.setProperty('--bg', `url(${shared}keyframe.png)`);
 setCount(3);
 const token = savedToken();

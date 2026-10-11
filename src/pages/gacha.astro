@@ -52,7 +52,7 @@ import { tiers } from '../data/prizes';
       .rate.mode { background: #666; font-weight: normal; }
       .stock { font-size: 12px; color: #555; max-height: 92px; overflow: auto; border: 1px solid #c8c8c8; padding: 4px 8px; background: #fafafa; }
       .stock b { color: #0b2a5b; }
-      .wiz-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #c8c8c8; background: #ece9d8; font-size: 12px; }
+      .wiz-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #c8c8c8; background: #ece9d8; font-size: 12px; }
       .wiz-foot label { display: flex; align-items: center; gap: 4px; }
       .pull-btn { padding: 8px 26px; border-radius: 20px; border: 1px solid #1b6b00; color: #fff; font: bold 17px 'Trebuchet MS', sans-serif; cursor: pointer; text-shadow: 0 1px 1px #145000;
         background: linear-gradient(180deg, #8fe36b 0%, #3fb31b 48%, #2d9a0f 52%, #47c11f 100%); box-shadow: 0 2px 6px rgba(0, 60, 0, 0.4), inset 0 1px #d8ffc6; }
@@ -127,8 +127,10 @@ import { tiers } from '../data/prizes';
       .res-actions { display: flex; gap: 10px; }
       .res-actions .xpbtn { font-size: 15px; padding: 6px 20px; }
       .front .photo { width: 120px; height: 120px; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); }
-      .wiz-foot select { font: inherit; font-size: 12px; max-width: 190px; }
-      .wiz-foot .xpbtn { white-space: nowrap; }
+      .wiz-foot select { font: inherit; font-size: 12px; flex: 1 1 100px; max-width: 190px; min-width: 0; }
+      /* .xpbtn's min-width overrides flex's min-width:auto, so without flex:none a crowded footer squeezes the button under its text */
+      .wiz-foot .xpbtn, .wiz-foot .pull-btn { white-space: nowrap; flex: none; }
+      .wiz-foot .pull-btn { margin-left: auto; }
 
       /* special reveal (T1/T2 items with reveal assets): boss-song style, 8 s / 15 s animation + 10 s showcase */
       .special { position: fixed; inset: 0; z-index: 30; background: #000; overflow: hidden; transition: opacity 0.6s; }
@@ -194,8 +196,8 @@ import { tiers } from '../data/prizes';
           </div>
         </div>
         <div class="wiz-foot">
-          <label><input type="checkbox" id="novideo" /> Skip video</label>
-          <select id="demo" title="Guarantee an item in the first pull (POC demo)">
+          <label data-demo hidden><input type="checkbox" id="novideo" /> Skip video</label>
+          <select id="demo" data-demo hidden title="Guarantee an item in the first pull (POC demo)">
             <option value="">Demo: random</option>
           </select>
           <button class="xpbtn" id="reset" type="button">Reset stock</button>
