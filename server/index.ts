@@ -22,6 +22,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS awards (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, place INTEGER NOT NULL DEFAULT 0, mac TEXT NOT NULL DEFAULT '', nick TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', prize_id TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 0, ord INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS attendees (ref TEXT PRIMARY KEY, name TEXT NOT NULL, grp TEXT NOT NULL DEFAULT '', ticket TEXT NOT NULL DEFAULT '', price REAL NOT NULL DEFAULT 0, email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', order_no TEXT NOT NULL DEFAULT '', eventpop_used TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', checked_at INTEGER NOT NULL DEFAULT 0, refunded_at INTEGER NOT NULL DEFAULT 0, pos INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS pitch_order (device TEXT PRIMARY KEY, no INTEGER NOT NULL, at INTEGER NOT NULL);
+  CREATE TABLE IF NOT EXISTS feedback (device TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', rating INTEGER NOT NULL, again TEXT NOT NULL DEFAULT '', liked TEXT NOT NULL DEFAULT '', best TEXT NOT NULL DEFAULT '', worst TEXT NOT NULL DEFAULT '', ideas TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS gacha_pulls (id INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT NOT NULL, count INTEGER NOT NULL, prizes TEXT NOT NULL, at INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS gacha_drawn (id TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
@@ -295,6 +296,7 @@ const normMac = (s: string): string | null => {
   const hex = s.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
   return hex.length === 12 ? hex.match(/../g)!.join(':') : null;
 };
+const clipText = (s: unknown, n: number) => String(s ?? '').replace(/[\u0000-\u0009\u000b-\u001f]/g, '').trim().slice(0, n); // keeps newlines
 const clip = (s: unknown, n: number) => String(s ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n);
 
 type Node = { mac: string; nick: string; skill: string; idea: string; at: number };
@@ -1086,6 +1088,39 @@ const app = new Elysia()
     };
   })
   .get('/api/vote/board', () => voteBoard)
+  /* Post-event feedback: one answer per device (re-submitting replaces it). Public POST, staff-only read + CSV. */
+  .post('/api/feedback', ({ body, set }) => {
+    const device = clip(body.device, 64);
+    const rating = Math.round(body.rating);
+    if (!device || !(rating >= 1 && rating <= 5)) {
+      set.status = 400;
+      return { error: 'missing' };
+    }
+    db.query('INSERT INTO feedback (device, name, rating, again, liked, best, worst, ideas, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(device) DO UPDATE SET name = excluded.name, rating = excluded.rating, again = excluded.again, liked = excluded.liked, best = excluded.best, worst = excluded.worst, ideas = excluded.ideas, at = excluded.at')
+      .run(device, clip(body.name ?? '', 80), rating, clip(body.again ?? '', 20), clip(body.liked ?? '', 400), clipText(body.best ?? '', 1500), clipText(body.worst ?? '', 1500), clipText(body.ideas ?? '', 1500), Date.now());
+    const n = (db.query('SELECT COUNT(*) AS n FROM feedback').get() as { n: number }).n;
+    broadcast({ type: 'feedback', count: n });
+    return { ok: true, count: n };
+  }, { body: t.Object({ device: t.String({ maxLength: 64 }), rating: t.Number(), name: t.Optional(t.String({ maxLength: 200 })), again: t.Optional(t.String({ maxLength: 40 })), liked: t.Optional(t.String({ maxLength: 800 })), best: t.Optional(t.String({ maxLength: 3000 })), worst: t.Optional(t.String({ maxLength: 3000 })), ideas: t.Optional(t.String({ maxLength: 3000 })) }) })
+  .get('/api/feedback', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    return { feedback: db.query('SELECT name, rating, again, liked, best, worst, ideas, at FROM feedback ORDER BY at DESC').all() };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .get('/api/feedback.csv', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return 'admin only';
+    }
+    const rows = db.query('SELECT name, rating, again, liked, best, worst, ideas, at FROM feedback ORDER BY at').all() as Record<string, string | number>[];
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const cols = ['at', 'name', 'rating', 'again', 'liked', 'best', 'worst', 'ideas'];
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename="shtx-feedback.csv"';
+    return '\ufeff' + [cols.join(','), ...rows.map((r) => cols.map((c) => cell(c === 'at' ? new Date(Number(r.at)).toISOString() : r[c])).join(','))].join('\n');
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .post('/api/vote/sync', ({ query, set }) => {
     if (!ADMIN || query.token !== ADMIN) {
       set.status = 403;

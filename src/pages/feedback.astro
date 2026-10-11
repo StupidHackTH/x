@@ -1,0 +1,170 @@
+---
+// Post-event feedback form (one answer per phone, re-submitting replaces it). Stored on the NOC server (/api/feedback).
+// Staff browsers (logged in via /x/login/) also see the answers and a CSV export under the form.
+import { asset } from '../lib/asset';
+const LIKED = ['SHTX-NET (300 baud)', 'Drawdy Logo Hunting', 'Bingo', 'Ransomware / EAS', 'Windows Update', 'Dead Pixel', 'Gacha แจกของ', 'สุ่มลำดับ pitch', 'Pitching', 'อาหาร / ขนม', 'สถานที่', 'เพื่อนใหม่'];
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>shtX Feedback</title>
+    <meta name="description" content="Stupid Hackathon X feedback" />
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body { font: 15px/1.45 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #0b2a5b; background: linear-gradient(180deg, #2a6be0 0%, #5aa2f5 40%, #bfe3ff 100%) fixed; padding: 12px; -webkit-tap-highlight-color: transparent; }
+      [hidden] { display: none !important; }
+      .xpwin { max-width: 640px; margin: 0 auto 16px; background: #ece9d8; border: 1px solid #0831d9; border-radius: 8px 8px 4px 4px; box-shadow: 0 0 0 1px #3a6ff0 inset, 0 18px 50px rgba(0, 20, 60, 0.45); overflow: hidden; }
+      .xpwin-title { display: flex; align-items: center; gap: 8px; padding: 6px 8px; color: #fff; font: bold 14px 'Trebuchet MS', Tahoma, sans-serif; text-shadow: 1px 1px #0a1f6e; background: linear-gradient(180deg, #0997ff 0%, #0053ee 8%, #0050ee 40%, #06f 88%, #0053ee 94%, #0039c6 100%); }
+      .xpwin-title img { width: 20px; height: 20px; }
+      .body { padding: 14px 16px 18px; background: #fff; display: flex; flex-direction: column; gap: 16px; }
+      .q { display: flex; flex-direction: column; gap: 6px; }
+      .q > b { font-size: 15px; }
+      .q > b em { font-style: normal; color: #c00; }
+      .q small { color: #666; font-size: 12px; }
+      textarea, input[type='text'] { width: 100%; padding: 8px 10px; border: 1px solid #7f9db9; font: inherit; font-size: 16px; border-radius: 2px; }
+      textarea { min-height: 76px; resize: vertical; }
+      .stars { display: flex; gap: 6px; }
+      .stars button { flex: 1; padding: 8px 0; font-size: 26px; line-height: 1; border: 1px solid #7f9db9; border-radius: 6px; background: #f3f7fd; cursor: pointer; filter: grayscale(1); opacity: 0.55; }
+      .stars button.on { filter: none; opacity: 1; background: #fff6d9; border-color: #e5b440; }
+      .stars-label { font-size: 13px; color: #555; min-height: 1.2em; }
+      .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+      .opts label { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border: 1px solid #b9c7dc; border-radius: 16px; background: #f3f7fd; font-size: 14px; cursor: pointer; user-select: none; }
+      .opts input { margin: 0; }
+      .opts label:has(input:checked) { background: #dfeaff; border-color: #3a6ff0; font-weight: bold; }
+      .xpbtn { padding: 9px 18px; border: 1px solid #003c74; border-radius: 3px; font: inherit; font-size: 15px; color: #000; cursor: pointer; background: linear-gradient(180deg, #fff 0%, #ecebe6 86%, #d6d0c5 100%); box-shadow: inset 0 -1px #c5c1b3; text-decoration: none; }
+      .xpbtn.primary { font-weight: bold; }
+      .xpbtn:disabled { opacity: 0.6; }
+      .msg { min-height: 1.3em; font-size: 14px; }
+      .msg.err { color: #c00; } .msg.ok { color: #0b7a2a; font-weight: bold; }
+      .done { text-align: center; padding: 22px 16px; background: #fff; }
+      .done .big { font-size: 46px; }
+      .staff .row { padding: 10px 0; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
+      .staff .row b { font-size: 15px; }
+      .staff .row p { margin: 4px 0 0; white-space: pre-wrap; }
+      .staff .row p i { font-style: normal; color: #666; font-size: 12px; margin-right: 4px; }
+      .staff .sum { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid #ddd; }
+      .tally { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+      .tally span { padding: 2px 8px; border-radius: 10px; background: #eef2f8; }
+    </style>
+  </head>
+  <body>
+    <main class="xpwin">
+      <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />Feedback.exe — Stupid Hackathon X</div>
+      <form class="body" id="fb">
+        <p style="margin:0">ขอบคุณที่มาโง่ด้วยกัน 🙏 ช่วยบอกหน่อยว่าเป็นยังไงบ้าง ใช้เวลาไม่ถึง 1 นาที (กรอกซ้ำได้ ระบบเก็บคำตอบล่าสุดของเครื่องนี้)</p>
+        <div class="q">
+          <b>ภาพรวมงานนี้ให้กี่ดาว <em>*</em></b>
+          <div class="stars" id="stars">{[1, 2, 3, 4, 5].map((n) => <button type="button" data-n={n} aria-label={`${n} ดาว`}>⭐</button>)}</div>
+          <div class="stars-label" id="stars-label"></div>
+        </div>
+        <div class="q">
+          <b>ชอบอะไรบ้าง</b><small>เลือกได้หลายอัน</small>
+          <div class="opts" id="liked">{LIKED.map((x) => <label><input type="checkbox" value={x} />{x}</label>)}</div>
+        </div>
+        <div class="q"><b>อะไรที่ดีที่สุด / ประทับใจสุด</b><textarea id="best" maxlength="1500"></textarea></div>
+        <div class="q"><b>อะไรที่ควรปรับ / ไม่ชอบ</b><small>ด่าได้ เราโง่อยู่แล้ว</small><textarea id="worst" maxlength="1500"></textarea></div>
+        <div class="q"><b>ไอเดียสำหรับ Stupid Hackathon ครั้งหน้า</b><textarea id="ideas" maxlength="1500"></textarea></div>
+        <div class="q">
+          <b>ครั้งหน้าจะมาอีกไหม</b>
+          <div class="opts" id="again"><label><input type="radio" name="again" value="มาแน่" />มาแน่ 🔥</label><label><input type="radio" name="again" value="อาจจะ" />อาจจะ 🤔</label><label><input type="radio" name="again" value="ไม่มาแล้ว" />ไม่มาแล้ว 💀</label></div>
+        </div>
+        <div class="q"><b>ชื่อ / ทีม</b><small>ไม่ใส่ก็ได้</small><input type="text" id="name" maxlength="80" autocomplete="nickname" /></div>
+        <button class="xpbtn primary" type="submit" id="send">ส่ง feedback</button>
+        <div class="msg" id="msg"></div>
+      </form>
+      <div class="done" id="done" hidden><div class="big">🙏</div><p><b>ส่งแล้ว ขอบคุณมาก!</b><br />เจอกันครั้งหน้า ยิ่งโง่กว่าเดิม</p><button class="xpbtn" type="button" id="again-btn">แก้คำตอบ</button></div>
+    </main>
+    <main class="xpwin staff" id="staff" hidden>
+      <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />คำตอบ (staff) <span id="staff-n" style="margin-left:auto;font-weight:normal;font-size:12px"></span></div>
+      <div class="body"><div class="sum" id="sum"></div><div class="tally" id="tally"></div><div id="rows"></div><a class="xpbtn" id="csv" href="#">Export CSV</a></div>
+    </main>
+    <script>
+      import { apiBase, deviceId } from '../scripts/netapi';
+      const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+      const DRAFT = 'shtx-feedback-draft';
+      const LABELS = ['', 'แย่มาก 💀', 'พอได้ 😐', 'โอเค 🙂', 'ดี 😄', 'โคตรดี 🤯'];
+      let rating = 0;
+      const setRating = (n: number) => {
+        rating = n;
+        document.querySelectorAll<HTMLButtonElement>('#stars button').forEach((b) => b.classList.toggle('on', Number(b.dataset.n) <= n));
+        $('stars-label').textContent = LABELS[n] ?? '';
+      };
+      document.querySelectorAll<HTMLButtonElement>('#stars button').forEach((b) => (b.onclick = () => { setRating(Number(b.dataset.n)); save(); }));
+      const collect = () => ({
+        device: deviceId(), rating,
+        liked: [...document.querySelectorAll<HTMLInputElement>('#liked input:checked')].map((i) => i.value).join(', '),
+        best: $<HTMLTextAreaElement>('best').value, worst: $<HTMLTextAreaElement>('worst').value, ideas: $<HTMLTextAreaElement>('ideas').value,
+        again: document.querySelector<HTMLInputElement>('#again input:checked')?.value ?? '', name: $<HTMLInputElement>('name').value,
+      });
+      function save() { try { localStorage.setItem(DRAFT, JSON.stringify(collect())); } catch { /* ignore */ } }
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT) || 'null');
+        if (d) {
+          setRating(d.rating || 0);
+          for (const k of ['best', 'worst', 'ideas']) $<HTMLTextAreaElement>(k).value = d[k] || '';
+          $<HTMLInputElement>('name').value = d.name || '';
+          const liked = String(d.liked || '').split(', ');
+          document.querySelectorAll<HTMLInputElement>('#liked input').forEach((i) => (i.checked = liked.includes(i.value)));
+          document.querySelectorAll<HTMLInputElement>('#again input').forEach((i) => (i.checked = i.value === d.again));
+        }
+      } catch { /* ignore */ }
+      $('fb').addEventListener('input', save);
+      $<HTMLFormElement>('fb').onsubmit = async (e) => {
+        e.preventDefault();
+        const msg = $('msg');
+        if (!rating) { msg.className = 'msg err'; msg.textContent = 'กดดาวก่อนนะ (ข้อเดียวที่บังคับ)'; return; }
+        $<HTMLButtonElement>('send').disabled = true;
+        msg.className = 'msg'; msg.textContent = 'กำลังส่ง…';
+        try {
+          const r = await fetch(`${apiBase()}/api/feedback`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(collect()), signal: AbortSignal.timeout(10000) });
+          if (r.status === 404) throw new Error('ระบบ feedback ยังไม่เปิด อีกเดี๋ยวลองกดส่งใหม่ (คำตอบยังอยู่ในเครื่อง)');
+          if (!r.ok) throw new Error(r.status === 429 ? 'ส่งถี่ไป รอแป๊บแล้วลองใหม่' : `ส่งไม่สำเร็จ (${r.status})`);
+          msg.textContent = '';
+          $('fb').hidden = true; $('done').hidden = false;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          void loadStaff();
+        } catch (err) {
+          msg.className = 'msg err';
+          msg.textContent = (err as Error).name === 'TimeoutError' ? 'เน็ตช้า ลองใหม่อีกที' : (err as Error).message;
+        } finally { $<HTMLButtonElement>('send').disabled = false; }
+      };
+      $('again-btn').onclick = () => { $('done').hidden = true; $('fb').hidden = false; };
+
+      // staff view
+      const token = (() => { try { return localStorage.getItem('shtx-noc-admin') ?? ''; } catch { return ''; } })();
+      type Fb = { name: string; rating: number; again: string; liked: string; best: string; worst: string; ideas: string; at: number };
+      async function loadStaff() {
+        if (!token) return;
+        const r = await fetch(`${apiBase()}/api/feedback?token=${encodeURIComponent(token)}`, { cache: 'no-store' }).catch(() => null);
+        if (!r?.ok) return;
+        const list = ((await r.json()) as { feedback: Fb[] }).feedback;
+        $('staff').hidden = false;
+        $('staff-n').textContent = `${list.length} คำตอบ`;
+        const avg = list.length ? list.reduce((s, f) => s + f.rating, 0) / list.length : 0;
+        const again = (v: string) => list.filter((f) => f.again === v).length;
+        $('sum').innerHTML = `<span>เฉลี่ย <b>${avg.toFixed(2)}</b> ⭐</span>${[5, 4, 3, 2, 1].map((n) => `<span>${n}⭐ <b>${list.filter((f) => f.rating === n).length}</b></span>`).join('')}<span>มาแน่ <b>${again('มาแน่')}</b> · อาจจะ <b>${again('อาจจะ')}</b> · ไม่มา <b>${again('ไม่มาแล้ว')}</b></span>`;
+        const counts = new Map<string, number>();
+        for (const f of list) for (const x of f.liked.split(', ').filter(Boolean)) counts.set(x, (counts.get(x) ?? 0) + 1);
+        $('tally').replaceChildren(...[...counts].sort((a, b) => b[1] - a[1]).map(([k, n]) => Object.assign(document.createElement('span'), { textContent: `${k} ${n}` })));
+        $('rows').replaceChildren(...list.map((f) => {
+          const d = document.createElement('div'); d.className = 'row';
+          const h = document.createElement('b'); h.textContent = `${'⭐'.repeat(f.rating)} ${f.name || 'ไม่ระบุชื่อ'}${f.again ? ` · ${f.again}` : ''}`;
+          d.append(h);
+          for (const [k, v] of [['ชอบ', f.liked], ['ดีสุด', f.best], ['ควรปรับ', f.worst], ['ไอเดีย', f.ideas]] as const) {
+            if (!v) continue;
+            const p = document.createElement('p'); p.innerHTML = `<i>${k}</i>`; p.append(v); d.append(p);
+          }
+          return d;
+        }));
+        $<HTMLAnchorElement>('csv').href = `${apiBase()}/api/feedback.csv?token=${encodeURIComponent(token)}`;
+      }
+      void loadStaff();
+      if (token) setInterval(() => void loadStaff(), 15000);
+    </script>
+  </body>
+</html>
