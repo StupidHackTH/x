@@ -1,0 +1,139 @@
+---
+import Window from '../Window.astro';
+import Icon from '../Icon.astro';
+
+// Self check-in: the attendee types the email / phone / Eventpop reference code on their ticket, confirms the name
+// the server finds, and is marked checked-in on the NOC server (staff see it on /checkin and the NOC ticker).
+---
+
+<Window id="checkin" menu={['File', 'Help']} status="Event Check-in · Eventpop ticket" beige>
+  <div class="ci" id="ci" data-state="ask">
+    <header class="ci-banner">
+      <div>
+        <h2>Event Check-in</h2>
+        <p>พิมพ์อีเมล เบอร์โทร หรือรหัสบัตร Eventpop (Reference code 6 ตัว) ที่ใช้ซื้อบัตร แล้วกดเช็คอินเอง</p>
+      </div>
+      <Icon name="checkin" class="ci-banner-icon" />
+    </header>
+    <form class="ci-form" id="ci-form" novalidate>
+      <label>อีเมล / เบอร์โทร / Ref code <input id="ci-q" maxlength="120" autocomplete="email" placeholder="เช่น name@email.com หรือ BH735T" /></label>
+      <div class="ci-actions"><button type="submit" class="xp-btn primary" id="ci-find">ค้นหาบัตร</button><span class="ci-msg" id="ci-msg"></span></div>
+    </form>
+    <section class="ci-card" id="ci-card" hidden>
+      <div class="ci-stub"><span class="ci-stub-label">ADMIT ONE</span><b id="ci-name">—</b><small id="ci-ticket">—</small><small id="ci-ref"></small></div>
+      <p class="ci-status" id="ci-status"></p>
+      <div class="ci-actions">
+        <button type="button" class="xp-btn primary" id="ci-confirm">✔ เช็คอิน</button>
+        <button type="button" class="xp-btn" id="ci-again">ไม่ใช่ฉัน</button>
+      </div>
+      <p class="ci-fine">เช็คอินแล้วรับมัดจำ ฿300 คืนที่โต๊ะ staff หลัง pitching (staff ติ๊กคืนเงินจากหน้าจอของเขา)</p>
+    </section>
+  </div>
+</Window>
+
+<style is:global>
+  .ci { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #ece9d8; font-size: 12px; overflow: auto; }
+  .ci-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #fff; border-bottom: 1px solid #a0a0a0; }
+  .ci-banner h2 { margin: 0 0 2px; font-size: 13px; font-weight: bold; }
+  .ci-banner p { margin: 0; color: #333; }
+  .ci-banner-icon { width: 44px; height: 44px; flex: none; }
+  .ci-form { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px 6px; }
+  .ci-form label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #333; }
+  .ci-form input { padding: 6px 8px; border: 1px solid #7f9db9; background: #fff; font: 15px Tahoma, 'Inter Thai Looped', sans-serif; }
+  .ci[data-state='done'] .ci-form { display: none; }
+  .ci-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ci-actions .xp-btn.primary { font-weight: bold; }
+  .ci-msg { font-size: 11px; color: #b00; }
+  .ci-card { display: flex; flex-direction: column; gap: 10px; padding: 10px 18px 14px; }
+  .ci-card[hidden] { display: none; }
+  .ci-stub { position: relative; padding: 14px 18px; background: repeating-linear-gradient(135deg, #fff8d6 0 10px, #fff2bf 10px 20px); border: 2px dashed #b8860b; border-radius: 10px; }
+  .ci-stub-label { font: bold 10px 'Lucida Console', monospace; letter-spacing: 3px; color: #8a6a12; }
+  .ci-stub b { display: block; font-size: 18px; margin-top: 2px; }
+  .ci-stub small { display: block; color: #555; }
+  .ci-status { margin: 0; font-size: 13px; }
+  .ci-status.ok { color: #0b7a2a; font-weight: bold; }
+  .ci-fine { margin: 0; font-size: 10px; color: #666; }
+  .ci[data-state='done'] #ci-confirm { display: none; }
+</style>
+
+<script>
+  import { api, hasApi } from '../../scripts/netapi';
+
+  const KEY = 'shtx-checkin-v1';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function setupCheckin() {
+    const root = $('ci');
+    if (!root) return;
+    const msg = $('ci-msg');
+    const say = (t: string) => (msg.textContent = t);
+    let q = '';
+    const fmt = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    function showCard(r: { name?: string; ticket?: string; price?: number; ref?: string; checked_at?: number; refunded_at?: number }) {
+      $('ci-name').textContent = r.name ?? '—';
+      $('ci-ticket').textContent = `${r.ticket ?? ''}${r.price ? ` · ฿${r.price}` : ''}`;
+      $('ci-ref').textContent = r.ref ? `Ref ${r.ref}` : '';
+      const st = $('ci-status');
+      if (r.checked_at) {
+        st.textContent = `✅ เช็คอินแล้ว ${fmt(r.checked_at)}${r.refunded_at ? ` · คืนมัดจำแล้ว ${fmt(r.refunded_at)}` : r.price ? ' · มัดจำ ฿300 ยังไม่ได้คืน' : ''}`;
+        st.classList.add('ok');
+        root.dataset.state = 'done';
+      } else {
+        st.textContent = 'ใช่คุณไหม? กดเช็คอินได้เลย';
+        st.classList.remove('ok');
+        root.dataset.state = 'found';
+      }
+      $('ci-card').hidden = false;
+    }
+    async function find(confirm: boolean) {
+      if (!hasApi() || !navigator.onLine) return say('ไม่มีเน็ต ลองใหม่');
+      say(confirm ? 'กำลังเช็คอิน…' : 'กำลังค้นหา…');
+      const r = await api.checkin(q, confirm);
+      if (!r) return say('ติดต่อ server ไม่ได้ ลองใหม่');
+      if (!r.ok) {
+        $('ci-card').hidden = true;
+        root.dataset.state = 'ask';
+        return say(r.error === 'short' ? 'พิมพ์ให้ครบก่อน' : r.error === 'ambiguous' ? 'เจอหลายคน ใช้อีเมลหรือ Ref code แทน' : 'ไม่พบบัตร ลองอีเมลที่ใช้ซื้อ หรือ Ref code บนบัตร Eventpop');
+      }
+      say('');
+      showCard(r);
+      if (r.checked_at) {
+        try {
+          localStorage.setItem(KEY, JSON.stringify({ q, ref: r.ref, name: r.name, at: r.checked_at }));
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    $('ci-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      q = $<HTMLInputElement>('ci-q').value.trim();
+      if (q.length < 4) return say('พิมพ์ให้ครบก่อน');
+      void find(false);
+    });
+    $('ci-confirm').addEventListener('click', () => void find(true));
+    $('ci-again').addEventListener('click', () => {
+      $('ci-card').hidden = true;
+      root.dataset.state = 'ask';
+      $<HTMLInputElement>('ci-q').value = '';
+      $('ci-q').focus();
+      try {
+        localStorage.removeItem(KEY);
+      } catch {
+        /* ignore */
+      }
+    });
+    // already checked in from this phone → show the stub straight away (refreshed from the server)
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (s?.q) {
+        q = s.q;
+        $<HTMLInputElement>('ci-q').value = q;
+        void find(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  setupCheckin();
+</script>

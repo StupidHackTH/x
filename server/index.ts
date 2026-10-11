@@ -20,6 +20,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS prizes (id TEXT PRIMARY KEY, item TEXT NOT NULL, tier TEXT NOT NULL DEFAULT '', count INTEGER NOT NULL DEFAULT 1, cost REAL NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', pos INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS awards (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, place INTEGER NOT NULL DEFAULT 0, mac TEXT NOT NULL DEFAULT '', nick TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', prize_id TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 0, ord INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE IF NOT EXISTS attendees (ref TEXT PRIMARY KEY, name TEXT NOT NULL, grp TEXT NOT NULL DEFAULT '', ticket TEXT NOT NULL DEFAULT '', price REAL NOT NULL DEFAULT 0, email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', order_no TEXT NOT NULL DEFAULT '', eventpop_used TEXT NOT NULL DEFAULT '', team TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', checked_at INTEGER NOT NULL DEFAULT 0, refunded_at INTEGER NOT NULL DEFAULT 0, pos INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS gacha_pulls (id INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT NOT NULL, count INTEGER NOT NULL, prizes TEXT NOT NULL, at INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS gacha_drawn (id TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS bingo (device TEXT PRIMARY KEY, nick TEXT NOT NULL DEFAULT '', lines INTEGER NOT NULL DEFAULT 0, cells INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
@@ -76,6 +77,10 @@ function weightedPick(items: { w: number }[]): number {
   }
   return items.length - 1;
 }
+type Attendee = { ref: string; name: string; grp: string; ticket: string; price: number; email: string; phone: string; order_no: string; eventpop_used: string; team: string; note: string; checked_at: number; refunded_at: number; pos: number };
+const qAttendees = db.query<Attendee, []>('SELECT * FROM attendees ORDER BY pos');
+const qAttendee = db.query<Attendee, [string]>('SELECT * FROM attendees WHERE ref = ?');
+
 /* ---- gacha helpers: Grist Prize table (doc id from GRIST_DOC; the doc is link-editable so no key is needed, GRIST_API_KEY optional) ---- */
 const GRIST_HOST = (process.env.GRIST_HOST ?? 'https://grist.creatorsgarten.org').replace(/\/$/, '');
 const GRIST_DOC = process.env.GRIST_DOC ?? '';
@@ -874,6 +879,97 @@ const app = new Elysia()
     insertEvent.run('note', '', 'gacha stock and log reset', Date.now());
     broadcast({ type: 'gacha' });
     return { ok: true };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  /* ---- Check-in desk (/checkin): attendee list imported from the Eventpop export; check-in and deposit refund are
+     toggled from any staff phone and shared live. ---- */
+  .get('/api/attendees', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    const rows = qAttendees.all();
+    return { attendees: rows, counts: { total: rows.length, checked: rows.filter((r) => r.checked_at).length, refunded: rows.filter((r) => r.refunded_at).length, paid: rows.filter((r) => r.price > 0).length, paidChecked: rows.filter((r) => r.price > 0 && r.checked_at).length, paidRefunded: rows.filter((r) => r.price > 0 && r.refunded_at).length } };
+  }, { query: t.Object({ token: t.Optional(t.String()) }) })
+  .post(
+    '/api/attendees/import',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      let added = 0;
+      db.transaction(() => {
+        body.rows.forEach((r, i) => {
+          const ref = clip(r.ref, 40);
+          if (!ref) return;
+          const exists = qAttendee.get(ref);
+          // keep local check-in/refund state; refresh the Eventpop fields
+          db.query('INSERT INTO attendees (ref, name, grp, ticket, price, email, phone, order_no, eventpop_used, team, note, pos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(ref) DO UPDATE SET name = excluded.name, grp = excluded.grp, ticket = excluded.ticket, price = excluded.price, email = excluded.email, phone = excluded.phone, order_no = excluded.order_no, eventpop_used = excluded.eventpop_used, team = excluded.team, pos = excluded.pos').run(ref, clip(r.name, 80), clip(r.grp, 30), clip(r.ticket, 80), Number(r.price) || 0, clip(r.email, 120), clip(r.phone, 30), clip(r.order_no, 30), clip(r.eventpop_used, 30), clip(r.team, 120), clip(r.note, 200), i);
+          if (!exists) added++;
+        });
+      })();
+      insertEvent.run('note', '', `attendee list imported: ${body.rows.length} rows (${added} new)`, Date.now());
+      broadcast({ type: 'attendees' });
+      return { ok: true, rows: body.rows.length, added };
+    },
+    { body: t.Object({ rows: t.Array(t.Object({ ref: t.String(), name: t.String(), grp: t.Optional(t.String()), ticket: t.Optional(t.String()), price: t.Optional(t.Number()), email: t.Optional(t.String()), phone: t.Optional(t.String()), order_no: t.Optional(t.String()), eventpop_used: t.Optional(t.String()), team: t.Optional(t.String()), note: t.Optional(t.String()) })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  .post(
+    '/api/attendees/mark',
+    ({ body, query, set }) => {
+      if (!ADMIN || query.token !== ADMIN) {
+        set.status = 403;
+        return { error: 'admin only' };
+      }
+      const a = qAttendee.get(clip(body.ref, 40));
+      if (!a) return { ok: false, error: 'unknown ref' };
+      const now = Date.now();
+      if (body.checked !== undefined) db.query('UPDATE attendees SET checked_at = ? WHERE ref = ?').run(body.checked ? now : 0, a.ref);
+      if (body.refunded !== undefined) db.query('UPDATE attendees SET refunded_at = ? WHERE ref = ?').run(body.refunded ? now : 0, a.ref);
+      if (body.note !== undefined) db.query('UPDATE attendees SET note = ? WHERE ref = ?').run(clip(body.note, 200), a.ref);
+      if (body.checked) insertEvent.run('note', '', `✅ check-in: ${a.name} (${a.ticket})`, now);
+      if (body.refunded) insertEvent.run('note', '', `💸 refund ฿${a.price}: ${a.name}`, now);
+      broadcast({ type: 'attendees' });
+      return { ok: true, attendee: qAttendee.get(a.ref) };
+    },
+    { body: t.Object({ ref: t.String({ maxLength: 64 }), checked: t.Optional(t.Boolean()), refunded: t.Optional(t.Boolean()), note: t.Optional(t.String({ maxLength: 300 })) }), query: t.Object({ token: t.Optional(t.String()) }) },
+  )
+  /* Self check-in from the site: the attendee types the email, phone or Eventpop reference code on their ticket.
+     One exact match → marked checked-in (idempotent). Only name/ticket/status come back. */
+  .post(
+    '/api/checkin',
+    ({ body }) => {
+      const q = clip(body.q, 120).toLowerCase().replace(/\s+/g, '');
+      if (q.length < 4) return { ok: false, error: 'short' };
+      const norm = (s: string) => (s || '').toLowerCase().replace(/\s+/g, '');
+      const digits = q.replace(/\D/g, '');
+      const hits = qAttendees.all().filter((a) => norm(a.email) === q || norm(a.ref) === q || norm(a.order_no).replace('#', '') === q.replace('#', '') || (digits.length >= 9 && a.phone.replace(/\D/g, '').endsWith(digits.slice(-9))));
+      if (hits.length !== 1) return { ok: false, error: hits.length ? 'ambiguous' : 'notfound' };
+      const a = hits[0];
+      const now = Date.now();
+      if (body.confirm) {
+        if (!a.checked_at) {
+          db.query('UPDATE attendees SET checked_at = ? WHERE ref = ?').run(now, a.ref);
+          insertEvent.run('note', '', `✅ self check-in: ${a.name} (${a.ticket})`, now);
+          broadcast({ type: 'event', event: { type: 'note', mac: '', detail: `✅ check-in: ${a.name}`, at: now } });
+          broadcast({ type: 'attendees' });
+        }
+      }
+      const f = qAttendee.get(a.ref)!;
+      return { ok: true, name: f.name, ticket: f.ticket, price: f.price, grp: f.grp, ref: f.ref, checked_at: f.checked_at, refunded_at: f.refunded_at, team: f.team };
+    },
+    { body: t.Object({ q: t.String({ maxLength: 200 }), confirm: t.Optional(t.Boolean()) }) },
+  )
+  .get('/api/attendees.csv', ({ query, set }) => {
+    if (!ADMIN || query.token !== ADMIN) {
+      set.status = 403;
+      return { error: 'admin only' };
+    }
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename="shtx-checkin.csv"';
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = qAttendees.all().map((a) => [a.ref, a.name, a.grp, a.ticket, a.price, a.email, a.phone, a.order_no, a.eventpop_used, a.checked_at ? new Date(a.checked_at).toISOString() : '', a.refunded_at ? new Date(a.refunded_at).toISOString() : '', a.team, a.note].map(esc).join(','));
+    return '\ufeff' + ['ref,name,group,ticket,price,email,phone,order,eventpop_checkin,checked_at,refunded_at,team,note', ...rows].join('\n');
   }, { query: t.Object({ token: t.Optional(t.String()) }) })
   .get('/api/hunt', () => huntState())
   .post(

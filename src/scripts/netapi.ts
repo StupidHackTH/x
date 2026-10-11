@@ -87,6 +87,7 @@ export const api = {
   bingo: (device: string, nick: string, lines: number, cells: number) => call<{ ok: boolean }>('/api/bingo', { method: 'POST', body: JSON.stringify({ device, nick, lines, cells }) }),
   bingoBoard: () => call<BingoBoard>('/api/bingo'),
   deadPixel: () => call<DeadPixelState | null>('/api/deadpixel'),
+  checkin: (q: string, confirm: boolean) => call<{ ok: boolean; error?: string; name?: string; ticket?: string; price?: number; grp?: string; ref?: string; checked_at?: number; refunded_at?: number; team?: string }>('/api/checkin', { method: 'POST', body: JSON.stringify({ q, confirm }) }),
   awardsMine: (mac: string) => call<{ awards: Award[] }>(`/api/awards/mine?mac=${encodeURIComponent(mac)}`),
   awards: () => call<AwardsState & { awards: Award[] }>('/api/awards'),
   prizes: () => call<{ prizes: { id: string; item: string; tier: string; count: number }[]; tickets: Record<string, number> }>('/api/prizes'),
