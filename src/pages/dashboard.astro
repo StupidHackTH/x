@@ -12,7 +12,7 @@ import { asset } from '../lib/asset';
     <meta name="robots" content="noindex" />
     <title>shtX Dashboard</title>
     <link rel="icon" href={asset('favicon-64.png')} />
-    <style>
+    <style is:global>
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body { font: 15px/1.4 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #e8f2ff; background: radial-gradient(circle at 30% 0%, #2a6be0, #06264f 60%, #031a3d) fixed; padding: 14px; }
@@ -30,7 +30,7 @@ import { asset } from '../lib/asset';
       ol li { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; padding: 5px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.15); font-size: 14px; }
       ol li .n { color: #bfe6ff; text-align: right; }
       ol li b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      ol li small { display: block; color: #bfe6ff; font-size: 12px; white-space: normal; }
+      ol li small { display: block; color: #bfe6ff; font-size: 12px; white-space: normal; margin-top: 1px; }
       .pill { padding: 2px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.2); font-size: 12px; align-self: start; white-space: nowrap; }
       .teams { grid-column: 1 / -1; }
       .ok { color: #8ef5a3; } .warn { color: #ffd34d; }
