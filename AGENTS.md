@@ -34,5 +34,5 @@ Grist is the source of truth for prizes; the code holds no prize list or media p
 Add or change a prize's media (no git changes expected):
 
 1. Upload a folder `<id>/` to `~/shtx-media/www/gacha/` on the media server (organizers have SSH access). Image only: `image.jpg` (the product photo, background removed, on white). Full reveal: also `reveal.mp4` (15 s for T1, 8 s for T2), `show.mp4` (10 s loop), `music.mp3` (25 s / 18 s, drop at the hand-off), `meta.json` (`{"flash": <ms of the reveal's own white flash>}`).
-2. In the Grist Prize row set `Image link` = `…/gacha/<id>/image.jpg` and, for a reveal, `Video link` = `…/gacha/<id>/reveal.mp4`. Name (`Item`), tier (`Final Prize Tier`) and stock (`Reward amount`) come from the same row; `Rejected` rows are skipped.
+2. In the Grist Prize row set `Image link` = `…/gacha/<id>/image.jpg` and, for a reveal, `Video link` = `…/gacha/<id>/reveal.mp4`. Name (`DisplayName`, or `Item` when it is empty), tier (`Final Prize Tier`) and stock (`Reward amount`) come from the same row; `Rejected` rows are skipped.
 3. Reload `/gacha`. `git status` should stay clean; if it doesn't, the change belongs in Grist or on the media server instead.

@@ -94,7 +94,7 @@ const GRIST_DOC = process.env.GRIST_DOC ?? '';
 const GRIST_KEY = process.env.GRIST_API_KEY ?? '';
 type GachaTier = 'T1' | 'T2' | 'T3';
 type GachaPrize = { id: string; name: string; tier: GachaTier; amount: number; image?: string; base?: string; reveal: boolean; remaining: number };
-type GristRow = { Item?: string; Final_Prize_Tier?: string; Status?: string; Reward_amount?: number; PriceID?: unknown; Image_link?: string; Video_link?: string };
+type GristRow = { Item?: string; DisplayName?: string; Final_Prize_Tier?: string; Status?: string; Reward_amount?: number; PriceID?: unknown; Image_link?: string; Video_link?: string };
 let gristCache: { at: number; rows: GristRow[] } | null = null;
 async function gristRows(): Promise<GristRow[]> {
   if (!GRIST_DOC) throw new Error('GRIST_DOC is not set on the server');
@@ -115,7 +115,7 @@ async function gachaPrizes(): Promise<GachaPrize[]> {
       const base = f.Video_link?.trim() ? f.Video_link.trim().replace(/reveal\.mp4$/, '') : undefined;
       const id = base ? base.split('/').filter(Boolean).pop()! : String(f.PriceID ?? f.Item);
       const amount = Number(f.Reward_amount);
-      return { id, name: (f.Item ?? '').trim(), tier: f.Final_Prize_Tier as GachaTier, amount, image: f.Image_link?.trim() || undefined, base, reveal: !!base, remaining: Math.max(0, amount - (drawn.get(id) ?? 0)) };
+      return { id, name: (f.DisplayName ?? '').trim() || (f.Item ?? '').trim(), tier: f.Final_Prize_Tier as GachaTier, amount, image: f.Image_link?.trim() || undefined, base, reveal: !!base, remaining: Math.max(0, amount - (drawn.get(id) ?? 0)) };
     });
 }
 function gachaRates(): Record<GachaTier, number> {

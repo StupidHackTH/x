@@ -16,6 +16,6 @@ if (!r.ok) throw new Error(`grist ${r.status}`);
 const { records } = await r.json();
 const prizes = records
   .filter((x) => (x.fields.Item || '').trim())
-  .map((x) => ({ id: String(x.fields.PriceID || `P${x.id}`), item: String(x.fields.Item).trim(), tier: String(x.fields.Final_Prize_Tier || ''), count: Number(x.fields.Reward_amount) || 0, cost: Number(x.fields.Cost) || 0, note: String(x.fields.Notes || '') }));
+  .map((x) => ({ id: String(x.fields.PriceID || `P${x.id}`), item: String(x.fields.DisplayName || '').trim() || String(x.fields.Item).trim(), tier: String(x.fields.Final_Prize_Tier || ''), count: Number(x.fields.Reward_amount) || 0, cost: Number(x.fields.Cost) || 0, note: String(x.fields.Notes || '') }));
 const p = await fetch(`${NET_API}/api/prizes?token=${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prizes }) });
 console.log(p.status, await p.text());
