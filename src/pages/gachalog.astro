@@ -1,0 +1,87 @@
+---
+// Staff gacha log: every pull recorded by the NOC server (team, prizes, time), with a "collected" toggle per pull and a
+// per-prize tally. Live over the websocket. Same staff login as /noc, /gacha, /checkin. Logic in src/scripts/gachalog.ts.
+import { asset } from '../lib/asset';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>shtX Gacha Log</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body { font: 15px/1.4 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #0b2a5b; background: linear-gradient(180deg, #2a6be0 0%, #5aa2f5 40%, #bfe3ff 100%) fixed; -webkit-tap-highlight-color: transparent; }
+      [hidden] { display: none !important; }
+      .xpwin { max-width: 860px; margin: 0 auto; background: #ece9d8; border: 1px solid #0831d9; border-radius: 8px 8px 4px 4px; box-shadow: 0 0 0 1px #3a6ff0 inset, 0 18px 50px rgba(0, 20, 60, 0.45); overflow: hidden; }
+      .xpwin-title { display: flex; align-items: center; gap: 8px; padding: 6px 8px; color: #fff; font: bold 14px 'Trebuchet MS', Tahoma, sans-serif; text-shadow: 1px 1px #0a1f6e; background: linear-gradient(180deg, #0997ff 0%, #0053ee 8%, #0050ee 40%, #06f 88%, #0053ee 94%, #0039c6 100%); position: sticky; top: 0; z-index: 2; }
+      .xpwin-title img { width: 20px; height: 20px; }
+      .xpwin-title .sp { margin-left: auto; font-weight: normal; font-size: 12px; opacity: 0.9; }
+      .lock { padding: 24px 18px; display: flex; flex-direction: column; gap: 10px; background: #fff; }
+      .lock input { padding: 8px; border: 1px solid #7f9db9; font: inherit; }
+      .lock-msg { min-height: 1.2em; color: #c00; font-size: 13px; }
+      .xpbtn { padding: 6px 12px; border: 1px solid #003c74; border-radius: 3px; font: inherit; font-size: 13px; color: #000; cursor: pointer; background: linear-gradient(180deg, #fff 0%, #ecebe6 86%, #d6d0c5 100%); box-shadow: inset 0 -1px #c5c1b3; text-decoration: none; }
+      .xpbtn:hover { box-shadow: inset 0 0 0 2px #f8b636; }
+      .xpbtn[aria-pressed='true'] { background: linear-gradient(180deg, #ffd27a, #e0901a); }
+      .xpbtn.on { background: linear-gradient(180deg, #a8e59a, #3fb31b); color: #063; font-weight: bold; }
+      .bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; background: #f1efe2; border-bottom: 1px solid #c8c8c8; position: sticky; top: 33px; z-index: 2; }
+      .bar input[type='search'] { flex: 1 1 160px; padding: 8px 10px; border: 1px solid #7f9db9; font: inherit; font-size: 16px; }
+      .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 12px; font-size: 12px; color: #333; background: #fffbe6; border-bottom: 1px solid #e6dca8; }
+      .counts b { color: #0b2a5b; }
+      .list { background: #fff; }
+      .pull { padding: 10px 12px; border-bottom: 1px solid #e5e5e5; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: start; }
+      .pull.c { background: #f0fbee; }
+      .pull .who b { font-size: 16px; }
+      .pull .who small { color: #555; font-size: 12px; margin-left: 6px; }
+      .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+      .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 3px; border-radius: 12px; font-size: 13px; background: #eef2f8; border: 1px solid #c9d3e3; }
+      .chip i { font-style: normal; font-weight: bold; font-size: 11px; padding: 1px 6px; border-radius: 9px; color: #fff; }
+      .t1 i { background: linear-gradient(180deg, #ffcf3a, #d68a00); color: #4a2a00; } .t1 { border-color: #e5b440; background: #fff6d9; }
+      .t2 i { background: linear-gradient(180deg, #b48cff, #6a3fd6); } .t2 { border-color: #b9a2ea; background: #f4efff; }
+      .t3 i { background: #7f8ea8; }
+      .tally { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+      .tally th, .tally td { padding: 7px 10px; border-bottom: 1px solid #e5e5e5; text-align: left; vertical-align: top; }
+      .tally th { background: #f1efe2; font-size: 12px; }
+      .tally td.n { text-align: right; white-space: nowrap; }
+      .tally tr.out td { color: #999; }
+      .tally td small { color: #666; }
+      .empty { padding: 22px; text-align: center; color: #666; }
+      .foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; font-size: 12px; color: #444; background: #ece9d8; border-top: 1px solid #c8c8c8; }
+      .msg { color: #0b7a2a; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main class="xpwin">
+      <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />Gacha Log<span class="sp" id="sync"></span></div>
+      <section class="lock" id="lock">
+        <p style="margin:0">ใส่รหัส staff (รหัสเดียวกับ NOC)</p>
+        <form id="lock-form" style="display:flex;gap:8px"><input id="lock-pass" type="password" autocomplete="current-password" required style="flex:1" /><button class="xpbtn" type="submit">เข้า</button></form>
+        <p class="lock-msg" id="lock-msg"></p>
+      </section>
+      <section id="desk" hidden>
+        <div class="bar">
+          <input id="q" type="search" placeholder="ค้นทีม / ของรางวัล" autocomplete="off" />
+          <button class="xpbtn" type="button" data-f="all" aria-pressed="true">ทั้งหมด</button>
+          <button class="xpbtn" type="button" data-f="todo" aria-pressed="false">ยังไม่รับของ</button>
+          <button class="xpbtn" type="button" data-f="done" aria-pressed="false">รับแล้ว</button>
+          <button class="xpbtn" type="button" id="view" aria-pressed="false">สรุปตามของ</button>
+        </div>
+        <div class="counts" id="counts"></div>
+        <div class="list" id="list"></div>
+        <div class="foot">
+          <button class="xpbtn" type="button" id="csv">Export CSV</button>
+          <a class="xpbtn" id="gacha-link" href="#">ไปหน้ากาชา</a>
+          <span class="msg" id="msg"></span>
+          <button class="xpbtn" type="button" id="logout" style="margin-left:auto">ออก</button>
+        </div>
+      </section>
+    </main>
+    <script>
+      import '../scripts/gachalog';
+    </script>
+  </body>
+</html>
