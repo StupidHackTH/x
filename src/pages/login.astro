@@ -1,0 +1,87 @@
+---
+// One staff login for every staff page: the password is checked against the NOC server and kept in the browser
+// under the key all staff pages share (NOC, gacha, check-in desk, pitch draw). ?next=/x/noc/ redirects after login.
+import { asset } from '../lib/asset';
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>shtX Staff Login</title>
+    <link rel="icon" href={asset('favicon-64.png')} />
+    <style is:global>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body { font: 15px/1.4 Tahoma, 'Segoe UI', 'Noto Sans Thai', sans-serif; color: #0b2a5b; background: linear-gradient(180deg, #2a6be0 0%, #5aa2f5 40%, #bfe3ff 100%) fixed; padding: 14px; display: flex; align-items: flex-start; justify-content: center; }
+      [hidden] { display: none !important; }
+      .xpwin { width: min(520px, 100%); margin-top: 6vh; background: #ece9d8; border: 1px solid #0831d9; border-radius: 8px 8px 4px 4px; box-shadow: 0 0 0 1px #3a6ff0 inset, 0 18px 50px rgba(0, 20, 60, 0.45); overflow: hidden; }
+      .xpwin-title { display: flex; align-items: center; gap: 8px; padding: 6px 8px; color: #fff; font: bold 14px 'Trebuchet MS', Tahoma, sans-serif; text-shadow: 1px 1px #0a1f6e; background: linear-gradient(180deg, #0997ff 0%, #0053ee 8%, #0050ee 40%, #06f 88%, #0053ee 94%, #0039c6 100%); }
+      .xpwin-title img { width: 20px; height: 20px; }
+      .body { padding: 16px 18px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+      form { display: flex; gap: 8px; }
+      input { flex: 1; padding: 9px 10px; border: 1px solid #7f9db9; font: inherit; font-size: 16px; }
+      .xpbtn { padding: 8px 16px; border: 1px solid #003c74; border-radius: 3px; font: inherit; color: #000; cursor: pointer; background: linear-gradient(180deg, #fff 0%, #ecebe6 86%, #d6d0c5 100%); }
+      .msg { min-height: 1.2em; font-size: 13px; color: #c00; }
+      .ok { color: #0b7a2a; }
+      .links { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+      .links a { display: block; padding: 10px 12px; border: 1px solid #7f9db9; border-radius: 6px; background: #f3f7fd; color: #0b2a5b; text-decoration: none; font-weight: bold; }
+      .links a small { display: block; font-weight: normal; color: #555; font-size: 12px; }
+      .links a:hover { background: #e3edfb; }
+      .foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; font-size: 12px; color: #444; background: #ece9d8; border-top: 1px solid #c8c8c8; }
+    </style>
+  </head>
+  <body>
+    <main class="xpwin">
+      <div class="xpwin-title"><img src={asset('favicon-64.png')} alt="" />Staff Login · Stupid Hackathon X</div>
+      <div class="body">
+        <form id="f" autocomplete="off"><input id="pass" type="password" placeholder="รหัส staff" autofocus /><button class="xpbtn" type="submit">เข้า</button></form>
+        <p class="msg" id="msg"></p>
+        <div id="pages" hidden>
+          <p class="ok" style="margin:0 0 6px">✔ ล็อกอินแล้ว ใช้ได้ทุกหน้าในเบราว์เซอร์นี้</p>
+          <div class="links">
+            <a href="noc/">NOC จอใหญ่<small>SHTX-NET · ปุ่ม Staff</small></a>
+            <a href="draw/">สุ่มลำดับ pitch<small>จอเวที</small></a>
+            <a href="gacha/">กาชาแจกของ<small>จอเวที</small></a>
+            <a href="checkin/">โต๊ะเช็คอิน / คืนมัดจำ<small>มือถือ staff</small></a>
+            <a href="queue/">คิว pitching สด<small>public</small></a>
+            <a href="dashboard/">Dashboard<small>public</small></a>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span id="who"></span><button class="xpbtn" id="logout" type="button" hidden>Log off</button></div>
+    </main>
+    <script>
+      import { apiBase } from '../scripts/netapi';
+      const KEY = 'shtx-noc-admin';
+      const $ = (id: string) => document.getElementById(id)!;
+      const get = () => { try { return localStorage.getItem(KEY) ?? ''; } catch { return ''; } };
+      const set = (t: string) => { try { t ? localStorage.setItem(KEY, t) : localStorage.removeItem(KEY); } catch { /* private mode */ } };
+      const next = new URLSearchParams(location.search).get('next');
+      async function check(t: string) {
+        const r = await fetch(`${apiBase()}/api/admin/check?token=${encodeURIComponent(t)}`, { cache: 'no-store' });
+        return r.ok;
+      }
+      function show() {
+        $('pages').hidden = false;
+        $('f').hidden = true;
+        $('logout').hidden = false;
+        $('who').textContent = 'staff';
+        if (next && /^\/x\//.test(next)) location.replace(next);
+      }
+      ($('f') as HTMLFormElement).onsubmit = async (e) => {
+        e.preventDefault();
+        const t = ($('pass') as HTMLInputElement).value.trim();
+        $('msg').textContent = '…';
+        try {
+          if (await check(t)) { set(t); $('msg').textContent = ''; show(); } else $('msg').textContent = 'รหัสไม่ถูกต้อง';
+        } catch { $('msg').textContent = 'ติดต่อ server ไม่ได้'; }
+      };
+      $('logout').onclick = () => { set(''); location.reload(); };
+      const t = get();
+      if (t) check(t).then((ok) => { if (ok) show(); else set(''); }).catch(() => undefined);
+    </script>
+  </body>
+</html>
