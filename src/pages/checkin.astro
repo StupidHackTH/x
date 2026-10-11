@@ -30,6 +30,7 @@ import { asset } from '../lib/asset';
       .xpbtn.on { background: linear-gradient(180deg, #a8e59a, #3fb31b); color: #063; font-weight: bold; }
       .bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; background: #f1efe2; border-bottom: 1px solid #c8c8c8; position: sticky; top: 33px; z-index: 2; }
       .bar input[type='search'] { flex: 1 1 160px; padding: 8px 10px; border: 1px solid #7f9db9; font: inherit; font-size: 16px; }
+      .bar select { padding: 6px 8px; border: 1px solid #7f9db9; font: inherit; font-size: 13px; background: #fff; }
       .counts { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 12px; font-size: 12px; color: #333; background: #fffbe6; border-bottom: 1px solid #e6dca8; }
       .counts b { color: #0b2a5b; }
       .list { background: #fff; }
@@ -61,6 +62,14 @@ import { asset } from '../lib/asset';
           <button class="xpbtn" data-f="checked">เช็คอินแล้ว</button>
           <button class="xpbtn" data-f="refund">รอคืนมัดจำ</button>
           <button class="xpbtn" data-f="all">ทั้งหมด</button>
+          <button class="xpbtn" id="paidonly" aria-pressed="true" title="แสดงเฉพาะบัตรที่จ่ายเงิน (ไม่รวม staff/sponsor)">เฉพาะ paid ticket</button>
+          <select id="sort" title="เรียงตาม">
+            <option value="name">เรียง: ชื่อ</option>
+            <option value="ticket">เรียง: ประเภทบัตร</option>
+            <option value="checked">เรียง: เวลาเช็คอิน</option>
+            <option value="paid">เรียง: ยอดจ่าย</option>
+            <option value="pos">เรียง: ลำดับ Eventpop</option>
+          </select>
         </div>
         <div class="counts" id="counts"></div>
         <div class="list" id="list"></div>

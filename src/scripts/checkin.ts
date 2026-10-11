@@ -12,6 +12,8 @@ const call = async (path: string, init?: RequestInit) => fetch(`${api()}${path}$
 let rows: Attendee[] = [];
 let counts = { total: 0, checked: 0, refunded: 0, paid: 0, paidChecked: 0, paidRefunded: 0, refundedBaht: 0, toRefundBaht: 0 };
 let filter: 'todo' | 'checked' | 'refund' | 'all' = 'todo';
+let paidOnly = true;
+let sortBy: 'name' | 'ticket' | 'checked' | 'paid' | 'pos' = 'name';
 const say = (t: string) => { $('msg').textContent = t; setTimeout(() => { if ($('msg').textContent === t) $('msg').textContent = ''; }, 4000); };
 const time = (ms: number) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
@@ -31,12 +33,15 @@ function render() {
   const q = $<HTMLInputElement>('q').value.trim().toLowerCase();
   const list = $('list');
   const shown = rows.filter((a) => {
+    if (paidOnly && !(a.price > 0)) return false;
     if (filter === 'todo' && a.checked_at) return false;
     if (filter === 'checked' && !a.checked_at) return false;
     if (filter === 'refund' && (!a.price || a.refunded_at)) return false;
     if (!q) return true;
     return [a.name, a.email, a.phone, a.ref, a.order_no, a.ticket, a.team].some((v) => (v || '').toLowerCase().includes(q));
   });
+  const coll = new Intl.Collator('th');
+  shown.sort((a, b) => sortBy === 'name' ? coll.compare(a.name, b.name) : sortBy === 'ticket' ? coll.compare(a.ticket, b.ticket) || coll.compare(a.name, b.name) : sortBy === 'checked' ? (b.checked_at || 0) - (a.checked_at || 0) || coll.compare(a.name, b.name) : sortBy === 'paid' ? (b.paid || b.price) - (a.paid || a.price) || coll.compare(a.name, b.name) : 0);
   list.replaceChildren(
     ...shown.map((a) => {
       const row = document.createElement('div');
@@ -127,6 +132,8 @@ $<HTMLFormElement>('lock-form').onsubmit = async (e) => {
   else $('lock-msg').textContent = '';
 };
 $('q').addEventListener('input', render);
+$('paidonly').onclick = () => { paidOnly = !paidOnly; $('paidonly').setAttribute('aria-pressed', String(paidOnly)); render(); };
+$<HTMLSelectElement>('sort').onchange = (e) => { sortBy = (e.target as HTMLSelectElement).value as typeof sortBy; render(); };
 document.querySelectorAll<HTMLButtonElement>('.bar [data-f]').forEach((b) => (b.onclick = () => { filter = b.dataset.f as typeof filter; document.querySelectorAll('.bar [data-f]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); render(); }));
 $<HTMLInputElement>('csv').onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void importCsv(f); };
 $('logout').onclick = () => { setToken(''); location.reload(); };
