@@ -274,11 +274,12 @@ export const staff: StaffMember[] = [
   { name: 'พีม', handle: 'peamz4', role: 'Lead organizer', group: 'organizer', wiki: 'peamz4', fullName: 'Pirawish Pratumngern' },
   // leads
   { name: 'โขง', handle: 'nattawatt', role: 'Firefighter · MC livestreaming · MC venue', group: 'organizer', wiki: 'nattawatthongthong', fullName: 'Nattawatt Hongthong', photo: 'nattawatthongthong.jpg' },
-  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets', group: 'lead' },
+  { name: 'กัส', handle: 'drowningtoast', role: 'Head challenge · Tickets', group: 'lead', fullName: 'Supratouch Suwatno' },
   { name: 'มีมี่', handle: 'awww_wwww', role: 'Finance lead · Food', group: 'organizer', wiki: 'khxmjarx', fullName: 'Khimjare Chodkadee', photo: 'khxmjarx.jpg' },
   // facilitators
   { name: 'หนุ่ม', role: 'Facilitator', group: 'faci', fullName: 'Noom' },
   { name: 'Ice', role: 'Facilitator', group: 'faci', fullName: 'Kamol Treewatchararat' },
+  { name: 'Bier', role: 'Facilitator', group: 'faci', wiki: 'bierbbbb', fullName: 'Yuttakhan Baingern' },
   // staff
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
   { name: 'นีโม่', role: 'Finance', group: 'staff' },
@@ -294,12 +295,10 @@ export const staff: StaffMember[] = [
   { name: 'Uddy', handle: 'wasinuddy', role: 'Popular vote system', group: 'staff', fullName: 'Wasin Silakong' },
   { name: 'Folkiesss', role: 'Staff', group: 'staff', fullName: 'Korraphat Pangvutthivanich', photo: 'folk.jpg' },
   { name: 'นรภัทร', role: 'Staff', group: 'staff', fullName: 'Narapat Bu', photo: 'norraphat.jpg' },
-  { name: 'Bier', role: 'Staff', group: 'staff', wiki: 'bierbbbb', fullName: 'Yuttakhan Baingern' },
   { name: 'Kana', role: 'Staff', group: 'staff', fullName: 'Khanaphon Phaengtan' },
   { name: 'Tackle', role: 'Staff', group: 'staff', fullName: 'Apidech Tearpaiboon' },
   { name: 'Thanadol', role: 'Staff', group: 'staff', fullName: 'Thanadol Sumetchotimaytha' },
   { name: 'Jirapol', role: 'Staff', group: 'staff', fullName: 'Jirapol Wachirasub' },
-  { name: 'ศุภธัช', role: 'Staff', group: 'staff', fullName: 'Supratouch Suwatno' },
 ];
 
 export const pastEditions = [
