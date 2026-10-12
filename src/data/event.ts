@@ -283,7 +283,6 @@ export const staff: StaffMember[] = [
   // staff
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
   { name: 'นีโม่', role: 'Finance', group: 'staff' },
-  { name: 'Opec', handle: 'opecgame', role: 'Runner', group: 'staff', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
   { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic lead', group: 'lead', fullName: 'Pariyakorn Saelao' },
   { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', group: 'lead', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
   { name: 'นีน่า', role: 'Swag', group: 'staff' },
