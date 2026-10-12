@@ -26,9 +26,10 @@ const tiles: Record<string, { bg: string }> = {
   bingo: { bg: 'linear-gradient(180deg,#b9f6c3,#1f8a3a)' },
   conduct: { bg: 'linear-gradient(180deg,#8fd9a8,#1f8a4c)' },
   recycle: { bg: 'linear-gradient(180deg,#d9d9d9,#7a7a7a)' },
+  projects: { bg: 'linear-gradient(180deg,#fff3c4,#e0a100)' },
 };
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const gridIds = ['about', 'checkin', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const gridIds = ['about', 'projects', 'checkin', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
 const dockIds = ['register', 'funding'];
 const eventDay = 10;
 ---
@@ -81,6 +82,10 @@ const eventDay = 10;
           </button>
         );
       })}
+      <a class="ios-app-icon" href={asset('feedback/')} role="listitem">
+        <span class="tile" style="background:linear-gradient(180deg,#fff6d9,#f0b400)"><Icon name="feedback" /></span>
+        <span class="name">Feedback</span>
+      </a>
       <a class="ios-app-icon" href={event.links.website} target="_blank" rel="noopener" role="listitem">
         <span class="tile" style="background:linear-gradient(180deg,#7fd0ff,#1a7bd8)"><Icon name="website" /></span>
         <span class="name">Website</span>

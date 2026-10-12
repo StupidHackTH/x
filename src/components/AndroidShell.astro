@@ -10,9 +10,10 @@ import { asset } from '../lib/asset';
 const eventStart = '2026-10-10T00:00:00+07:00';
 const daysToGo = Math.max(0, Math.ceil((new Date(eventStart).getTime() - Date.now()) / 86_400_000));
 const byId = Object.fromEntries(windows.map((w) => [w.id, w]));
-const homeIds = ['about', 'checkin', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
-const drawerIds = ['about', 'checkin', 'register', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const homeIds = ['about', 'projects', 'checkin', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
+const drawerIds = ['about', 'projects', 'checkin', 'register', 'schedule', 'venue', 'camera', 'shtxnet', 'activate', 'submit', 'vote', 'bingo', 'funding', 'sponsors', 'staff', 'faq', 'conduct', 'recycle'];
 const links = [
+  { label: 'Feedback', icon: 'feedback', href: asset('feedback/'), same: true },
   { label: 'Browser', icon: 'website', href: event.links.website },
   { label: 'Facebook', icon: 'facebook', href: event.links.facebook },
   { label: 'Discord', icon: 'discord', href: event.links.discord },
@@ -118,6 +119,10 @@ const icons = {
           </button>
         );
       })}
+      <a class="android-app" href={asset('feedback/')} role="listitem">
+        <Icon name="feedback" class="icon" />
+        <span class="name">Feedback</span>
+      </a>
     </div>
     <div class="android-widgets">
       <button type="button" class="android-widget" data-open="funding" aria-label="Funding goal widget">
@@ -157,7 +162,7 @@ const icons = {
         );
       })}
       {links.map((l) => (
-        <a class="android-app" href={l.href} target="_blank" rel="noopener" role="listitem">
+        <a class="android-app" href={l.href} target={'same' in l ? undefined : '_blank'} rel="noopener" role="listitem">
           <Icon name={l.icon} class="icon" />
           <span class="name">{l.label}</span>
         </a>
