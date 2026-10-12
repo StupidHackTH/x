@@ -283,7 +283,7 @@ export const staff: StaffMember[] = [
   { name: 'อาร์ต', handle: 'cgix', role: 'Finance', group: 'staff' },
   { name: 'นีโม่', role: 'Finance', group: 'staff' },
   { name: 'Opec', handle: 'opecgame', role: 'Runner', group: 'staff', wiki: 'opecgame', fullName: 'Kittipong Songyos', photo: 'opecgame.jpg' },
-  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic lead', group: 'lead' },
+  { name: 'Carrot', handle: 'Pariyakorn.S', role: 'Graphic lead', group: 'lead', fullName: 'Pariyakorn Saelao' },
   { name: 'นีน่า', role: 'Swag', group: 'staff' },
   { name: 'ลีโอ', role: 'Challenge · Tech · ขนของ', group: 'staff', wiki: 'leomotors', fullName: 'Leomotors', photo: 'leomotors.jpg' },
   { name: 'Nac', role: 'Challenge', group: 'staff', wiki: 'nacnano', fullName: 'Chotpisit Adunsehawat', photo: 'nacnano.jpg' },
@@ -291,9 +291,15 @@ export const staff: StaffMember[] = [
   { name: 'Juk', role: 'OB', group: 'staff', wiki: 'juk', fullName: 'Chukkrit Visitsaktavorn', photo: 'juk.jpg' },
   { name: 'บีบี', role: 'OB', group: 'staff', wiki: 'siravijbb', fullName: 'Siravij Praevisavakij', photo: 'siravijbb.jpg' },
   { name: 'Neo', handle: 'ne0negi', role: 'Staff', group: 'staff' },
-  { name: 'Uddy', handle: 'wasinuddy', role: 'Staff', group: 'staff' },
-  { name: 'Folkiesss', role: 'Staff', group: 'staff', photo: 'folk.jpg' },
-  { name: 'นรภัทร', role: 'Staff', group: 'staff', photo: 'norraphat.jpg' },
+  { name: 'Uddy', handle: 'wasinuddy', role: 'Popular vote system', group: 'staff', fullName: 'Wasin Silakong' },
+  { name: 'Folkiesss', role: 'Staff', group: 'staff', fullName: 'Korraphat Pangvutthivanich', photo: 'folk.jpg' },
+  { name: 'นรภัทร', role: 'Staff', group: 'staff', fullName: 'Narapat Bu', photo: 'norraphat.jpg' },
+  { name: 'Bier', role: 'Staff', group: 'staff', wiki: 'bierbbbb', fullName: 'Yuttakhan Baingern' },
+  { name: 'Kana', role: 'Staff', group: 'staff', fullName: 'Khanaphon Phaengtan' },
+  { name: 'Tackle', role: 'Staff', group: 'staff', fullName: 'Apidech Tearpaiboon' },
+  { name: 'Thanadol', role: 'Staff', group: 'staff', fullName: 'Thanadol Sumetchotimaytha' },
+  { name: 'Jirapol', role: 'Staff', group: 'staff', fullName: 'Jirapol Wachirasub' },
+  { name: 'ศุภธัช', role: 'Staff', group: 'staff', fullName: 'Supratouch Suwatno' },
 ];
 
 export const pastEditions = [
