@@ -94,6 +94,11 @@ const GRIST_DOC = process.env.GRIST_DOC ?? '';
 const GRIST_KEY = process.env.GRIST_API_KEY ?? '';
 type GachaTier = 'T1' | 'T2' | 'T3';
 type GachaPrize = { id: string; name: string; tier: GachaTier; amount: number; image?: string; base?: string; reveal: boolean; remaining: number };
+/* Media links in Grist still name the old media host; MEDIA_FROM → MEDIA_TO rewrites them when the server moves
+   (e.g. MEDIA_FROM=https://82-26-104-114.sslip.io:8445/ MEDIA_TO=https://<new host>:10000/). */
+const MEDIA_FROM = process.env.MEDIA_FROM ?? '';
+const MEDIA_TO = process.env.MEDIA_TO ?? '';
+const moveMedia = (url: string) => (MEDIA_FROM && MEDIA_TO && url.startsWith(MEDIA_FROM) ? MEDIA_TO + url.slice(MEDIA_FROM.length) : url);
 type GristRow = { Item?: string; DisplayName?: string; Final_Prize_Tier?: string; Status?: string; Reward_amount?: number; PriceID?: unknown; Image_link?: string; Video_link?: string };
 let gristCache: { at: number; rows: GristRow[] } | null = null;
 async function gristRows(): Promise<GristRow[]> {
@@ -112,10 +117,10 @@ async function gachaPrizes(): Promise<GachaPrize[]> {
   return (await gristRows())
     .filter((f) => /^T[123]$/.test(f.Final_Prize_Tier ?? '') && f.Status !== 'Rejected' && Number(f.Reward_amount) > 0 && (f.Item ?? '').trim())
     .map((f) => {
-      const base = f.Video_link?.trim() ? f.Video_link.trim().replace(/reveal\.mp4$/, '') : undefined;
+      const base = f.Video_link?.trim() ? moveMedia(f.Video_link.trim()).replace(/reveal\.mp4$/, '') : undefined;
       const id = base ? base.split('/').filter(Boolean).pop()! : String(f.PriceID ?? f.Item);
       const amount = Number(f.Reward_amount);
-      return { id, name: (f.DisplayName ?? '').trim() || (f.Item ?? '').trim(), tier: f.Final_Prize_Tier as GachaTier, amount, image: f.Image_link?.trim() || undefined, base, reveal: !!base, remaining: Math.max(0, amount - (drawn.get(id) ?? 0)) };
+      return { id, name: (f.DisplayName ?? '').trim() || (f.Item ?? '').trim(), tier: f.Final_Prize_Tier as GachaTier, amount, image: f.Image_link?.trim() ? moveMedia(f.Image_link.trim()) : undefined, base, reveal: !!base, remaining: Math.max(0, amount - (drawn.get(id) ?? 0)) };
     });
 }
 function gachaRates(): Record<GachaTier, number> {
