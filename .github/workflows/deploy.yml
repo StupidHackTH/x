@@ -33,6 +33,8 @@ jobs:
           SITE_URL: https://stupid.hackathon.in.th
           BASE_PATH: /${{ github.event.repository.name }}
           PUBLIC_SHTX_NET_API: ${{ vars.SHTX_NET_API }}
+          PUBLIC_GACHA_MEDIA: ${{ vars.GACHA_MEDIA }}
+          PUBLIC_VOTE_UPSTREAM: ${{ vars.VOTE_UPSTREAM }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
